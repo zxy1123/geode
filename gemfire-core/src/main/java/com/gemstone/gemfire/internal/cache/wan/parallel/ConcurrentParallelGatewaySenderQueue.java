@@ -56,10 +56,10 @@ import com.gemstone.gemfire.internal.size.SingleObjectSizer;
  */
 public class ConcurrentParallelGatewaySenderQueue implements RegionQueue {
 
-  private final ParallelGatewaySenderEventProcessor processors[];
+  private final List<ParallelGatewaySenderEventProcessor> processors;
   
   public ConcurrentParallelGatewaySenderQueue(
-		  ParallelGatewaySenderEventProcessor pro[]) {
+		  List<ParallelGatewaySenderEventProcessor> pro) {
     this.processors = pro;
   }
   
@@ -79,15 +79,15 @@ public class ConcurrentParallelGatewaySenderQueue implements RegionQueue {
 
   @Override
   public Region getRegion() {
-	  return this.processors[0].getQueue().getRegion();
+	  return this.processors.get(0).getQueue().getRegion();
   }
   
   public PartitionedRegion getRegion(String fullpath) {
-    return processors[0].getRegion(fullpath);
+    return processors.get(0).getRegion(fullpath);
   }
   
   public Set<PartitionedRegion> getRegions() {
-	return ((ParallelGatewaySenderQueue)(processors[0].getQueue())).getRegions();
+	return ((ParallelGatewaySenderQueue)(processors.get(0).getQueue())).getRegions();
   }
 
   @Override
@@ -124,21 +124,21 @@ public class ConcurrentParallelGatewaySenderQueue implements RegionQueue {
   @Override
   public int size() {
 	//is that fine??
-	return this.processors[0].getQueue().size();
+	return this.processors.get(0).getQueue().size();
   }
   
   public int localSize() {
-	return ((ParallelGatewaySenderQueue)(processors[0].getQueue())).localSize();
+	return ((ParallelGatewaySenderQueue)(processors.get(0).getQueue())).localSize();
   }
 
   @Override
   public void addCacheListener(CacheListener listener) {
-	  this.processors[0].getQueue().addCacheListener(listener);    
+	  this.processors.get(0).getQueue().addCacheListener(listener);    
   }
 
   @Override
   public void removeCacheListener() {
-    this.processors[0].removeCacheListener();    
+    this.processors.get(0).removeCacheListener();    
   }
 
   @Override
@@ -152,8 +152,8 @@ public class ConcurrentParallelGatewaySenderQueue implements RegionQueue {
   
   public long estimateMemoryFootprint(SingleObjectSizer sizer) {
 	long size = 0;
-	for(int i=0; i< processors.length; i++)
-	  size += ((ParallelGatewaySenderQueue)this.processors[i].getQueue()).estimateMemoryFootprint(sizer);
+	for(ParallelGatewaySenderEventProcessor p: this.processors)
+	  size += ((ParallelGatewaySenderQueue)p.getQueue()).estimateMemoryFootprint(sizer);
 	return size;
   }
 
@@ -165,20 +165,20 @@ public class ConcurrentParallelGatewaySenderQueue implements RegionQueue {
   }*/
   
   public void removeShadowPR(String prRegionName) {
-  	for(int i =0; i< processors.length; i++){
-   	 processors[i].removeShadowPR(prRegionName);
+	  for(ParallelGatewaySenderEventProcessor p: this.processors){
+		  p.removeShadowPR(prRegionName);
     }
   }
   
   public void addShadowPartitionedRegionForUserPR(PartitionedRegion pr) {
-	for(int i =0; i< processors.length; i++){
-	  processors[i].addShadowPartitionedRegionForUserPR(pr);
+	  for(ParallelGatewaySenderEventProcessor p: this.processors){
+	  p.addShadowPartitionedRegionForUserPR(pr);
 	 }
   }
   
   private ParallelGatewaySenderEventProcessor getPGSProcessor(int bucketId) {
-  	int index = bucketId % this.processors.length;
-  	return processors[index];
+  	int index = bucketId % this.processors.size();
+  	return processors.get(index);
   }
 
   public BlockingQueue<GatewaySenderEventImpl> getBucketTmpQueue(int bucketId) {
@@ -197,11 +197,12 @@ public class ConcurrentParallelGatewaySenderQueue implements RegionQueue {
   public void clear(PartitionedRegion pr, int bucketId) {
   	getPGSProcessor(bucketId).clear(pr, bucketId);
   }
-  
-  public void cleanUp() {
-	for(int i=0; i< processors.length; i++)
-	  ((ParallelGatewaySenderQueue)this.processors[i].getQueue()).cleanUp();
-  }
+
+	public void cleanUp() {
+		for (ParallelGatewaySenderEventProcessor p : this.processors) {
+			((ParallelGatewaySenderQueue) p.getQueue()).cleanUp();
+		}
+	}
   
   public void conflateEvent(Conflatable conflatableObject, int bucketId,
       Long tailKey) {
@@ -214,16 +215,16 @@ public class ConcurrentParallelGatewaySenderQueue implements RegionQueue {
   }
   
   public void addShadowPartitionedRegionForUserRR(DistributedRegion userRegion) {
-	for(int i =0; i< processors.length; i++){
-  	 processors[i].addShadowPartitionedRegionForUserRR(userRegion);;
+	  for(ParallelGatewaySenderEventProcessor p: this.processors){
+  	 p.addShadowPartitionedRegionForUserRR(userRegion);;
    }
   }
   
   public long getNumEntriesInVMTestOnly() {
-	return ((ParallelGatewaySenderQueue)(processors[0].getQueue())).getNumEntriesInVMTestOnly();
+	return ((ParallelGatewaySenderQueue)(processors.get(0).getQueue())).getNumEntriesInVMTestOnly();
   }
 	 
   public long getNumEntriesOverflowOnDiskTestOnly() {
-	return ((ParallelGatewaySenderQueue)(processors[0].getQueue())).getNumEntriesOverflowOnDiskTestOnly();
+	return ((ParallelGatewaySenderQueue)(processors.get(0).getQueue())).getNumEntriesOverflowOnDiskTestOnly();
   }
 }

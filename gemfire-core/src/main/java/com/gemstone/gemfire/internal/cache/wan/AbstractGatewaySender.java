@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -57,6 +59,7 @@ import com.gemstone.gemfire.distributed.internal.DistributionAdvisor.Profile;
 import com.gemstone.gemfire.distributed.internal.InternalDistributedSystem;
 import com.gemstone.gemfire.distributed.internal.ResourceEvent;
 import com.gemstone.gemfire.distributed.internal.ServerLocation;
+import com.gemstone.gemfire.internal.cache.BucketServerLocation66;
 import com.gemstone.gemfire.internal.cache.CachePerfStats;
 import com.gemstone.gemfire.internal.cache.EntryEventImpl;
 import com.gemstone.gemfire.internal.cache.EnumListenerEvent;
@@ -225,6 +228,8 @@ public abstract class AbstractGatewaySender implements GatewaySender,
   private Region<String,Integer> eventIdIndexMetaDataRegion;
   
   final Object lockForConcurrentDispatcher = new Object();
+
+  private volatile Map<BucketServerLocation66, List<Integer>> recieverToPrimaryBucketMap = new ConcurrentHashMap<BucketServerLocation66, List<Integer>>();
 
   protected AbstractGatewaySender() {
   }
@@ -1309,4 +1314,10 @@ public abstract class AbstractGatewaySender implements GatewaySender,
       this.event.release();
     }
   }
+
+	public void setPrimaryLocations(Map<ServerLocation, Set<Integer>> locations) {
+		if(this.eventProcessor != null) {
+			this.eventProcessor.setPrimaryLocations(locations);
+		}
+	}
 }

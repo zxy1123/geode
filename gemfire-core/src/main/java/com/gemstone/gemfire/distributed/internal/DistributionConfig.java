@@ -472,7 +472,7 @@ public interface DistributionConfig extends Config, LogConfig {
    * The default log level.
    * <p> Actual value of this constant is {@link InternalLogWriter#CONFIG_LEVEL}.
    */
-  public static final int DEFAULT_LOG_LEVEL = InternalLogWriter.CONFIG_LEVEL;
+  public static final int DEFAULT_LOG_LEVEL = InternalLogWriter.FINE_LEVEL;
   /**
    * The minimum log level.
    * <p> Actual value of this constant is {@link InternalLogWriter#ALL_LEVEL}.

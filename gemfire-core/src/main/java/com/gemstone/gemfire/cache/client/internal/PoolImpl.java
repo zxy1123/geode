@@ -844,6 +844,9 @@ public class PoolImpl implements InternalPool {
     return manager.borrowConnection(45000L);
   }
   
+  public Connection acquireConnectionForWAN(ServerLocation loc) {
+	return manager.borrowConnection(loc,45000L,false);
+  }
   /**
    * Hook to return connections that were acquired using 
    * acquireConnection.

@@ -24,9 +24,12 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.logging.log4j.Logger;
 
@@ -43,8 +46,10 @@ import com.gemstone.gemfire.cache.client.internal.pooling.ConnectionDestroyedExc
 import com.gemstone.gemfire.cache.wan.GatewayEventFilter;
 import com.gemstone.gemfire.cache.wan.GatewayQueueEvent;
 import com.gemstone.gemfire.cache.wan.GatewaySender;
+import com.gemstone.gemfire.distributed.internal.ServerLocation;
 import com.gemstone.gemfire.internal.Version;
 import com.gemstone.gemfire.internal.cache.BucketRegion;
+import com.gemstone.gemfire.internal.cache.BucketServerLocation66;
 import com.gemstone.gemfire.internal.cache.Conflatable;
 import com.gemstone.gemfire.internal.cache.DistributedRegion;
 import com.gemstone.gemfire.internal.cache.EntryEventImpl;
@@ -230,11 +235,19 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
   protected void eventQueueRemove() throws CacheException,
       InterruptedException {
     this.queue.remove();
+//    if(this.resumeWhenPeekedEventsEmpty && peekedEvents.isEmpty()) {
+//    	this.resumeWhenPeekedEventsEmpty = false;
+//    }
   }
 
   protected void eventQueueRemove(int size) throws CacheException {
     this.queue.remove(size);
+    
+//    if(this.resumeWhenPeekedEventsEmpty && peekedEvents.isEmpty()) {
+//    	this.resumeWhenPeekedEventsEmpty = false;
+//    }
   }
+  
 
   protected Object eventQueueTake() throws CacheException, InterruptedException {
     throw new UnsupportedOperationException();
@@ -268,7 +281,7 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
     }
     this.isPaused = true;
   }
-
+  
   //merge44957: WHile merging 44957, need this method hence picked up this method from revision 42024.
   public void waitForDispatcherToPause() {
     if (!this.isPaused) {
@@ -320,6 +333,8 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
    */
   private final ConcurrentHashMap<Integer, long[]> failureLogInterval =
       new ConcurrentHashMap<Integer, long[]>();
+
+  private boolean resumeWhenPeekedEventsEmpty = false;
       
   /**
    * The maximum size of {@link #failureLogInterval} beyond which it will start
@@ -403,11 +418,11 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
       if (stopped()) {
         break;
       }
-
+      
       try {
         // Check if paused. If so, wait for resumption
         if (this.isPaused) {
-          waitForResumption();
+        	waitForResumption();
         }
 
         // Peek a batch
@@ -476,7 +491,13 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
               }
             }*/
             }
-            events = this.queue.peek(batchSize, batchTimeInterval);
+            if(this.resumeWhenPeekedEventsEmpty) {
+            	if(this.queue instanceof ParallelGatewaySenderQueue) {
+            		events = ((ParallelGatewaySenderQueue)this.queue).peekAlreadyPeekedEvents();
+            	}
+            }else{
+            	events = this.queue.peek(batchSize, batchTimeInterval);
+            }
           } catch (InterruptedException e) {
             interrupted = true;
             this.sender.getCancelCriterion().checkCancelInProgress(e);
@@ -979,6 +1000,8 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
       eventQueueRemove(events.size());
     }
     
+    //set the latest primary locations to the sender.
+    
   }
   
   public void handleUnSuccessBatchAck(int bId) {
@@ -1241,7 +1264,9 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
     return numEventsDispatched;
   }
   public void clear(PartitionedRegion pr, int bucketId) {
-    ((ParallelGatewaySenderQueue)this.queue).clear(pr, bucketId);
+	  if(this.queue instanceof ParallelGatewaySenderQueue) {
+		  ((ParallelGatewaySenderQueue)this.queue).clear(pr, bucketId);
+	  }
 }
 
 /*public int size(PartitionedRegion pr, int bucketId)
@@ -1250,7 +1275,10 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
 }*/
 
   public void notifyEventProcessorIfRequired(int bucketId) {
-    ((ParallelGatewaySenderQueue) this.queue).notifyEventProcessorIfRequired();
+	  if(this.queue instanceof ParallelGatewaySenderQueue) {
+		  ((ParallelGatewaySenderQueue) this.queue).notifyEventProcessorIfRequired();	  
+	  }
+    
   }
 
   public BlockingQueue<GatewaySenderEventImpl> getBucketTmpQueue(int bucketId) {
@@ -1344,5 +1372,42 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
       }
       return true;
     }
-  }   
+  }
+
+  public void setPrimaryLocations(Map<ServerLocation, Set<Integer>> locations) {
+  }
+
+	public boolean isPeekedEventEmpty() {
+		if (logger.isDebugEnabled()) {
+			logger.debug("SKSKSK Getting called for this processor  " + this);
+		}
+		BlockingQueue peekedEvents = ((ParallelGatewaySenderQueue) this.queue)
+				.getPeekedEvents();
+		if (logger.isDebugEnabled()) {
+			logger.debug("SKSKSK the peeked evets are for this processor  "
+					+ peekedEvents);
+			
+		}
+		
+//		synchronized (peekedEvents) {
+//			while(!peekedEvents.isEmpty()) {
+//				try {
+//					peekedEvents.wait();
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("SKSKSK WAIT COMPLETE  "
+					+ peekedEvents);
+			
+		}
+		return peekedEvents.isEmpty();
+	}
+
+	public void markResumeWhenPeekedEventEmpty(boolean flag) {
+		this.resumeWhenPeekedEventsEmpty = flag;
+	}   
 }

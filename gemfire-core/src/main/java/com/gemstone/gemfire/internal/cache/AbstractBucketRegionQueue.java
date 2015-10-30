@@ -527,6 +527,7 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
   @Override
   public void afterAcquiringPrimaryState() {
     super.afterAcquiringPrimaryState();
+    // add the serverlocation of primary receiver
     notifyEventProcessor();
   }
   

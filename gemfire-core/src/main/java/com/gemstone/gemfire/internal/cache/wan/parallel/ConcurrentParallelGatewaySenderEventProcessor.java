@@ -22,6 +22,9 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,10 +39,6 @@ import com.gemstone.gemfire.InternalGemFireException;
 import com.gemstone.gemfire.cache.CacheException;
 import com.gemstone.gemfire.cache.EntryEvent;
 import com.gemstone.gemfire.cache.Region;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSBucketRegionQueue;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSGatewayEventImpl;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSParallelGatewaySenderQueue;
-import com.gemstone.gemfire.cache.wan.GatewayQueueEvent;
 import com.gemstone.gemfire.internal.cache.EntryEventImpl;
 import com.gemstone.gemfire.internal.cache.EnumListenerEvent;
 import com.gemstone.gemfire.internal.cache.GemFireCacheImpl;
@@ -47,7 +46,6 @@ import com.gemstone.gemfire.internal.cache.LocalRegion;
 import com.gemstone.gemfire.internal.cache.RegionQueue;
 import com.gemstone.gemfire.internal.cache.wan.AbstractGatewaySender;
 import com.gemstone.gemfire.internal.cache.wan.AbstractGatewaySenderEventProcessor;
-import com.gemstone.gemfire.internal.cache.wan.GatewaySenderEventCallbackDispatcher;
 import com.gemstone.gemfire.internal.cache.wan.GatewaySenderEventDispatcher;
 import com.gemstone.gemfire.internal.cache.wan.GatewaySenderException;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
@@ -71,7 +69,8 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
 
   protected static final Logger logger = LogService.getLogger();
   
-  protected ParallelGatewaySenderEventProcessor processors[];
+  protected List<ParallelGatewaySenderEventProcessor> processors;
+  
   //private final List<ConcurrentParallelGatewaySenderQueue> concurrentParallelQueues;
   private GemFireException ex = null;
   final int nDispatcher;
@@ -116,13 +115,13 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
   }
   
   protected void createProcessors(int dispatcherThreads, Set<Region> targetRs) {
-    processors = new ParallelGatewaySenderEventProcessor[sender.getDispatcherThreads()];
+    processors = new CopyOnWriteArrayList<ParallelGatewaySenderEventProcessor>();
     if (logger.isDebugEnabled()) {
       logger.debug("Creating AsyncEventProcessor");
     }
     for (int i = 0; i < sender.getDispatcherThreads(); i++) {
-      processors[i] = new ParallelGatewaySenderEventProcessor(sender,
-          targetRs, i, sender.getDispatcherThreads());
+      this.processors.add(new ParallelGatewaySenderEventProcessor(sender,
+          targetRs, i, sender.getDispatcherThreads()));
     }
   }
 
@@ -154,7 +153,7 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
     	return;
     }
     int pId = bucketId % this.nDispatcher;
-    this.processors[pId].enqueueEvent(operation, event, substituteValue);
+    this.processors.get(pId).enqueueEvent(operation, event, substituteValue);
     
    /* if (getSender().beforeEnque(gatewayQueueEvent)) {
       long start = getSender().getStatistics().startTime();
@@ -178,11 +177,12 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
   public void run() {
     final boolean isDebugEnabled = logger.isDebugEnabled();
     
-    for(int i = 0; i < this.processors.length; i++){
+    for(ParallelGatewaySenderEventProcessor p:  this.processors){
+    	int i=0;
       if (isDebugEnabled) {
-        logger.debug("Starting the ParallelProcessors {}", i);
+        logger.debug("Starting the ParallelProcessors {}", i++);
       }
-      this.processors[i].start();
+      p.start();
     }
     try {
       waitForRunningStatus();
@@ -258,8 +258,8 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
       stopperCallables.add(new SenderStopperCallable(parallelProcessor));
     }
     
-    ExecutorService stopperService = Executors.newFixedThreadPool(processors.length, threadFactory);
-    try {
+    ExecutorService stopperService = Executors.newFixedThreadPool(processors.size(), threadFactory);
+    try {	
       List<Future<Boolean>> futures = stopperService.invokeAll(stopperCallables);
       for(Future<Boolean> f: futures) {
         try {
@@ -317,6 +317,9 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
   public void resumeDispatching() {
     for (ParallelGatewaySenderEventProcessor parallelProcessor : this.processors) {
       parallelProcessor.resumeDispatching();
+      if (logger.isDebugEnabled()) {
+          logger.debug("ParallelGatewaySenderEventProcessor: Resumed dispatching: {}", parallelProcessor);
+        }
     }
     super.resumeDispatching();
     if (logger.isDebugEnabled()) {
@@ -335,9 +338,7 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
    */
   public List<ParallelGatewaySenderEventProcessor> getProcessors() {
     List<ParallelGatewaySenderEventProcessor> l = new LinkedList<ParallelGatewaySenderEventProcessor>();
-    for (int i = 0; i < processors.length; i++) {
-      l.add(processors[i]);
-    }
+    l.addAll(processors);
     return l;
   }
 /*
@@ -360,7 +361,7 @@ public class ConcurrentParallelGatewaySenderEventProcessor extends AbstractGatew
  
   @Override
   public GatewaySenderEventDispatcher getDispatcher() {
-    return this.processors[0].getDispatcher();//Suranjan is that fine??
+    return this.processors.get(0).getDispatcher();//Suranjan is that fine??
   }
 
   @Override

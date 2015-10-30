@@ -18,10 +18,10 @@
 package com.gemstone.gemfire.cache.hdfs.internal;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 
 import com.gemstone.gemfire.cache.CacheException;
 import com.gemstone.gemfire.cache.EntryNotFoundException;
@@ -53,7 +53,7 @@ public class HDFSParallelGatewaySenderQueue extends ParallelGatewaySenderQueue {
   public HDFSParallelGatewaySenderQueue(AbstractGatewaySender sender,
       Set<Region> userPRs, int idx, int nDispatcher) {
      
-    super(sender, userPRs, idx, nDispatcher);
+    super(sender, userPRs, idx, nDispatcher,Collections.<Integer> emptySet());
     //only first dispatcher Hemant?
     if (sender.getBucketSorted() && this.index == 0) {
       rollListTimer = new SystemTimer(sender.getCache().getDistributedSystem(),
@@ -124,7 +124,7 @@ public class HDFSParallelGatewaySenderQueue extends ParallelGatewaySenderQueue {
     if (this.resetLastPeeked) {
       int previousBucketId = -1;
       boolean stillPrimary = true; 
-      Iterator<GatewaySenderEventImpl>  iter = peekedEvents.iterator();
+      Iterator<GatewaySenderEventImpl>  iter = getPeekedEvents().iterator();
       // we need to remove the events of the bucket that are no more primary on 
       // this node as they cannot be persisted from this node. 
       while(iter.hasNext()) {
@@ -213,7 +213,7 @@ public class HDFSParallelGatewaySenderQueue extends ParallelGatewaySenderQueue {
       if (list != null && list.size() != 0 ) {
         for (Object object : list) {
           batch.add(object);
-          peekedEvents.add((HDFSGatewayEventImpl)object);
+          getPeekedEvents().add((HDFSGatewayEventImpl)object);
         }
       }
     }
@@ -252,8 +252,8 @@ public class HDFSParallelGatewaySenderQueue extends ParallelGatewaySenderQueue {
     int destroyed = 0;
     HDFSGatewayEventImpl event = null;
     
-    if (this.peekedEvents.size() > 0)
-      event = (HDFSGatewayEventImpl)this.peekedEvents.remove();
+    if (this.getPeekedEvents().size() > 0)
+      event = (HDFSGatewayEventImpl)this.getPeekedEvents().remove();
     
     while (event != null && destroyed < batchSize) {
       Region currentRegion = event.getRegion();
@@ -269,12 +269,12 @@ public class HDFSParallelGatewaySenderQueue extends ParallelGatewaySenderQueue {
         destroyedSeqNum.add(event.getShadowKey());
         destroyed++;
 
-        if (this.peekedEvents.size() == 0 || (destroyed) >= batchSize) {
+        if (this.getPeekedEvents().size() == 0 || (destroyed) >= batchSize) {
           event = null; 
           break;
         }
 
-        event = (HDFSGatewayEventImpl)this.peekedEvents.remove();
+        event = (HDFSGatewayEventImpl)this.getPeekedEvents().remove();
 
         bucketId = event.getBucketId();
 

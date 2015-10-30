@@ -1794,7 +1794,8 @@ public final class BucketAdvisor extends CacheDistributionAdvisor  {
     if (!this.pRegion.isShadowPR()) {
       GemFireCacheImpl c = getProxyBucketRegion().getCache();
       List servers = null;
-      servers = c.getCacheServers();
+      servers = c.getCacheServers();// SURANJAN change it to servers and receivrs later on
+      servers = c.getCacheServersAndGatewayReceiver();
 
       HashSet<BucketServerLocation66> serverLocations = new HashSet<BucketServerLocation66>();
       for (Object object : servers) {

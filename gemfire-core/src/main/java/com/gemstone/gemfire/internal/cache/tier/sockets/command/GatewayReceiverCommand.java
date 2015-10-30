@@ -22,6 +22,8 @@ package com.gemstone.gemfire.internal.cache.tier.sockets.command;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.gemstone.gemfire.CancelException;
 import com.gemstone.gemfire.cache.EntryNotFoundException;
@@ -32,12 +34,15 @@ import com.gemstone.gemfire.cache.wan.GatewayReceiver;
 import com.gemstone.gemfire.distributed.DistributedSystem;
 import com.gemstone.gemfire.distributed.internal.DistributionStats;
 import com.gemstone.gemfire.distributed.internal.InternalDistributedSystem;
+import com.gemstone.gemfire.distributed.internal.ServerLocation;
 import com.gemstone.gemfire.i18n.LogWriterI18n;
 import com.gemstone.gemfire.internal.Version;
+import com.gemstone.gemfire.internal.cache.BucketServerLocation66;
 import com.gemstone.gemfire.internal.cache.EntryEventImpl;
 import com.gemstone.gemfire.internal.cache.EventID;
 import com.gemstone.gemfire.internal.cache.KeyWithRegionContext;
 import com.gemstone.gemfire.internal.cache.LocalRegion;
+import com.gemstone.gemfire.internal.cache.PartitionedRegion;
 import com.gemstone.gemfire.internal.cache.tier.CachedRegionHelper;
 import com.gemstone.gemfire.internal.cache.tier.Command;
 import com.gemstone.gemfire.internal.cache.tier.MessageType;
@@ -77,6 +82,8 @@ public class GatewayReceiverCommand extends BaseCommand {
     CachedRegionHelper crHelper = servConn.getCachedRegionHelper();
     GatewayReceiverStats stats = (GatewayReceiverStats)servConn.getCacheServerStats();
     EventID eventId = null;
+    //For single hop assuming that there is only one 
+    // region present
     LocalRegion region = null;
     List<BatchException70> exceptions = new ArrayList<BatchException70>();
     Throwable fatalException = null;
@@ -111,7 +118,7 @@ public class GatewayReceiverCommand extends BaseCommand {
       }
       else {
         logger.warn(LocalizedMessage.create(LocalizedStrings.ProcessBatch_RECEIVED_PROCESS_BATCH_REQUEST_0_THAT_HAS_ALREADY_BEEN_OR_IS_BEING_PROCESSED__THIS_PROCESS_BATCH_REQUEST_IS_BEING_IGNORED, batchId));
-        writeReply(msg, servConn, batchId, numberOfEvents);
+        writeReply(msg, servConn, batchId, numberOfEvents, region);
         return;
       }
       stats.incDuplicateBatchesReceived();
@@ -322,6 +329,10 @@ public class GatewayReceiverCommand extends BaseCommand {
               }
               // Attempt to create the entry
               boolean result = false;
+              
+              if (logger.isDebugEnabled()) {
+                  logger.debug(" SKSKSK Processing event with proxy {}",servConn.getProxyID());
+              }
               result = region.basicBridgeCreate(key, value, isObject, callbackArg,
                       servConn.getProxyID(), false, clientEvent, false); 
               // If the create fails (presumably because it already exists),
@@ -709,7 +720,7 @@ public class GatewayReceiverCommand extends BaseCommand {
       // batch)
       servConn.incrementLatestBatchIdReplied(batchId);
       
-      writeReply(msg, servConn, batchId, numberOfEvents);
+      writeReply(msg, servConn, batchId, numberOfEvents, region);
       servConn.setAsTrue(RESPONDED);
       stats.incWriteProcessBatchResponseTime(DistributionStats.getStatTime()
           - start);
@@ -737,13 +748,37 @@ public class GatewayReceiverCommand extends BaseCommand {
   }
 
   private void writeReply(Message msg, ServerConnection servConn, int batchId,
-      int numberOfEvents) throws IOException {
+      int numberOfEvents, LocalRegion region) throws IOException {
     Message replyMsg = servConn.getResponseMessage();
     replyMsg.setMessageType(MessageType.REPLY);
     replyMsg.setTransactionId(msg.getTransactionId());
-    replyMsg.setNumberOfParts(2);
-    replyMsg.addIntPart(batchId);
-    replyMsg.addIntPart(numberOfEvents);
+    
+    boolean nwhop = false;
+    if(region instanceof PartitionedRegion ) {
+    	PartitionedRegion pr = (PartitionedRegion)region;
+    	nwhop = pr.isNetworkHop().byteValue() != (byte)0;
+    }
+    if (nwhop) {
+    	PartitionedRegion pr = (PartitionedRegion)region;
+    	Map<ServerLocation, Set<Integer>> recieverToPrimaryBucketMap = pr
+    	        .getRegionAdvisor().getAllPrimaryBucketLocations();
+    	if (logger.isDebugEnabled()) {
+    	    logger.debug("Replying with the primary locations as nwhop occurred {}", recieverToPrimaryBucketMap);
+    	}
+        replyMsg.setNumberOfParts(3);
+        replyMsg.addIntPart(batchId);
+        replyMsg.addIntPart(numberOfEvents);
+        replyMsg.addObjPart(recieverToPrimaryBucketMap);
+    }
+    else{
+    	if (logger.isDebugEnabled()) {
+    	    logger.debug("Not Replying with the primary locations as no nwhop occurred");
+    	}
+    	replyMsg.setNumberOfParts(2);
+        replyMsg.addIntPart(batchId);
+        replyMsg.addIntPart(numberOfEvents);
+    }
+    
     replyMsg.setTransactionId(msg.getTransactionId());
     replyMsg.send(servConn);
     servConn.setAsTrue(Command.RESPONDED);
