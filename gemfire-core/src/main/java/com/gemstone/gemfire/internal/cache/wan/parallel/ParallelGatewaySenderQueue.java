@@ -1010,25 +1010,27 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
         BucketRegion bucket = bucketEntry.getValue();
         if (bucket.getBucketAdvisor().isPrimary()) {
           int bId = bucket.getId();
-          if(this.buckets.isEmpty() && !singleHop){
-        	if (bId % this.nDispatcher == this.index) {
-        	  thisProcessorBuckets.add(bId);
-        	}
-          }else {
-        	  if(this.buckets.contains(bId)) {
-        		thisProcessorBuckets.add(bId);
-              }
+          if (this.buckets.isEmpty() && !singleHop) {
+            if (bId % this.nDispatcher == this.index) {
+              thisProcessorBuckets.add(bId);
+            }
+          } else {
+            if (this.buckets.contains(bId)) {
+              thisProcessorBuckets.add(bId);
+            }
           }
         }
       }
-      
+
       if (logger.isDebugEnabled()) {
-          logger.debug("getRandomPrimaryBucket: allocated {} for this processor", this.buckets);
-        }      
-      
+        logger.debug("getRandomPrimaryBucket: allocated {} for this processor",
+            this.buckets);
+      }
+
       if (logger.isDebugEnabled()) {
-        logger.debug("getRandomPrimaryBucket: total {} for this processor: {}", allBuckets.size(), thisProcessorBuckets.size());
-      }           
+        logger.debug("getRandomPrimaryBucket: total {} for this processor: {}",
+            allBuckets.size(), thisProcessorBuckets.size());
+      }          
       
       int nTry =  thisProcessorBuckets.size();
       
@@ -1057,18 +1059,18 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
     return -1;
   }
   
-	public Set<Integer> getAllBucket() {
-		PartitionedRegion prQ = getRandomShadowPR();
-		
-		if (prQ != null) {
-			Set<Integer> s = new HashSet<Integer>();
-			for(int i=0;i<prQ.getTotalNumberOfBuckets(); i++) {
-				s.add(i);
-			}
-			return s;
-		}
-		return Collections.EMPTY_SET;
-	}
+  public Set<Integer> getAllBucket() {
+    PartitionedRegion prQ = getRandomShadowPR();
+
+    if (prQ != null) {
+      Set<Integer> s = new HashSet<Integer>();
+      for (int i = 0; i < prQ.getTotalNumberOfBuckets(); i++) {
+        s.add(i);
+      }
+      return s;
+    }
+    return Collections.EMPTY_SET;
+  }
   
   @Override
   public List take(int batchSize) throws CacheException, InterruptedException {
@@ -1127,14 +1129,13 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
       } finally {
         event.release();
       }
+    } else {
+      synchronized (peekedEvents) {
+        if (peekedEvents.isEmpty()) {
+          peekedEvents.notifyAll();
+        }
+      }
     }
-    else {
-			synchronized (peekedEvents) {
-				if (peekedEvents.isEmpty()) {
-					peekedEvents.notifyAll();
-				}
-			}
-		}
   }
 
   private void destroyEventFromQueue(PartitionedRegion prQ, int bucketId,
@@ -1285,35 +1286,32 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
     throw new UnsupportedOperationException();
   }
 
-	public List<GatewaySenderEventImpl> peekAlreadyPeekedEvents() {
-		List batch = new ArrayList();
-		if (this.resetLastPeeked) {
-			batch.addAll(peekedEvents);
-			this.resetLastPeeked = false;
-			final boolean isDebugEnabled = logger.isDebugEnabled();
+  public List<GatewaySenderEventImpl> peekAlreadyPeekedEvents() {
+    List batch = new ArrayList();
+    if (this.resetLastPeeked) {
+      batch.addAll(peekedEvents);
+      this.resetLastPeeked = false;
+      final boolean isDebugEnabled = logger.isDebugEnabled();
 
-			if (isDebugEnabled) {
-				StringBuffer buffer = new StringBuffer();
-				for (GatewaySenderEventImpl ge : peekedEvents) {
-					buffer.append("event :");
-					buffer.append(ge);
-				}
-				logger.debug("Adding already peeked events to the batch {}",
-						buffer);
-			}
-		}
-		else {
-			// ideally block
-			try {
-				Thread.sleep(200);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-		
-		
-		return batch;
-	}
+      if (isDebugEnabled) {
+        StringBuffer buffer = new StringBuffer();
+        for (GatewaySenderEventImpl ge : peekedEvents) {
+          buffer.append("event :");
+          buffer.append(ge);
+        }
+        logger.debug("Adding already peeked events to the batch {}", buffer);
+      }
+    } else {
+      // ideally block
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+    return batch;
+  }
   
   public List peek(int batchSize, int timeToWait) throws InterruptedException,
       CacheException {
@@ -1550,11 +1548,11 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
     for (int i = 0; i < batchSize; i++) {
       remove();
     }
-	synchronized (peekedEvents) {
-		if (peekedEvents.isEmpty()) {
-			peekedEvents.notifyAll();
-		}
-	}
+    synchronized (peekedEvents) {
+      if (peekedEvents.isEmpty()) {
+        peekedEvents.notifyAll();
+      }
+    }
   }
   
   public void conflateEvent(Conflatable conflatableObject, int bucketId, Long tailKey) {
@@ -1944,21 +1942,21 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
   	throw new RuntimeException("This method(size)is not supported by ParallelGatewaySenderQueue");
   }
 
-	public void setBuckets(Set<Integer> buckets2) {
-		this.buckets = buckets2;
-		if (logger.isDebugEnabled()) {
-	          logger.debug("ParallelQueue Settign buckets : {} , {}", buckets2, this.buckets);
-	    }
-		
-	}
+  public void setBuckets(Set<Integer> buckets2) {
+    this.buckets = buckets2;
+    if (logger.isDebugEnabled()) {
+      logger.debug("ParallelQueue Settign buckets : {} , {}", buckets2,
+          this.buckets);
+    }
 
-	public BlockingQueue<GatewaySenderEventImpl> getPeekedEvents() {
-		return peekedEvents;
-	}
+  }
 
-	public void setSingleHop() {
-		this.singleHop = true;
-	}
+  public BlockingQueue<GatewaySenderEventImpl> getPeekedEvents() {
+    return peekedEvents;
+  }
 
-	
+  public void setSingleHop() {
+    this.singleHop = true;
+  }
+
 }

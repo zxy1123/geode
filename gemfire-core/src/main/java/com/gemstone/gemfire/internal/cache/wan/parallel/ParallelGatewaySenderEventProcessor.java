@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.gemstone.gemfire.cache.CacheException;
 import com.gemstone.gemfire.cache.EntryEvent;
+import com.gemstone.gemfire.cache.PartitionAttributesFactory;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.hdfs.internal.HDFSBucketRegionQueue;
 import com.gemstone.gemfire.cache.hdfs.internal.HDFSGatewayEventImpl;
@@ -51,6 +52,7 @@ import com.gemstone.gemfire.internal.cache.wan.GatewaySenderEventImpl;
 import com.gemstone.gemfire.internal.logging.LogService;
 import com.gemstone.gemfire.internal.logging.LoggingThreadGroup;
 import com.gemstone.gemfire.internal.cache.PartitionedRegion;
+import com.gemstone.gemfire.internal.cache.ha.ThreadIdentifier;
 import com.gemstone.gemfire.internal.size.SingleObjectSizer;
 
 import java.io.IOException;
@@ -82,23 +84,27 @@ public class ParallelGatewaySenderEventProcessor extends
     initializeMessageQueue(sender.getId());
     setDaemon(true);
   }
-  
-  public synchronized void  setBuckets(Set<Integer> s) {
-	  if (logger.isDebugEnabled()) {
-          logger.debug("ParallelGatewaySenderEventProcessor before setting: {} , {}", s, this.buckets);
-	  }
-	  this.buckets.clear();
-	  this.buckets.addAll(s);
-	  if (logger.isDebugEnabled()) {
-          logger.debug("ParallelGatewaySenderEventProcessor after settingn: {} , {}", s, this.buckets);
-	  }
-	  
-	  ((ParallelGatewaySenderQueue)this.queue).setBuckets(this.buckets);
-	  ((ParallelGatewaySenderQueue)this.queue).setSingleHop();
+
+  public synchronized void setBuckets(Set<Integer> s) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "ParallelGatewaySenderEventProcessor before setting: {} , {}", s,
+          this.buckets);
+    }
+    this.buckets.clear();
+    this.buckets.addAll(s);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "ParallelGatewaySenderEventProcessor after settingn: {} , {}", s,
+          this.buckets);
+    }
+
+    ((ParallelGatewaySenderQueue) this.queue).setBuckets(this.buckets);
+    ((ParallelGatewaySenderQueue) this.queue).setSingleHop();
   }
   
   public Set<Integer> getBuckets() {
-	  return this.buckets;
+    return this.buckets;
   }
   /**
    * use in concurrent scenario where queue is to be shared among all the processors.
@@ -109,10 +115,8 @@ public class ParallelGatewaySenderEventProcessor extends
         "Event Processor for GatewaySender_" + sender.getId()+"_"+ id, sender);
     this.index = id;
     this.nDispatcher = nDispatcher;
-    //this.queue = new ParallelGatewaySenderQueue(sender, userRegions, id, nDispatcher);
-    //SURANJAN for the time being assume 113, it should be totalnumbuckets in the region
     this.buckets = new HashSet<Integer>();
-    for(int i=index;i< 113; i = i+nDispatcher) {
+    for (int i = index; i < PartitionAttributesFactory.GLOBAL_MAX_BUCKETS_DEFAULT; i = i + nDispatcher) {
       this.buckets.add(i);
     }
     initializeMessageQueue(sender.getId());
@@ -269,8 +273,6 @@ public class ParallelGatewaySenderEventProcessor extends
 
   @Override
   public void setPrimaryLocations(Map<ServerLocation, Set<Integer>> locations) {
-	  this.sender.setPrimaryLocations(locations);
+    this.sender.setPrimaryLocations(locations);
   }
-  
-
 }

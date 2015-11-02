@@ -491,12 +491,13 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
               }
             }*/
             }
-            if(this.resumeWhenPeekedEventsEmpty) {
-            	if(this.queue instanceof ParallelGatewaySenderQueue) {
-            		events = ((ParallelGatewaySenderQueue)this.queue).peekAlreadyPeekedEvents();
-            	}
-            }else{
-            	events = this.queue.peek(batchSize, batchTimeInterval);
+            if (this.resumeWhenPeekedEventsEmpty) {
+              if (this.queue instanceof ParallelGatewaySenderQueue) {
+                events = ((ParallelGatewaySenderQueue) this.queue)
+                    .peekAlreadyPeekedEvents();
+              }
+            } else {
+              events = this.queue.peek(batchSize, batchTimeInterval);
             }
           } catch (InterruptedException e) {
             interrupted = true;
@@ -1377,37 +1378,36 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
   public void setPrimaryLocations(Map<ServerLocation, Set<Integer>> locations) {
   }
 
-	public boolean isPeekedEventEmpty() {
-		if (logger.isDebugEnabled()) {
-			logger.debug("SKSKSK Getting called for this processor  " + this);
-		}
-		BlockingQueue peekedEvents = ((ParallelGatewaySenderQueue) this.queue)
-				.getPeekedEvents();
-		if (logger.isDebugEnabled()) {
-			logger.debug("SKSKSK the peeked evets are for this processor  "
-					+ peekedEvents);
-			
-		}
-		
-//		synchronized (peekedEvents) {
-//			while(!peekedEvents.isEmpty()) {
-//				try {
-//					peekedEvents.wait();
-//				} catch (InterruptedException e) {
-//					e.printStackTrace();
-//				}
-//			}
-//		}
-		
-		if (logger.isDebugEnabled()) {
-			logger.debug("SKSKSK WAIT COMPLETE  "
-					+ peekedEvents);
-			
-		}
-		return peekedEvents.isEmpty();
-	}
+  public boolean isPeekedEventEmpty() {
+    if (logger.isDebugEnabled()) {
+      logger.debug("SKSKSK Getting called for this processor  " + this);
+    }
+    BlockingQueue peekedEvents = ((ParallelGatewaySenderQueue) this.queue)
+        .getPeekedEvents();
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "SKSKSK the peeked evets are for this processor  " + peekedEvents);
 
-	public void markResumeWhenPeekedEventEmpty(boolean flag) {
-		this.resumeWhenPeekedEventsEmpty = flag;
-	}   
+    }
+
+    // synchronized (peekedEvents) {
+    // while(!peekedEvents.isEmpty()) {
+    // try {
+    // peekedEvents.wait();
+    // } catch (InterruptedException e) {
+    // e.printStackTrace();
+    // }
+    // }
+    // }
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("SKSKSK WAIT COMPLETE  " + peekedEvents);
+
+    }
+    return peekedEvents.isEmpty();
+  }
+
+  public void markResumeWhenPeekedEventEmpty(boolean flag) {
+    this.resumeWhenPeekedEventsEmpty = flag;
+  }
 }

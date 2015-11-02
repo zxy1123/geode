@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,6 +46,7 @@ import com.gemstone.gemfire.InternalGemFireException;
 import com.gemstone.gemfire.cache.InterestPolicy;
 import com.gemstone.gemfire.cache.LowMemoryException;
 import com.gemstone.gemfire.cache.Region;
+import com.gemstone.gemfire.cache.wan.GatewayReceiver;
 import com.gemstone.gemfire.distributed.DistributedMember;
 import com.gemstone.gemfire.distributed.internal.ProfileListener;
 import com.gemstone.gemfire.distributed.internal.ServerLocation;
@@ -306,76 +308,91 @@ public class RegionAdvisor extends CacheDistributionAdvisor
   
   /**
    * get the bucket to primary serverlocation map.
+   * 
    * @return
    */
-  
+
   public Map<Integer, BucketServerLocation66> getAllPrimaryClientBucketProfiles() {
-	Map<Integer, BucketServerLocation66> bucketToPrimaryServerLocation = new HashMap<Integer, BucketServerLocation66>();
+    Map<Integer, BucketServerLocation66> bucketToPrimaryServerLocation = new HashMap<Integer, BucketServerLocation66>();
     for (Integer bucketId : this.clientBucketProfilesMap.keySet()) {
       for (BucketProfile profile : this.clientBucketProfilesMap.get(bucketId)) {
-	      ServerBucketProfile cProfile = (ServerBucketProfile)profile;
-	      Set<BucketServerLocation66> bucketServerLocations = cProfile.getBucketServerLocations();
-	      for(BucketServerLocation66 loc: bucketServerLocations) {
-	    	  if(loc.isPrimary()) {
-	    		  bucketToPrimaryServerLocation.put(bucketId, loc);
-	    	  }
-	      }
+        ServerBucketProfile cProfile = (ServerBucketProfile) profile;
+        Set<BucketServerLocation66> bucketServerLocations = cProfile
+            .getBucketServerLocations();
+        for (BucketServerLocation66 loc : bucketServerLocations) {
+          if (loc.isPrimary()) {
+            bucketToPrimaryServerLocation.put(bucketId, loc);
+          }
+        }
       }
     }
-    
+
     if (getPartitionedRegion().isDataStore()) {
-      for (Integer bucketId : getPartitionedRegion().getDataStore().getAllLocalBucketIds()) {
+      for (Integer bucketId : getPartitionedRegion().getDataStore()
+          .getAllLocalBucketIds()) {
         BucketProfile profile = getBucketAdvisor(bucketId).getLocalProfile();
 
         if (logger.isDebugEnabled()) {
           logger.debug("The local profile is : {}", profile);
         }
-        
+
         if (profile != null) {
           if (profile instanceof ServerBucketProfile) {
-            ServerBucketProfile cProfile = (ServerBucketProfile)profile;
+            ServerBucketProfile cProfile = (ServerBucketProfile) profile;
             Set<BucketServerLocation66> bucketServerLocations = cProfile
                 .getBucketServerLocations();
-            
-            for(BucketServerLocation66 loc: bucketServerLocations) {
-            	if(loc.isPrimary()) {
-  	    		  bucketToPrimaryServerLocation.put(bucketId, loc);
-  	    	  }
+
+            for (BucketServerLocation66 loc : bucketServerLocations) {
+              if (loc.isPrimary()) {
+                bucketToPrimaryServerLocation.put(bucketId, loc);
+              }
             }
           }
         }
       }
     }
     if (logger.isDebugEnabled()) {
-        logger.debug("The bucket to primary serverlocation is : {}", bucketToPrimaryServerLocation);
-      }
+      logger.debug("The bucket to primary serverlocation is : {}",
+          bucketToPrimaryServerLocation);
+    }
     return bucketToPrimaryServerLocation;
   }
-  
-	public Map<ServerLocation, Set<Integer>> getAllPrimaryBucketLocations() {
-		Map<BucketServerLocation66, Set<Integer>> recieverToPrimaryBucketMap = new ConcurrentHashMap<BucketServerLocation66, Set<Integer>>();
 
-		for (BucketServerLocation66 location : getAllPrimaryClientBucketProfiles()
-				.values()) {
-			if (recieverToPrimaryBucketMap.containsKey(location)) {
-				Set<Integer> l = recieverToPrimaryBucketMap.get(location);
-				l.add(location.getBucketId());
-			} else {
-				Set<Integer> bucketList = new HashSet<Integer>();
-				bucketList.add(location.getBucketId());
-				recieverToPrimaryBucketMap.put(location, bucketList);
-			}
-		}
-		
-		Map<ServerLocation, Set<Integer>> recieverToPrimaryBucketMapCopy = new ConcurrentHashMap<ServerLocation, Set<Integer>>();
-		
-		for(BucketServerLocation66 bl: recieverToPrimaryBucketMap.keySet()) {
-			recieverToPrimaryBucketMapCopy.put(
-					new ServerLocation(bl.getHostName(), bl.getPort()),
-					recieverToPrimaryBucketMap.get(bl));
-		}
-		return recieverToPrimaryBucketMapCopy;
-	}
+  public Map<ServerLocation, Set<Integer>> getAllPrimaryBucketLocations() {
+    Map<BucketServerLocation66, Set<Integer>> recieverToPrimaryBucketMap = new ConcurrentHashMap<BucketServerLocation66, Set<Integer>>();
+
+    for (BucketServerLocation66 location : getAllPrimaryClientBucketProfiles()
+        .values()) {
+      if (recieverToPrimaryBucketMap.containsKey(location)) {
+        Set<Integer> l = recieverToPrimaryBucketMap.get(location);
+        l.add(location.getBucketId());
+      } else {
+        Set<Integer> bucketList = new HashSet<Integer>();
+        bucketList.add(location.getBucketId());
+        recieverToPrimaryBucketMap.put(location, bucketList);
+      }
+    }
+
+    Map<ServerLocation, Set<Integer>> recieverToPrimaryBucketMapCopy = new ConcurrentHashMap<ServerLocation, Set<Integer>>();
+    
+   // GemFireCacheImpl c = getPartitionedRegion().getCache();
+   // Set<GatewayReceiver> s = c.getGatewayReceivers();
+    
+    for (BucketServerLocation66 bl : recieverToPrimaryBucketMap.keySet()) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("The servergroup is : {}",  bl.getServerGroups());
+      }
+      List<String> allgroups = Arrays.asList(bl.getServerGroups());
+      boolean contains = allgroups.contains(GatewayReceiver.RECEIVER_GROUP);
+      
+      if (contains) {
+        recieverToPrimaryBucketMapCopy.put(
+            new ServerLocation(bl.getHostName(), bl.getPort()),
+            recieverToPrimaryBucketMap.get(bl));
+      }
+    }
+    return recieverToPrimaryBucketMapCopy;
+  }
   
   public ConcurrentHashMap<Integer, Set<ServerBucketProfile>> getAllClientBucketProfilesTest() {
     ConcurrentHashMap<Integer, Set<ServerBucketProfile>> map = new ConcurrentHashMap<Integer, Set<ServerBucketProfile>>();

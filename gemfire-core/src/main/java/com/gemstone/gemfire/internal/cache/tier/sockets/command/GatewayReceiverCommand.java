@@ -754,29 +754,31 @@ public class GatewayReceiverCommand extends BaseCommand {
     replyMsg.setTransactionId(msg.getTransactionId());
     
     boolean nwhop = false;
-    if(region instanceof PartitionedRegion ) {
-    	PartitionedRegion pr = (PartitionedRegion)region;
-    	nwhop = pr.isNetworkHop().byteValue() != (byte)0;
+    if (region instanceof PartitionedRegion) {
+      PartitionedRegion pr = (PartitionedRegion) region;
+      nwhop = pr.isNetworkHop().byteValue() != (byte) 0;
     }
-    if (nwhop) {
-    	PartitionedRegion pr = (PartitionedRegion)region;
-    	Map<ServerLocation, Set<Integer>> recieverToPrimaryBucketMap = pr
-    	        .getRegionAdvisor().getAllPrimaryBucketLocations();
-    	if (logger.isDebugEnabled()) {
-    	    logger.debug("Replying with the primary locations as nwhop occurred {}", recieverToPrimaryBucketMap);
-    	}
-        replyMsg.setNumberOfParts(3);
-        replyMsg.addIntPart(batchId);
-        replyMsg.addIntPart(numberOfEvents);
-        replyMsg.addObjPart(recieverToPrimaryBucketMap);
-    }
-    else{
-    	if (logger.isDebugEnabled()) {
-    	    logger.debug("Not Replying with the primary locations as no nwhop occurred");
-    	}
-    	replyMsg.setNumberOfParts(2);
-        replyMsg.addIntPart(batchId);
-        replyMsg.addIntPart(numberOfEvents);
+    if (nwhop && (servConn.getClientVersion() != null)
+        && (servConn.getClientVersion().compareTo(Version.GFE_90) >= 0)) {
+      PartitionedRegion pr = (PartitionedRegion) region;
+      Map<ServerLocation, Set<Integer>> recieverToPrimaryBucketMap = pr
+          .getRegionAdvisor().getAllPrimaryBucketLocations();
+      if (logger.isDebugEnabled()) {
+        logger.debug("Replying with the primary locations as nwhop occurred {}",
+            recieverToPrimaryBucketMap);
+      }
+      replyMsg.setNumberOfParts(3);
+      replyMsg.addIntPart(batchId);
+      replyMsg.addIntPart(numberOfEvents);
+      replyMsg.addObjPart(recieverToPrimaryBucketMap);
+    } else {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Not Replying with the primary locations as no nwhop occurred");
+      }
+      replyMsg.setNumberOfParts(2);
+      replyMsg.addIntPart(batchId);
+      replyMsg.addIntPart(numberOfEvents);
     }
     
     replyMsg.setTransactionId(msg.getTransactionId());
