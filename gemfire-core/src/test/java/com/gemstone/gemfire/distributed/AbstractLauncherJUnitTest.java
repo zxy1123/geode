@@ -1,17 +1,23 @@
 /*
- * =========================================================================
- *  Copyright (c) 2002-2014 Pivotal Software, Inc. All Rights Reserved.
- *  This product is protected by U.S. and international copyright
- *  and intellectual property laws. Pivotal products are covered by
- *  more patents listed at http://www.pivotal.io/patents.
- * ========================================================================
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.distributed;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
@@ -37,10 +43,10 @@ import org.junit.experimental.categories.Category;
  * @since 7.0
  */
 @Category(UnitTest.class)
-public class AbstractLauncherJUnitTest extends CommonLauncherTestSuite {
+public class AbstractLauncherJUnitTest {
 
   protected AbstractLauncher<?> createAbstractLauncher(final String memberName, final String memberId) {
-    return new TestServiceLauncher(memberName, memberId);
+    return new FakeServiceLauncher(memberName, memberId);
   }
 
   @Test
@@ -100,26 +106,6 @@ public class AbstractLauncherJUnitTest extends CommonLauncherTestSuite {
     final Properties properties = AbstractLauncher.loadGemFireProperties(new URL("file:///path/to/non_existing/gemfire.properties"));
     assertNotNull(properties);
     assertTrue(properties.isEmpty());
-  }
-
-  @Test
-  public void testLoadGemFirePropertiesFromFile() throws IOException {
-    final Properties expectedGemfireProperties = new Properties();
-
-    expectedGemfireProperties.setProperty(DistributionConfig.NAME_NAME, "memberOne");
-    expectedGemfireProperties.setProperty(DistributionConfig.GROUPS_NAME, "groupOne, groupTwo");
-
-    final File gemfirePropertiesFile = writeGemFirePropertiesToFile(expectedGemfireProperties, "gemfire.properties",
-      "Test gemfire.properties file for AbstractLauncherJUnitTest.testLoadGemFirePropertiesFromFile");
-
-    assertNotNull(gemfirePropertiesFile);
-    assertTrue(gemfirePropertiesFile.isFile());
-
-    final Properties actualGemFireProperties = AbstractLauncher.loadGemFireProperties(
-      gemfirePropertiesFile.toURI().toURL());
-
-    assertNotNull(actualGemFireProperties);
-    assertEquals(expectedGemfireProperties, actualGemFireProperties);
   }
 
   @Test
@@ -266,12 +252,12 @@ public class AbstractLauncherJUnitTest extends CommonLauncherTestSuite {
       TimeUnit.DAYS.toMillis(2) + TimeUnit.HOURS.toMillis(1) + TimeUnit.MINUTES.toMillis(30) + TimeUnit.SECONDS.toMillis(1)));
   }
 
-  protected static final class TestServiceLauncher extends AbstractLauncher<String> {
+  protected static final class FakeServiceLauncher extends AbstractLauncher<String> {
 
     private final String memberId;
     private final String memberName;
 
-    public TestServiceLauncher(final String memberName, final String memberId) {
+    public FakeServiceLauncher(final String memberName, final String memberId) {
       this.memberId = memberId;
       this.memberName = memberName;
     }
@@ -281,6 +267,7 @@ public class AbstractLauncherJUnitTest extends CommonLauncherTestSuite {
       return false;
     }
 
+    @Override
     public String getLogFileName() {
       throw new UnsupportedOperationException("Not Implemented!");
     }
@@ -290,22 +277,22 @@ public class AbstractLauncherJUnitTest extends CommonLauncherTestSuite {
       return memberId;
     }
 
+    @Override
     public String getMemberName() {
       return memberName;
     }
 
+    @Override
     public Integer getPid() {
       throw new UnsupportedOperationException("Not Implemented!");
     }
 
+    @Override
     public String getServiceName() {
       return "TestService";
     }
 
-    public String getId() {
-      throw new UnsupportedOperationException("Not Implemented!");
-    }
-
+    @Override
     public void run() {
       throw new UnsupportedOperationException("Not Implemented!");
     }

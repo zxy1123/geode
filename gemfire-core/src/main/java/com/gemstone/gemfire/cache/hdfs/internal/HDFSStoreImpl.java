@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2002-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.gemstone.gemfire.cache.hdfs.internal;
@@ -31,7 +40,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.logging.log4j.Logger;
 
-import com.gemstone.gemfire.cache.hdfs.HDFSEventQueueAttributes;
 import com.gemstone.gemfire.cache.hdfs.HDFSIOException;
 import com.gemstone.gemfire.cache.hdfs.HDFSStore;
 import com.gemstone.gemfire.cache.hdfs.HDFSStoreMutator;
@@ -131,7 +139,7 @@ public class HDFSStoreImpl implements HDFSStore {
       throw new HDFSIOException(ex.getMessage(),ex);
     }    
     //HDFSCompactionConfig has already been initialized
-    long cleanUpIntervalMillis = getHDFSCompactionConfig().getOldFilesCleanupIntervalMins() * 60 * 1000;
+    long cleanUpIntervalMillis = getPurgeInterval() * 60 * 1000;
     Path cleanUpIntervalPath = new Path(getHomeDir(), HoplogConfig.CLEAN_UP_INTERVAL_FILE_NAME);
     HoplogUtil.exposeCleanupIntervalMillis(fileSystem, cleanUpIntervalPath, cleanUpIntervalMillis);
   }
@@ -448,7 +456,7 @@ public class HDFSStoreImpl implements HDFSStore {
     }
     HDFSStoreConfigHolder newHolder = new HDFSStoreConfigHolder(configHolder);
     newHolder.copyFrom(mutator);
-    newHolder.getHDFSCompactionConfig().validate();
+    newHolder.validate();
     HDFSStore oldStore = configHolder;
     configHolder = newHolder;
     if (logger.isDebugEnabled()) {
@@ -495,13 +503,13 @@ public class HDFSStoreImpl implements HDFSStore {
   }
 
   @Override
-  public int getMaxFileSize() {
-    return configHolder.getMaxFileSize();
+  public int getWriteOnlyFileRolloverSize() {
+    return configHolder.getWriteOnlyFileRolloverSize();
   }
 
   @Override
-  public int getFileRolloverInterval() {
-    return configHolder.getFileRolloverInterval();
+  public int getWriteOnlyFileRolloverInterval() {
+    return configHolder.getWriteOnlyFileRolloverInterval();
   }
 
   @Override
@@ -510,15 +518,81 @@ public class HDFSStoreImpl implements HDFSStore {
   }
 
   @Override
-  public HDFSEventQueueAttributes getHDFSEventQueueAttributes() {
-    return configHolder.getHDFSEventQueueAttributes();
+  public int getMinorCompactionThreads() {
+    return configHolder.getMinorCompactionThreads();
   }
 
   @Override
-  public HDFSCompactionConfig getHDFSCompactionConfig() {
-    return (HDFSCompactionConfig) configHolder.getHDFSCompactionConfig();
+  public boolean getMajorCompaction() {
+    return configHolder.getMajorCompaction();
   }
 
+  @Override
+  public int getMajorCompactionInterval() {
+    return configHolder.getMajorCompactionInterval();
+  }
+
+  @Override
+  public int getMajorCompactionThreads() {
+    return configHolder.getMajorCompactionThreads();
+  }
+
+
+  @Override
+  public int getInputFileSizeMax() {
+    return configHolder.getInputFileSizeMax();
+  }
+
+  @Override
+  public int getInputFileCountMin() {
+    return configHolder.getInputFileCountMin();
+  }
+
+  @Override
+  public int getInputFileCountMax() {
+    return configHolder.getInputFileCountMax();
+  }
+
+  @Override
+  public int getPurgeInterval() {
+    return configHolder.getPurgeInterval();
+  }
+
+  @Override
+  public String getDiskStoreName() {
+    return configHolder.getDiskStoreName();
+  }
+
+  @Override
+  public int getMaxMemory() {
+    return configHolder.getMaxMemory();
+  }
+
+  @Override
+  public int getBatchSize() {
+    return configHolder.getBatchSize();
+  }
+
+  @Override
+  public int getBatchInterval() {
+    return configHolder.getBatchInterval();
+  }
+
+  @Override
+  public boolean getBufferPersistent() {
+    return configHolder.getBufferPersistent();
+  }
+
+  @Override
+  public boolean getSynchronousDiskWrite() {
+    return configHolder.getSynchronousDiskWrite();
+  }
+
+  @Override
+  public int getDispatcherThreads() {
+    return configHolder.getDispatcherThreads();
+  }
+  
   @Override
   public HDFSStoreMutator createHdfsStoreMutator() {
     return new HDFSStoreMutatorImpl();

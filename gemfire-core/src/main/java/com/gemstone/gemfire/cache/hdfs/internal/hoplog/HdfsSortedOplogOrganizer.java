@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.cache.hdfs.internal.hoplog;
 
@@ -43,7 +52,6 @@ import com.gemstone.gemfire.InternalGemFireException;
 import com.gemstone.gemfire.cache.CacheClosedException;
 import com.gemstone.gemfire.cache.hdfs.HDFSIOException;
 import com.gemstone.gemfire.cache.hdfs.HDFSStore;
-import com.gemstone.gemfire.cache.hdfs.HDFSStore.HDFSCompactionConfig;
 import com.gemstone.gemfire.cache.hdfs.internal.QueuedPersistentEvent;
 import com.gemstone.gemfire.cache.hdfs.internal.SortedHoplogPersistedEvent;
 import com.gemstone.gemfire.cache.hdfs.internal.cardinality.CardinalityMergeException;
@@ -157,8 +165,7 @@ public class HdfsSortedOplogOrganizer extends AbstractHoplogOrganizer<SortedHopl
     FileSystem fs = store.getFileSystem();
     Path cleanUpIntervalPath = new Path(store.getHomeDir(), HoplogConfig.CLEAN_UP_INTERVAL_FILE_NAME); 
     if (!fs.exists(cleanUpIntervalPath)) {
-      HDFSCompactionConfig compactionConf = store.getHDFSCompactionConfig();
-      long intervalDurationMillis = compactionConf.getOldFilesCleanupIntervalMins() * 60 * 1000;
+      long intervalDurationMillis = store.getPurgeInterval() * 60 * 1000;
       HoplogUtil.exposeCleanupIntervalMillis(fs, cleanUpIntervalPath, intervalDurationMillis);
     }
 
@@ -316,8 +323,7 @@ public class HdfsSortedOplogOrganizer extends AbstractHoplogOrganizer<SortedHopl
     
     // determine if a major compaction is needed and create a compaction request
     // with compaction manager
-    HDFSCompactionConfig compactionConf = store.getHDFSCompactionConfig();
-    if (compactionConf.getAutoMajorCompaction()) {
+    if (store.getMajorCompaction()) {
       if (isMajorCompactionNeeded()) {
         req = new CompactionRequest(regionFolder, bucketId, getCompactor(), true);
         HDFSCompactionManager.getInstance(store).submitRequest(req);
@@ -337,9 +343,8 @@ public class HdfsSortedOplogOrganizer extends AbstractHoplogOrganizer<SortedHopl
    */
   private boolean isMajorCompactionNeeded() throws IOException {
     // major compaction interval in milliseconds
-    HDFSCompactionConfig compactionConf = store.getHDFSCompactionConfig();
     
-    long majorCInterval = ((long)compactionConf.getMajorCompactionIntervalMins()) * 60 * 1000;
+    long majorCInterval = ((long)store.getMajorCompactionInterval()) * 60 * 1000;
 
     Hoplog oplog = hoplogReadersController.getOldestHoplog();
     if (oplog == null) {
@@ -677,7 +682,7 @@ public class HdfsSortedOplogOrganizer extends AbstractHoplogOrganizer<SortedHopl
    * @return number of files deleted
    */
    synchronized int initiateCleanup() throws IOException {
-    int conf = store.getHDFSCompactionConfig().getOldFilesCleanupIntervalMins();
+    int conf = store.getPurgeInterval();
     // minutes to milliseconds
     long intervalDurationMillis = conf * 60 * 1000;
     // Any expired hoplog with timestamp less than targetTS is a delete
@@ -752,8 +757,7 @@ public class HdfsSortedOplogOrganizer extends AbstractHoplogOrganizer<SortedHopl
         } else if (timestamp < ts && name.endsWith(FLUSH_HOPLOG_EXTENSION)) {
           isTarget = true;
         } else if (timestamp < ts && name.endsWith(MAJOR_HOPLOG_EXTENSION)) {
-          HDFSCompactionConfig compactionConf = store.getHDFSCompactionConfig();
-          long majorCInterval = ((long)compactionConf.getMajorCompactionIntervalMins()) * 60 * 1000;
+          long majorCInterval = ((long)store.getMajorCompactionInterval()) * 60 * 1000;
           if (timestamp < (System.currentTimeMillis() - majorCInterval)) {
             isTarget = true;
           }
@@ -1360,10 +1364,9 @@ public class HdfsSortedOplogOrganizer extends AbstractHoplogOrganizer<SortedHopl
       // minimum number of files that must be present for compaction to be worth
       final int MIN_FILE_COUNT_COMPACTION;
       
-      HDFSCompactionConfig compactionConf = store.getHDFSCompactionConfig();
-      MAX_COMPACTION_FILE_SIZE = ((long)compactionConf.getMaxInputFileSizeMB()) * 1024 *1024;
-      MAX_FILE_COUNT_COMPACTION = compactionConf.getMaxInputFileCount();
-      MIN_FILE_COUNT_COMPACTION = compactionConf.getMinInputFileCount();
+      MAX_COMPACTION_FILE_SIZE = ((long)store.getInputFileSizeMax()) * 1024 *1024;
+      MAX_FILE_COUNT_COMPACTION = store.getInputFileCountMax();
+      MIN_FILE_COUNT_COMPACTION = store.getInputFileCountMin();
 
       try {
         // skip till first file smaller than the max compaction file size is

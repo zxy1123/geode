@@ -1,5 +1,18 @@
-/**
- * 
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal.cache;
 
@@ -41,10 +54,10 @@ import com.gemstone.gemfire.internal.logging.log4j.LogMarker;
  * @author vivekb
  * 
  */
-public final class DistTXCommitMessage extends TXMessage {
+public class DistTXCommitMessage extends TXMessage {
 
   private static final Logger logger = LogService.getLogger();
-  private ArrayList<ArrayList<DistTxThinEntryState>> entryStateList = null;
+  protected ArrayList<ArrayList<DistTxThinEntryState>> entryStateList = null;
   
   /** for deserialization */
   public DistTXCommitMessage() {
@@ -71,7 +84,6 @@ public final class DistTXCommitMessage extends TXMessage {
     GemFireCacheImpl cache = GemFireCacheImpl.getInstance();
     TXManagerImpl txMgr = cache.getTXMgr();
     final TXStateProxy txStateProxy = txMgr.getTXState();
-    boolean commitSuccessful = false;
     TXCommitMessage cmsg = null;
     try {
       // do the actual commit, only if it was not done before
@@ -86,7 +98,6 @@ public final class DistTXCommitMessage extends TXMessage {
         if (txMgr.isExceptionToken(cmsg)) {
           throw txMgr.getExceptionForToken(cmsg, txId);
         }
-        commitSuccessful = true;
       } else {
         // [DISTTX] TODO - Handle scenarios of no txState
         // if no TXState was created (e.g. due to only getEntry/size operations
@@ -124,15 +135,14 @@ public final class DistTXCommitMessage extends TXMessage {
           ((DistTXStateProxyImplOnDatanode) txStateProxy)
               .populateDistTxEntryStates(this.entryStateList);
           txStateProxy.setCommitOnBehalfOfRemoteStub(true);
+          
           txMgr.commit();
-          commitSuccessful = true;
+
           cmsg = txStateProxy.getCommitMessage();
         }
       }
     } finally {
-      if (commitSuccessful) {
         txMgr.removeHostedTXState(txId);
-      }
     }
     DistTXCommitReplyMessage.send(getSender(), getProcessorId(), cmsg,
         getReplySender(dm));
@@ -143,6 +153,7 @@ public final class DistTXCommitMessage extends TXMessage {
     return false;
   }
 
+  
   @Override
   public void fromData(DataInput in) throws IOException, ClassNotFoundException {
     super.fromData(in);

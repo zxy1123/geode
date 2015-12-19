@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2002-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * more patents listed at http://www.pivotal.io/patents.
- *========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.gemstone.gemfire.internal.cache;
@@ -343,7 +352,55 @@ public class TXRegionState {
       // passed. So do nothing.
     }
   }
-    
+
+  void buildMessageForAdjunctReceivers(LocalRegion r, TXCommitMessage msg) {
+    try {
+      if (!r.getScope().isLocal() && !this.entryMods.isEmpty()) {
+        
+        msg.startRegion(r, entryMods.size());
+        Iterator it = this.entryMods.entrySet().iterator();
+        Set<InternalDistributedMember> newMemberSet = new HashSet<InternalDistributedMember>();
+        
+        while (it.hasNext()) {
+          Map.Entry me = (Map.Entry)it.next();
+          Object eKey = me.getKey();
+          TXEntryState txes = (TXEntryState)me.getValue();
+          txes.buildMessage(r, eKey, msg,this.otherMembers);
+          if(txes.getFilterRoutingInfo()!=null) {
+            newMemberSet.addAll(txes.getFilterRoutingInfo().getMembers());
+          }
+          if(txes.getAdjunctRecipients()!=null) {
+            
+            Set adjunctRecipients = txes.getAdjunctRecipients();
+            newMemberSet.addAll(adjunctRecipients);  
+          }
+        }
+        
+        
+        if (!newMemberSet.equals(this.otherMembers)) 
+        { 
+          // r.getCache().getLogger().info("DEBUG: participants list has changed! bug 32999."); 
+          // Flag the message that the lock manager needs to be updated with the new member set
+          msg.setUpdateLockMembers();
+          this.otherMembers = newMemberSet;
+        }
+        
+        msg.finishRegion(this.otherMembers);
+      }
+    }
+    catch (RegionDestroyedException ex) {
+      // region was destroyed out from under us; after conflict checking
+      // passed. So act as if the region destroy happened right after the
+      // commit. We act this way by doing nothing; including distribution
+      // of this region's commit data.
+    }
+    catch (CancelException ex) {
+      // cache was closed out from under us; after conflict checking
+      // passed. So do nothing.
+    }
+  }
+
+  
   void buildCompleteMessage(LocalRegion r, TXCommitMessage msg) {
     try {
       if (!this.entryMods.isEmpty()) {

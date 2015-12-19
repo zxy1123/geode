@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.management.internal.cli;
 
@@ -16,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.springframework.shell.core.CommandMarker;
@@ -124,6 +134,26 @@ public class GfshParserJUnitTest {
   private static final Completion[] OPTION3_COMPLETIONS = {
       new Completion("option3"), new Completion("option3Alternate") };
 
+  private CommandManager commandManager;
+
+  private GfshParser parser;
+
+  @Before
+  public void setUp() throws Exception {
+    // Make sure no prior tests leave the CommandManager in a funky state
+    CommandManager.clearInstance();
+
+    commandManager = CommandManager.getInstance(false);
+    commandManager.add(Commands.class.newInstance());
+    commandManager.add(SimpleConverter.class.newInstance());
+    commandManager.add(StringArrayConverter.class.newInstance());
+    commandManager.add(StringListConverter.class.newInstance());
+    // Set up the parser
+    parser = new GfshParser(commandManager);
+
+    CliUtil.isGfshVM = false;
+  }
+
   @After
   public void tearDown() {
     CommandManager.clearInstance();
@@ -140,14 +170,6 @@ public class GfshParserJUnitTest {
    */
   @Test
   public void testComplete() throws Exception {
-    // get a CommandManager, add sample commands
-    CommandManager commandManager = CommandManager.getInstance(false);
-    assertNotNull("CommandManager should not be null.", commandManager);
-    commandManager.add(Commands.class.newInstance());
-    commandManager.add(SimpleConverter.class.newInstance());
-    // Set up the parser
-    GfshParser parser = new GfshParser(commandManager);
-
     // Get the names of the command
     String[] command1Names = ((CliCommand) METHOD_command1
         .getAnnotation(CliCommand.class)).value();
@@ -444,14 +466,6 @@ public class GfshParserJUnitTest {
    */
   @Test
   public void testCompleteAdvanced() throws Exception {
-    // get a CommandManager, add sample commands
-    CommandManager commandManager = CommandManager.getInstance(false);
-    assertNotNull("CommandManager should not be null.", commandManager);
-    commandManager.add(Commands.class.newInstance());
-    commandManager.add(SimpleConverter.class.newInstance());
-    // Set up the parser
-    GfshParser parser = new GfshParser(commandManager);
-
     // Get the names of the command
     String[] command1Names = ((CliCommand) METHOD_command1
         .getAnnotation(CliCommand.class)).value();
@@ -769,17 +783,6 @@ public class GfshParserJUnitTest {
    */
   @Test
   public void testParse() throws Exception {
-    // get a CommandManager, add sample commands
-    CommandManager commandManager = CommandManager.getInstance(false);
-    assertNotNull("CommandManager should not be null.", commandManager);
-    commandManager.add(StringArrayConverter.class.newInstance());
-    commandManager.add(StringListConverter.class.newInstance());
-    commandManager.add(SimpleConverter.class.newInstance());
-    commandManager.add(Commands.class.newInstance());
-
-    // Set up the parser
-    GfshParser parser = new GfshParser(commandManager);
-
     // Get the names of the command
     String[] command1Names = ((CliCommand) METHOD_command1
         .getAnnotation(CliCommand.class)).value();

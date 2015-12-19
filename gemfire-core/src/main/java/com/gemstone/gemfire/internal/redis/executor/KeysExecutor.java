@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.redis.executor;
 
 import java.util.ArrayList;
@@ -11,7 +27,7 @@ import com.gemstone.gemfire.internal.redis.Command;
 import com.gemstone.gemfire.internal.redis.ExecutionHandlerContext;
 import com.gemstone.gemfire.internal.redis.RedisConstants;
 import com.gemstone.gemfire.internal.redis.RedisConstants.ArityDef;
-import com.gemstone.gemfire.internal.redis.executor.org.apache.hadoop.fs.GlobPattern;
+import com.gemstone.gemfire.internal.redis.org.apache.hadoop.fs.GlobPattern;
 import com.gemstone.gemfire.redis.GemFireRedisServer;
 
 public class KeysExecutor extends AbstractExecutor {
@@ -25,7 +41,7 @@ public class KeysExecutor extends AbstractExecutor {
     }
 
     String glob = Coder.bytesToString(commandElems.get(1));
-    Set<String> allKeys = context.getRegionCache().metaKeySet();
+    Set<String> allKeys = context.getRegionProvider().metaKeySet();
     List<String> matchingKeys = new ArrayList<String>();
 
     Pattern pattern;
@@ -37,8 +53,7 @@ public class KeysExecutor extends AbstractExecutor {
     }
 
     for (String key: allKeys) {
-      if (!(key.equals(GemFireRedisServer.LISTS_META_DATA_REGION) ||
-              key.equals(GemFireRedisServer.REDIS_META_DATA_REGION) ||
+      if (!(key.equals(GemFireRedisServer.REDIS_META_DATA_REGION) ||
               key.equals(GemFireRedisServer.STRING_REGION) ||
               key.equals(GemFireRedisServer.HLL_REGION))
               && pattern.matcher(key).matches())

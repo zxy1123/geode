@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal.cache.partitioned;
 
@@ -710,7 +719,44 @@ public final class PutAllPRMessage extends PartitionMessageWithDirectReply
   protected boolean mayAddToMultipleSerialGateways(DistributionManager dm) {
     return _mayAddToMultipleSerialGateways(dm);
   }
+  
+  @Override
+  public String toString()
+  {
+    StringBuffer buff = new StringBuffer();
+    String className = getClass().getName();
+//    className.substring(className.lastIndexOf('.', className.lastIndexOf('.') - 1) + 1);  // partition.<foo> more generic version 
+    buff.append(className.substring(className.indexOf(PN_TOKEN) + PN_TOKEN.length())); // partition.<foo>
+    buff.append("(prid="); // make sure this is the first one
+    buff.append(this.regionId);
+    
+    // Append name, if we have it
+    String name = null;
+    try {
+      PartitionedRegion pr = PartitionedRegion.getPRFromId(this.regionId);
+      if (pr != null) {
+        name = pr.getFullPath();
+      }
+    }
+    catch (Exception e) {
+      /* ignored */
+      name = null;
+    }
+    if (name != null) {
+      buff.append(" (name = \"").append(name).append("\")");
+    }
 
+    appendFields(buff);
+    buff.append(" ,distTx=");
+    buff.append(this.isTransactionDistributed);
+    buff.append(" ,putAlldatasize=");
+    buff.append(this.putAllPRDataSize);
+    // [DISTTX] TODO Disable this
+    buff.append(" ,putAlldata=");
+    buff.append(Arrays.toString(this.putAllPRData));
+    buff.append(")");
+    return buff.toString();
+  }
 
   public static final class PutAllReplyMessage extends ReplyMessage {
     /** Result of the PutAll operation */

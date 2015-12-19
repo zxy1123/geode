@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal;
 
@@ -3536,21 +3545,26 @@ public class DataSerializableJUnitTest extends TestCase
   }
 
   public void testObjectEnum() throws Exception {
-    System.getProperties().setProperty("DataSerializer.DEBUG", "true");
-    DAY_OF_WEEK e = DAY_OF_WEEK.SUN;
-    MONTH m = MONTH.FEB;
-    DataOutputStream out = getDataOutput();
-    DataSerializer.writeObject(e, out);
-    DataSerializer.writeObject(m, out);
-    out.flush();
-
-    DataInput in = getDataInput();
-    DAY_OF_WEEK e2 = (DAY_OF_WEEK)DataSerializer.readObject(in);
-    MONTH m2 = (MONTH)DataSerializer.readObject(in);
-    assertEquals(e, e2);
-    assertEquals(m, m2);
-    // Make sure there's nothing left in the stream
-    assertEquals(0, in.skipBytes(1));
+    final String propName = "DataSerializer.DEBUG";
+    System.setProperty(propName, "true");
+    try {
+      DAY_OF_WEEK e = DAY_OF_WEEK.SUN;
+      MONTH m = MONTH.FEB;
+      DataOutputStream out = getDataOutput();
+      DataSerializer.writeObject(e, out);
+      DataSerializer.writeObject(m, out);
+      out.flush();
+  
+      DataInput in = getDataInput();
+      DAY_OF_WEEK e2 = (DAY_OF_WEEK)DataSerializer.readObject(in);
+      MONTH m2 = (MONTH)DataSerializer.readObject(in);
+      assertEquals(e, e2);
+      assertEquals(m, m2);
+      // Make sure there's nothing left in the stream
+      assertEquals(0, in.skipBytes(1));
+    } finally {
+      System.getProperties().remove(propName);
+    }
   }
   
   /**

@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.redis.executor;
 
 public enum SortedSetQuery {
@@ -104,67 +120,67 @@ public enum SortedSetQuery {
     }
   }, ZRBSNINFI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score <= $1 ORDER BY value asc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score <= $1 ORDER BY entry.value asc LIMIT $2";
     }
   }, ZRBSNINF {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score < $1 ORDER BY value asc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score < $1 ORDER BY entry.value asc LIMIT $2";
     }
   }, ZRBSPINFI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score >= $1 ORDER BY value asc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score >= $1 ORDER BY entry.value asc LIMIT $2";
     }
   }, ZRBSPINF {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score > $1 ORDER BY value asc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score > $1 ORDER BY entry.value asc LIMIT $2";
     }
   }, ZRBSSTISI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score >= $1 AND value.score <= $2 ORDER BY value asc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score >= $1 AND entry.value.score <= $2 ORDER BY entry.value asc LIMIT $3";
     }
   }, ZRBSSTI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score >= $1 AND value.score < $2 ORDER BY value asc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score >= $1 AND entry.value.score < $2 ORDER BY entry.value asc LIMIT $3";
     }
   }, ZRBSSI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score > $1 AND value.score <= $2 ORDER BY value asc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score > $1 AND entry.value.score <= $2 ORDER BY entry.value asc LIMIT $3";
     }
   }, ZRBS {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score > $1 AND value.score < $2 ORDER BY value asc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score > $1 AND entry.value.score < $2 ORDER BY entry.value asc LIMIT $3";
     }
   }, ZREVRBSNINFI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value <= $1 ORDER BY value desc, key desc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value <= $1 ORDER BY entry.value desc, entry.key desc LIMIT $2";
     }
   }, ZREVRBSNINF {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score < $1 ORDER BY value desc, key desc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score < $1 ORDER BY entry.value desc, entry.key desc LIMIT $2";
     }
   }, ZREVRBSPINFI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score >= $1 ORDER BY value desc, key desc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score >= $1 ORDER BY entry.value desc, entry.key desc LIMIT $2";
     }
   }, ZREVRBSPINF {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score > $1 ORDER BY value desc, key desc LIMIT $2";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score > $1 ORDER BY entry.value desc, entry.key desc LIMIT $2";
     }
   }, ZREVRBSSTISI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score >= $1 AND value.score <= $2 ORDER BY value desc, key desc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score >= $1 AND entry.value.score <= $2 ORDER BY entry.value desc, entry.key desc LIMIT $3";
     }
   }, ZREVRBSSTI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score >= $1 AND value.score < $2 ORDER BY value desc, key desc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score >= $1 AND entry.value.score < $2 ORDER BY entry.value desc, entry.key desc LIMIT $3";
     }
   }, ZREVRBSSI {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score > $1 AND value.score <= $2 ORDER BY value desc, key desc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score > $1 AND entry.value.score <= $2 ORDER BY entry.value desc, entry.key desc LIMIT $3";
     }
   }, ZREVRBS {
     public String getQueryString(String fullpath) {
-      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE value.score > $1 AND value.score < $2 ORDER BY value desc, key desc LIMIT $3";
+      return "SELECT DISTINCT entry.key, entry.value FROM " + fullpath + ".entrySet entry WHERE entry.value.score > $1 AND entry.value.score < $2 ORDER BY entry.value desc, entry.key desc LIMIT $3";
     }
   }, ZREVRANGE {
     public String getQueryString(String fullpath) {
@@ -176,11 +192,11 @@ public enum SortedSetQuery {
     }
   }, ZRANK {
     public String getQueryString(String fullpath) {
-      return "SELECT COUNT(*) FROM " + fullpath + ".entrySet entry WHERE value < $1 OR (value = $2 AND key.compareTo($3) < 0)";
+      return "SELECT COUNT(*) FROM " + fullpath + ".entrySet entry WHERE entry.value < $1 OR (entry.value = $2 AND entry.key.compareTo($3) < 0)";
     }
   }, ZREVRANK {
     public String getQueryString(String fullpath) {
-      return "SELECT COUNT(*) FROM " + fullpath + ".entrySet entry WHERE value > $1 OR (value = $2 AND key.compareTo($3) > 0)";
+      return "SELECT COUNT(*) FROM " + fullpath + ".entrySet entry WHERE entry.value > $1 OR (entry.value = $2 AND entry.key.compareTo($3) > 0)";
     }
   };
 

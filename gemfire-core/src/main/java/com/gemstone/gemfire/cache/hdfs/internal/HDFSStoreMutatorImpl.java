@@ -1,63 +1,61 @@
-/*=========================================================================
- * Copyright (c) 2002-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.gemstone.gemfire.cache.hdfs.internal;
 
-import com.gemstone.gemfire.cache.hdfs.HDFSEventQueueAttributes;
-import com.gemstone.gemfire.cache.hdfs.HDFSEventQueueAttributesFactory;
 import com.gemstone.gemfire.cache.hdfs.HDFSStore;
 import com.gemstone.gemfire.cache.hdfs.HDFSStoreMutator;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSStoreConfigHolder.AbstractHDFSCompactionConfigHolder;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 
 public class HDFSStoreMutatorImpl implements HDFSStoreMutator {
   private HDFSStoreConfigHolder configHolder;
   private Boolean autoCompact;
-  private HDFSCompactionConfigMutator compactionMutator;
-  private HDFSEventQueueAttributesMutator qMutator;
+  private Boolean autoMajorCompact;
 
   public HDFSStoreMutatorImpl() {
     configHolder = new HDFSStoreConfigHolder();
     configHolder.resetDefaultValues();
-    compactionMutator = new HDFSCompactionConfigMutatorImpl(configHolder.getHDFSCompactionConfig());
-    qMutator = new HDFSEventQueueAttributesMutatorImpl(null);
   }
 
   public HDFSStoreMutatorImpl(HDFSStore store) {
     configHolder = new HDFSStoreConfigHolder(store);
-    compactionMutator = new HDFSCompactionConfigMutatorImpl(configHolder.getHDFSCompactionConfig());
-    // The following two steps are needed to set the null boolean values in compactionMutator
-    configHolder.setMinorCompaction(configHolder.getMinorCompaction());
-    compactionMutator.setAutoMajorCompaction(configHolder.getHDFSCompactionConfig().getAutoMajorCompaction());
-    qMutator = new HDFSEventQueueAttributesMutatorImpl(configHolder.getHDFSEventQueueAttributes());
   }
   
-  public HDFSStoreMutator setMaxFileSize(int maxFileSize) {
-    configHolder.setMaxFileSize(maxFileSize);
+  public HDFSStoreMutator setWriteOnlyFileRolloverSize(int maxFileSize) {
+    configHolder.setWriteOnlyFileRolloverSize(maxFileSize);
     return this;
   }
   @Override
-  public int getMaxFileSize() {
-    return configHolder.getMaxFileSize();
+  public int getWriteOnlyFileRolloverSize() {
+    return configHolder.getWriteOnlyFileRolloverSize();
   }
 
   @Override
-  public HDFSStoreMutator setFileRolloverInterval(int count) {
-    configHolder.setFileRolloverInterval(count);
+  public HDFSStoreMutator setWriteOnlyFileRolloverInterval(int count) {
+    configHolder.setWriteOnlyFileRolloverInterval(count);
     return this;
   }
   @Override
-  public int getFileRolloverInterval() {
-    return configHolder.getFileRolloverInterval();
+  public int getWriteOnlyFileRolloverInterval() {
+    return configHolder.getWriteOnlyFileRolloverInterval();
   }
 
   @Override
-  public HDFSCompactionConfigMutator setMinorCompaction(boolean auto) {
+  public HDFSStoreMutator setMinorCompaction(boolean auto) {
     autoCompact = Boolean.valueOf(auto);
     configHolder.setMinorCompaction(auto);
     return null;
@@ -68,165 +66,107 @@ public class HDFSStoreMutatorImpl implements HDFSStoreMutator {
   }
   
   @Override
-  public HDFSCompactionConfigMutator getCompactionConfigMutator() {
-    return compactionMutator;
+  public HDFSStoreMutator setMinorCompactionThreads(int count) {
+    configHolder.setMinorCompactionThreads(count);
+    return this;
+  }
+  @Override
+  public int getMinorCompactionThreads() {
+    return configHolder.getMinorCompactionThreads();
+  }
+  
+  @Override
+  public HDFSStoreMutator setMajorCompaction(boolean auto) {
+    autoMajorCompact = Boolean.valueOf(auto);
+    configHolder.setMajorCompaction(auto);
+    return this;
+  }
+  @Override
+  public Boolean getMajorCompaction() {
+    return autoMajorCompact;
   }
 
   @Override
-  public HDFSEventQueueAttributesMutator getHDFSEventQueueAttributesMutator() {
-    return qMutator;
+  public HDFSStoreMutator setMajorCompactionInterval(int count) {
+    configHolder.setMajorCompactionInterval(count);
+    return this;
+  }
+  @Override
+  public int getMajorCompactionInterval() {
+    return configHolder.getMajorCompactionInterval();
   }
 
-  public static class HDFSEventQueueAttributesMutatorImpl implements HDFSEventQueueAttributesMutator {
-    private HDFSEventQueueAttributesFactory factory = new HDFSEventQueueAttributesFactory();
-    int batchSize = -1;
-    int batchInterval = -1;
-    
-    public HDFSEventQueueAttributesMutatorImpl(HDFSEventQueueAttributes qAttrs) {
-      if (qAttrs == null) {
-        return;
-      }
-      
-      setBatchSizeMB(qAttrs.getBatchSizeMB());
-      setBatchTimeInterval(qAttrs.getBatchTimeInterval());
-    }
-    
-    @Override
-    public HDFSEventQueueAttributesMutator setBatchSizeMB(int size) {
-      factory.setBatchSizeMB(size);
-      batchSize = size;
-      // call factory.set to execute attribute value validation
-      return this;
-    }
-    @Override
-    public int getBatchSizeMB() {
-      return batchSize;
-    }
-
-    @Override
-    public HDFSEventQueueAttributesMutator setBatchTimeInterval(int interval) {
-      batchInterval = interval;
-      // call factory.set to execute attribute value validation
-      factory.setBatchTimeInterval(interval);
-      return this;
-    }
-    @Override
-    public int getBatchTimeInterval() {
-      return batchInterval;
-    }
-    
-    @Override
-    public String toString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append("HDFSEventQueueAttributesMutatorImpl [");
-      if (batchSize > -1) {
-        builder.append("batchSize=");
-        builder.append(batchSize);
-        builder.append(", ");
-      }
-      if (batchInterval > -1) {
-        builder.append("batchInterval=");
-        builder.append(batchInterval);
-      }
-      builder.append("]");
-      return builder.toString();
-    }
+  @Override
+  public HDFSStoreMutator setMajorCompactionThreads(int count) {
+    configHolder.setMajorCompactionThreads(count);
+    return this;
+  }
+  @Override
+  public int getMajorCompactionThreads() {
+    return configHolder.getMajorCompactionThreads();
   }
 
-  /**
-   * @author ashvina
-   */
-  public static class HDFSCompactionConfigMutatorImpl implements HDFSCompactionConfigMutator {
-    private AbstractHDFSCompactionConfigHolder configHolder;
-    private Boolean autoMajorCompact;
-
-    public HDFSCompactionConfigMutatorImpl(AbstractHDFSCompactionConfigHolder configHolder) {
-      this.configHolder = configHolder;
-    }
-
-    @Override
-    public HDFSCompactionConfigMutator setMaxInputFileSizeMB(int size) {
-      configHolder.setMaxInputFileSizeMB(size);
-      return this;
-    }
-    @Override
-    public int getMaxInputFileSizeMB() {
-      return configHolder.getMaxInputFileSizeMB();
-    }
-    
-    @Override
-    public HDFSCompactionConfigMutator setMinInputFileCount(int count) {
-      configHolder.setMinInputFileCount(count);
-      return this;
-    }
-    @Override
-    public int getMinInputFileCount() {
-      return configHolder.getMinInputFileCount();
-    }
-
-    @Override
-    public HDFSCompactionConfigMutator setMaxInputFileCount(int count) {
-      configHolder.setMaxInputFileCount(count);
-      return this;
-    }
-    @Override
-    public int getMaxInputFileCount() {
-      return configHolder.getMaxInputFileCount();
-    }
-
-    @Override
-    public HDFSCompactionConfigMutator setMaxThreads(int count) {
-      configHolder.setMaxThreads(count);
-      return this;
-    }
-    @Override
-    public int getMaxThreads() {
-      return configHolder.getMaxThreads();
-    }
-    
-    @Override
-    public HDFSCompactionConfigMutator setAutoMajorCompaction(boolean auto) {
-      autoMajorCompact = Boolean.valueOf(auto);
-      configHolder.setAutoMajorCompaction(auto);
-      return this;
-    }
-    @Override
-    public Boolean getAutoMajorCompaction() {
-      return autoMajorCompact;
-    }
-
-    @Override
-    public HDFSCompactionConfigMutator setMajorCompactionIntervalMins(int count) {
-      configHolder.setMajorCompactionIntervalMins(count);
-      return this;
-    }
-    @Override
-    public int getMajorCompactionIntervalMins() {
-      return configHolder.getMajorCompactionIntervalMins();
-    }
-
-    @Override
-    public HDFSCompactionConfigMutator setMajorCompactionMaxThreads(int count) {
-      configHolder.setMajorCompactionMaxThreads(count);
-      return this;
-    }
-    @Override
-    public int getMajorCompactionMaxThreads() {
-      return configHolder.getMajorCompactionMaxThreads();
-    }
-
-    @Override
-    public HDFSCompactionConfigMutator setOldFilesCleanupIntervalMins(
-        int interval) {
-      configHolder.setOldFilesCleanupIntervalMins(interval);
-      return this;
-    }
-    @Override
-    public int getOldFilesCleanupIntervalMins() {
-      return configHolder.getOldFilesCleanupIntervalMins();
-    }
+  @Override
+  public HDFSStoreMutator setInputFileSizeMax(int size) {
+    configHolder.setInputFileSizeMax(size);
+    return this;
+  }
+  @Override
+  public int getInputFileSizeMax() {
+    return configHolder.getInputFileSizeMax();
+  }
+  
+  @Override
+  public HDFSStoreMutator setInputFileCountMin(int count) {
+    configHolder.setInputFileCountMin(count);
+    return this;
+  }
+  @Override
+  public int getInputFileCountMin() {
+    return configHolder.getInputFileCountMin();
+  }
+  
+  @Override
+  public HDFSStoreMutator setInputFileCountMax(int count) {
+    configHolder.setInputFileCountMax(count);
+    return this;
+  }
+  @Override
+  public int getInputFileCountMax() {
+    return configHolder.getInputFileCountMax();
+  }
+  
+  @Override
+  public HDFSStoreMutator setPurgeInterval(int interval) {
+    configHolder.setPurgeInterval(interval);
+    return this;
+  }
+  @Override
+  public int getPurgeInterval() {
+    return configHolder.getPurgeInterval();
   }
 
+  @Override
+  public int getBatchSize() {
+    return configHolder.batchSize;
+  }
+  @Override
+  public HDFSStoreMutator setBatchSize(int size) {
+    configHolder.setBatchSize(size);
+    return this;
+  }
+
+  
+  @Override
+  public int getBatchInterval() {
+    return configHolder.batchIntervalMillis;
+  }
+  @Override
+  public HDFSStoreMutator setBatchInterval(int interval) {
+    configHolder.setBatchInterval(interval);
+    return this;
+  }
+    
   public static void assertIsPositive(String name, int count) {
     if (count < 1) {
       throw new IllegalArgumentException(
@@ -249,14 +189,10 @@ public class HDFSStoreMutatorImpl implements HDFSStoreMutator {
       builder.append(autoCompact);
       builder.append(", ");
     }
-    if (compactionMutator.getAutoMajorCompaction() != null) {
+    if (getMajorCompaction() != null) {
       builder.append("autoMajorCompaction=");
-      builder.append(compactionMutator.getAutoMajorCompaction());
+      builder.append(getMajorCompaction());
       builder.append(", ");
-    }
-    if (qMutator != null) {
-      builder.append("qMutator=");
-      builder.append(qMutator);
     }
     builder.append("]");
     return builder.toString();

@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal.cache.execute;
 
@@ -46,7 +55,7 @@ public class SingleHopGetAllPutAllDUnitTest extends PRClientServerTestBase{
    * hosting the data. 
    */
   @Ignore("Disabled due to bug #50618")
-  public void DISABLED_testServerGetAllFunction(){
+  public void testServerGetAllFunction(){
     createScenario();
     client.invoke(SingleHopGetAllPutAllDUnitTest.class,
         "getAll");
@@ -60,17 +69,19 @@ public class SingleHopGetAllPutAllDUnitTest extends PRClientServerTestBase{
   public static void getAll() {
     Region region = cache.getRegion(PartitionedRegionName);
     assertNotNull(region);
-    final List testKeysList = new ArrayList();
+    final List testValueList = new ArrayList();
+    final List testKeyList = new ArrayList();
     for (int i = (totalNumBuckets.intValue() * 3); i > 0; i--) {
-      testKeysList.add("execKey-" + i);
+      testValueList.add("execKey-" + i);    
     }
     DistributedSystem.setThreadsSocketPolicy(false);
     try {
       int j = 0;
       Map origVals = new HashMap();
-      for (Iterator i = testKeysList.iterator(); i.hasNext();) {
-        Integer val = new Integer(j++);
-        Object key = i.next();
+      for (Iterator i = testValueList.iterator(); i.hasNext();) {
+        testKeyList.add(j);
+        Integer key = new Integer(j++);
+        Object val = i.next();
         origVals.put(key, val);
         region.put(key, val);
       }
@@ -79,10 +90,10 @@ public class SingleHopGetAllPutAllDUnitTest extends PRClientServerTestBase{
       verifyMetadata();
       
       // check if the function was routed to pruned nodes
-      Map resultMap = region.getAll(testKeysList);
+      Map resultMap = region.getAll(testKeyList);
       assertTrue(resultMap.equals(origVals));
       pause(2000);
-      Map secondResultMap = region.getAll(testKeysList);
+      Map secondResultMap = region.getAll(testKeyList);
       assertTrue(secondResultMap.equals(origVals));
     }
     catch (Exception e) {

@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal.cache.partitioned.fixed;
 
@@ -762,112 +771,6 @@ public class FixedPartitioningWithColocationAndPersistenceDUnitTest extends
     catch (Exception e) {
       fail("Unexpected Exception ", e);
     }
-  }
-
-  /**
-   * Create bucket on an empty FPR and see if and check if it gets created or
-   * exceptions are thrown. IllegalArguementException is expected for bucketId
-   * which is out of range or doesn't belong to the FPR node.
-   * 
-   */
-  public void testPartitionManagerWithFPR_NoBucketsCreatedYet() {
-    member1.invoke(FixedPartitioningTestBase.class, "createCacheOnMember");
-    FixedPartitionAttributes fpa1 = FixedPartitionAttributes
-        .createFixedPartition(Quarter1, true, 3);
-    FixedPartitionAttributes fpa2 = FixedPartitionAttributes
-        .createFixedPartition(Quarter2, false, 3);
-    List<FixedPartitionAttributes> fpaList = new ArrayList<FixedPartitionAttributes>();
-
-    fpaList.add(fpa1);
-    fpaList.add(fpa2);
-    member1.invoke(FixedPartitioningTestBase.class,
-        "createRegionWithPartitionAttributes", new Object[] { "Quarter",
-            fpaList, 1, 40, 6, new QuarterPartitionResolver(), null, false });
-
-    member2.invoke(FixedPartitioningTestBase.class, "createCacheOnMember");
-    fpa1 = FixedPartitionAttributes.createFixedPartition(Quarter2, true, 3);
-    fpa2 = FixedPartitionAttributes.createFixedPartition(Quarter1, false, 3);
-    fpaList = new ArrayList<FixedPartitionAttributes>();
-    fpaList.add(fpa1);
-    fpaList.add(fpa2);
-    member2.invoke(FixedPartitioningTestBase.class,
-        "createRegionWithPartitionAttributes", new Object[] { "Quarter",
-            fpaList, 1, 40, 6, new QuarterPartitionResolver(), null, false });
-
-    // create primary buckets belonging to this partition
-    member1.invoke(FixedPartitioningTestBase.class,
-        "createPrimaryBucketsBelongingToThisPartition", new Object[] {
-            "Quarter", Boolean.FALSE, Boolean.FALSE });
-
-    // create primary buckets not belonging to this partition
-    member1.invoke(FixedPartitioningTestBase.class,
-        "createPrimaryBucketsBelongingToOtherPartition", new Object[] {
-            "Quarter", Boolean.FALSE, Boolean.FALSE });
-
-    // try creating out of range primary buckets
-    final int outOfRangeBucketId = 13;
-    member1.invoke(FixedPartitioningTestBase.class,
-        "createOutOfRangePrimaryBucketUsingPartitionManager", new Object[] {
-            "Quarter", outOfRangeBucketId, Boolean.FALSE, Boolean.FALSE });
-  }
-
-  /**
-   * Create bucket on FPR for which buckets are created and see if it gets
-   * created
-   */
-
-  public void testPartitionManagerWithFPR_BucketsAlreadyCreated() {
-    member1.invoke(FixedPartitioningTestBase.class, "createCacheOnMember");
-    FixedPartitionAttributes fpa1 = FixedPartitionAttributes
-        .createFixedPartition(Quarter1, true, 3);
-    List<FixedPartitionAttributes> fpaList = new ArrayList<FixedPartitionAttributes>();
-
-    fpaList.add(fpa1);
-    member1.invoke(FixedPartitioningTestBase.class,
-        "createRegionWithPartitionAttributes", new Object[] { "Quarter",
-            fpaList, 1, 40, 12, new QuarterPartitionResolver(), null, false });
-
-    member2.invoke(FixedPartitioningTestBase.class, "createCacheOnMember");
-    fpa1 = FixedPartitionAttributes.createFixedPartition(Quarter2, true, 3);
-    fpaList = new ArrayList<FixedPartitionAttributes>();
-    fpaList.add(fpa1);
-    member2.invoke(FixedPartitioningTestBase.class,
-        "createRegionWithPartitionAttributes", new Object[] { "Quarter",
-            fpaList, 1, 40, 12, new QuarterPartitionResolver(), null, false });
-
-    member3.invoke(FixedPartitioningTestBase.class, "createCacheOnMember");
-    fpa1 = FixedPartitionAttributes.createFixedPartition(Quarter3, true, 3);
-    fpaList = new ArrayList<FixedPartitionAttributes>();
-    fpaList.add(fpa1);
-    member3.invoke(FixedPartitioningTestBase.class,
-        "createRegionWithPartitionAttributes", new Object[] { "Quarter",
-            fpaList, 1, 40, 12, new QuarterPartitionResolver(), null, false });
-
-    member4.invoke(FixedPartitioningTestBase.class, "createCacheOnMember");
-    fpa1 = FixedPartitionAttributes.createFixedPartition(Quarter4, true, 3);
-    fpaList = new ArrayList<FixedPartitionAttributes>();
-    fpaList.add(fpa1);
-    member4.invoke(FixedPartitioningTestBase.class,
-        "createRegionWithPartitionAttributes", new Object[] { "Quarter",
-            fpaList, 1, 40, 12, new QuarterPartitionResolver(), null, false });
-
-    member1.invoke(FixedPartitioningTestBase.class, "putThroughDataStore",
-        new Object[] { "Quarter" });
-
-    // create primary buckets belonging to this partition
-    member1.invoke(FixedPartitioningTestBase.class,
-        "createPrimaryBucketsBelongingToThisPartition", new Object[] {
-            "Quarter", Boolean.FALSE, Boolean.TRUE });
-
-    member1.invoke(FixedPartitioningTestBase.class,
-        "checkPrimaryBucketsForQuarter", new Object[] { 3, 3 });
-    member2.invoke(FixedPartitioningTestBase.class,
-        "checkPrimaryBucketsForQuarter", new Object[] { 3, 3 });
-    member3.invoke(FixedPartitioningTestBase.class,
-        "checkPrimaryBucketsForQuarter", new Object[] { 3, 3 });
-    member4.invoke(FixedPartitioningTestBase.class,
-        "checkPrimaryBucketsForQuarter", new Object[] { 3, 3 });
-
   }
 
   /**

@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.cache;
 
 import java.util.ArrayList;
@@ -468,7 +484,6 @@ public class DistTXStateProxyImplOnCoordinator extends DistTXStateProxyImpl {
 
     // Determine if the set of VMs for any of the Regions for this TX have
     // changed
-    DistributedRegion dr = null;
     HashSet<LocalRegion> affectedRegions = new HashSet<LocalRegion>();
     for (DistTXCoordinatorInterface distTXStateStub : target2realDeals.values()) {
       affectedRegions.clear();
@@ -477,9 +492,8 @@ public class DistTXStateProxyImplOnCoordinator extends DistTXStateProxyImpl {
         if (lr.getScope().isLocal()) {
           continue;
         }
-        // [DISTTX] TODO what about PR?
         if (lr instanceof DistributedRegion) {
-          dr = (DistributedRegion) lr;
+          DistributedRegion dr = (DistributedRegion) lr;
           CacheDistributionAdvisor adv = dr.getCacheDistributionAdvisor();
           Set newRegionMemberView = adv.adviseTX();
 
@@ -489,6 +503,24 @@ public class DistTXStateProxyImplOnCoordinator extends DistTXStateProxyImpl {
                     .create(
                         LocalizedStrings.TXCommitMessage_NEW_MEMBERS_FOR_REGION_0_ORIG_LIST_1_NEW_LIST_2,
                         new Object[] { dr, txParticpants, newRegionMemberView }));
+          }
+        } else if (lr instanceof PartitionedRegion
+            || lr instanceof BucketRegion) {
+          final PartitionedRegion pr;
+          if (lr instanceof BucketRegion) {
+            pr = ((BucketRegion) lr).getPartitionedRegion();
+          } else {
+            pr = (PartitionedRegion) lr;
+          }
+          CacheDistributionAdvisor adv = pr.getCacheDistributionAdvisor();
+          Set newRegionMemberView = adv.adviseTX();
+
+          if (!txParticpants.containsAll(newRegionMemberView)) {
+            logger
+                .warn(LocalizedMessage
+                    .create(
+                        LocalizedStrings.TXCommitMessage_NEW_MEMBERS_FOR_REGION_0_ORIG_LIST_1_NEW_LIST_2,
+                        new Object[] { pr, txParticpants, newRegionMemberView }));
           }
         }
       }
@@ -872,6 +904,7 @@ public class DistTXStateProxyImplOnCoordinator extends DistTXStateProxyImpl {
               event, putallOp.putAllDataSize, putallOp.isBridgeOp);
           bucketToPutallMap.put(bucketId, putAllForBucket);
         } 
+        putallOp.putAllData[i].setFakeEventID();
         putAllForBucket.addEntry(putallOp.putAllData[i]);
 
         KeyInfo ki = new KeyInfo(key, null, null);
@@ -943,12 +976,13 @@ public class DistTXStateProxyImplOnCoordinator extends DistTXStateProxyImpl {
         DistributedRemoveAllOperation removeAllForBucket = 
             bucketToRemoveAllMap.get(bucketId);
         if (removeAllForBucket == null) {
-          EntryEventImpl event = EntryEventImpl.createPutAllEvent(null, region,
-              Operation.REMOVEALL_DESTROY, key, null);
+          EntryEventImpl event = EntryEventImpl.createRemoveAllEvent(op, region, key);
+          event.setEventId(op.removeAllData[i].getEventID());
           removeAllForBucket = new DistributedRemoveAllOperation(
               event, op.removeAllDataSize, op.isBridgeOp);
           bucketToRemoveAllMap.put(bucketId, removeAllForBucket);
         } 
+        op.removeAllData[i].setFakeEventID();
         removeAllForBucket.addEntry(op.removeAllData[i]);
 
         KeyInfo ki = new KeyInfo(key, null, null);

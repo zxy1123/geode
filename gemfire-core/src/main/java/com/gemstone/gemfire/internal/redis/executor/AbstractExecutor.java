@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.redis.executor;
 
 import com.gemstone.gemfire.cache.Region;
@@ -7,7 +23,7 @@ import com.gemstone.gemfire.internal.redis.ExecutionHandlerContext;
 import com.gemstone.gemfire.internal.redis.Executor;
 import com.gemstone.gemfire.internal.redis.RedisDataType;
 import com.gemstone.gemfire.internal.redis.RedisDataTypeMismatchException;
-import com.gemstone.gemfire.internal.redis.RegionCache;
+import com.gemstone.gemfire.internal.redis.RegionProvider;
 import com.gemstone.gemfire.redis.GemFireRedisServer;
 
 /**
@@ -22,7 +38,7 @@ public abstract class AbstractExecutor implements Executor {
   /**
    * Number of Regions used by GemFireRedisServer internally
    */
-  public static final int NUM_DEFAULT_REGIONS = 4;
+  public static final int NUM_DEFAULT_REGIONS = 3;
 
   /**
    * Max length of a list
@@ -53,7 +69,7 @@ public abstract class AbstractExecutor implements Executor {
    * @return Region with name key
    */
   protected Region<?, ?> getOrCreateRegion(ExecutionHandlerContext context, ByteArrayWrapper key, RedisDataType type) {
-    return context.getRegionCache().getOrCreateRegion(key, type, context);
+    return context.getRegionProvider().getOrCreateRegion(key, type, context);
   }
 
   /**
@@ -65,7 +81,7 @@ public abstract class AbstractExecutor implements Executor {
    * @param context context
    */
   protected void checkDataType(ByteArrayWrapper key, RedisDataType type, ExecutionHandlerContext context) {
-    RedisDataType currentType = context.getRegionCache().getRedisDataType(key);
+    RedisDataType currentType = context.getRegionProvider().getRedisDataType(key);
     if (currentType == null)
       return;
     if (currentType == RedisDataType.REDIS_PROTECTED)
@@ -83,13 +99,13 @@ public abstract class AbstractExecutor implements Executor {
    * @return The Query of this key and QueryType
    */
   protected Query getQuery(ByteArrayWrapper key, Enum<?> type, ExecutionHandlerContext context) {
-    return context.getRegionCache().getQuery(key, type);
+    return context.getRegionProvider().getQuery(key, type);
   }
 
   protected boolean removeEntry(ByteArrayWrapper key, RedisDataType type, ExecutionHandlerContext context) {
     if (type == null || type == RedisDataType.REDIS_PROTECTED)
       return false;
-    RegionCache rC = context.getRegionCache();
+    RegionProvider rC = context.getRegionProvider();
     return rC.removeKey(key, type);
   }
 

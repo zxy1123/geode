@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.distributed.internal;
 
@@ -1395,11 +1404,20 @@ public abstract class AbstractDistributionConfig
           }));
     }
   }
+  
+  protected void checkRedisPassword(String value) {
+    
+  }
+  
   public boolean isRedisBindAddressModifiable() {
     return _modifiableDefault();
   }
 
   public boolean isRedisPortModifiable() {
+    return _modifiableDefault();
+  }
+  
+  public boolean isRedisPasswordModifiable() {
     return _modifiableDefault();
   }
 
@@ -1553,6 +1571,7 @@ public abstract class AbstractDistributionConfig
       MEMCACHED_BIND_ADDRESS_NAME,
       REDIS_PORT_NAME,
       REDIS_BIND_ADDRESS_NAME,
+      REDIS_PASSWORD_NAME,
       USER_COMMAND_PACKAGES,
       ENABLE_CLUSTER_CONFIGURATION_NAME,
       USE_CLUSTER_CONFIGURATION_NAME,
@@ -1806,6 +1825,8 @@ public abstract class AbstractDistributionConfig
       this.setRedisPort(((Integer)attValue).intValue());
     } else if (attName.equalsIgnoreCase(REDIS_BIND_ADDRESS_NAME)) {
       this.setRedisBindAddress((String)attValue);
+    } else if (attName.equalsIgnoreCase(REDIS_PASSWORD_NAME)) {
+      this.setRedisPassword((String)attValue);
     } else if (attName.equalsIgnoreCase(USER_COMMAND_PACKAGES)) {
       this.setUserCommandPackages((String)attValue);
     } else if (attName.equalsIgnoreCase(ENABLE_CLUSTER_CONFIGURATION_NAME)) {
@@ -2094,6 +2115,8 @@ public abstract class AbstractDistributionConfig
       return this.getRedisPort();
     } else if (attName.equalsIgnoreCase(REDIS_BIND_ADDRESS_NAME)) {
       return this.getRedisBindAddress();
+    } else if (attName.equalsIgnoreCase(REDIS_PASSWORD_NAME)) {
+      return this.getRedisPassword();
     } else if (attName.equalsIgnoreCase(USER_COMMAND_PACKAGES)) {
       return this.getUserCommandPackages();
     } else if (attName.equalsIgnoreCase(ENABLE_CLUSTER_CONFIGURATION_NAME)) {
@@ -2383,6 +2406,8 @@ public abstract class AbstractDistributionConfig
       return this.isRedisPortModifiable();
     } else if (attName.equalsIgnoreCase(REDIS_BIND_ADDRESS_NAME)) {
       return this.isRedisBindAddressModifiable();
+    } else if (attName.equalsIgnoreCase(REDIS_PASSWORD_NAME)) {
+      return this.isRedisPasswordModifiable();
     } else if (attName.equalsIgnoreCase(USER_COMMAND_PACKAGES)) {
       return this.isUserCommandPackagesModifiable();
     } else if (attName.equalsIgnoreCase(ENABLE_CLUSTER_CONFIGURATION_NAME)) {
@@ -2674,7 +2699,9 @@ public abstract class AbstractDistributionConfig
       return Integer.class;
     } else if (attName.equalsIgnoreCase(REDIS_BIND_ADDRESS_NAME)) {
       return String.class;
-    }else if (attName.equalsIgnoreCase(USER_COMMAND_PACKAGES)) {
+    } else if (attName.equalsIgnoreCase(REDIS_PASSWORD_NAME)) {
+      return String.class;
+    } else if (attName.equalsIgnoreCase(USER_COMMAND_PACKAGES)) {
       return String.class;
     } else if (attName.equalsIgnoreCase(ENABLE_CLUSTER_CONFIGURATION_NAME)) {
       return Boolean.class;
@@ -3130,6 +3157,7 @@ public abstract class AbstractDistributionConfig
     m.put(MEMCACHED_BIND_ADDRESS_NAME, "The address the GemFireMemcachedServer will listen on for remote connections. Default is \"\" which causes the GemFireMemcachedServer to listen on the host's default address. This property is ignored if memcached-port is \"0\".");
     m.put(REDIS_PORT_NAME, "The port GemFireRedisServer will listen on. Default is 0. Set to zero to disable GemFireRedisServer.");
     m.put(REDIS_BIND_ADDRESS_NAME, "The address the GemFireRedisServer will listen on for remote connections. Default is \"\" which causes the GemFireRedisServer to listen on the host's default address. This property is ignored if redis-port is \"0\".");
+    m.put(REDIS_PASSWORD_NAME, "The password which client of GemFireRedisServer must use to authenticate themselves. The default is none and no authentication will be required.");
     m.put(ENABLE_CLUSTER_CONFIGURATION_NAME, LocalizedStrings.AbstractDistributionConfig_ENABLE_SHARED_CONFIGURATION.toLocalizedString());
     m.put(USE_CLUSTER_CONFIGURATION_NAME, LocalizedStrings.AbstractDistributionConfig_USE_SHARED_CONFIGURATION.toLocalizedString());
     m.put(LOAD_CLUSTER_CONFIG_FROM_DIR_NAME, LocalizedStrings.AbstractDistributionConfig_LOAD_SHARED_CONFIGURATION_FROM_DIR.toLocalizedString(SharedConfiguration.CLUSTER_CONFIG_ARTIFACTS_DIR_NAME));

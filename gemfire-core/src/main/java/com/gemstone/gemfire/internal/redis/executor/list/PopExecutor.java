@@ -1,8 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.redis.executor.list;
 
 import java.util.List;
 
 import com.gemstone.gemfire.cache.Region;
+import com.gemstone.gemfire.cache.RegionDestroyedException;
 import com.gemstone.gemfire.internal.redis.ByteArrayWrapper;
 import com.gemstone.gemfire.internal.redis.Coder;
 import com.gemstone.gemfire.internal.redis.Command;
@@ -24,16 +41,15 @@ public abstract class PopExecutor extends ListExecutor implements Extendable {
     ByteArrayWrapper key = command.getKey();
 
     checkDataType(key, RedisDataType.REDIS_LIST, context);
-    Region<Integer, ByteArrayWrapper> keyRegion = getRegion(context, key);
-    Region<String, Integer> meta = context.getRegionCache().getListsMetaRegion();
+    Region keyRegion = getRegion(context, key);
 
-    if (keyRegion == null || keyRegion.size() == 0) {
+    if (keyRegion == null || keyRegion.size() == LIST_EMPTY_SIZE) {
       command.setResponse(Coder.getNilResponse(context.getByteBufAllocator()));
       return;
     }
 
-    String indexKey = popType() == ListDirection.LEFT ? key + "head" : key + "tail";
-    String oppositeKey = popType() == ListDirection.RIGHT ? key + "head" : key + "tail";
+    String indexKey = popType() == ListDirection.LEFT ? "head" : "tail";
+    String oppositeKey = popType() == ListDirection.RIGHT ? "head" : "tail";
     Integer index = 0;
     int originalIndex = index;
     int incr = popType() == ListDirection.LEFT ? 1 : -1;
@@ -49,10 +65,11 @@ public abstract class PopExecutor extends ListExecutor implements Extendable {
     
     boolean indexChanged = false;
     do {
-      index = meta.get(indexKey);
-      if (index == meta.get(oppositeKey))
+      index = (Integer) keyRegion.get(indexKey);
+      Integer opp = (Integer) keyRegion.get(oppositeKey);
+      if (index.equals(opp))
         break;
-      indexChanged = meta.replace(indexKey, index, index + incr);
+      indexChanged = keyRegion.replace(indexKey, index, index + incr);
     } while(!indexChanged);
     
     /**
@@ -67,7 +84,7 @@ public abstract class PopExecutor extends ListExecutor implements Extendable {
     boolean removed = false;
     int i = 0;
     do {
-      valueWrapper = keyRegion.get(index);
+      valueWrapper = (ByteArrayWrapper) keyRegion.get(index);
       if (valueWrapper != null)
         removed = keyRegion.remove(index, valueWrapper);
       
@@ -116,12 +133,12 @@ public abstract class PopExecutor extends ListExecutor implements Extendable {
        */
       
       index += incr;
-      int metaIndex = meta.get(indexKey);
+      Integer metaIndex = (Integer) keyRegion.get(indexKey);
       if (i < 1 && (popType() == ListDirection.LEFT && metaIndex < originalIndex ||
           popType() == ListDirection.RIGHT && metaIndex > originalIndex))
         index = metaIndex;
       i++;
-    } while (!removed && keyRegion.size() != 0);
+    } while (!removed && keyRegion.size() != LIST_EMPTY_SIZE);
     if (valueWrapper != null)
       command.setResponse(Coder.getBulkStringResponse(context.getByteBufAllocator(), valueWrapper.toBytes()));
     else

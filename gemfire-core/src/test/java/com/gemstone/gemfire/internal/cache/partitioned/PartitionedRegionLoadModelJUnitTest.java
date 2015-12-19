@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2002-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal.cache.partitioned;
 
@@ -34,6 +43,7 @@ import com.gemstone.gemfire.DataSerializer;
 import com.gemstone.gemfire.cache.partition.PartitionMemberInfo;
 import com.gemstone.gemfire.distributed.internal.membership.InternalDistributedMember;
 import com.gemstone.gemfire.distributed.internal.membership.MemberAttributes;
+import com.gemstone.gemfire.internal.cache.partitioned.rebalance.BucketOperator.Completion;
 import com.gemstone.gemfire.internal.cache.partitioned.rebalance.CompositeDirector;
 import com.gemstone.gemfire.internal.cache.partitioned.rebalance.PartitionedRegionLoadModel;
 import com.gemstone.gemfire.internal.cache.partitioned.rebalance.PartitionedRegionLoadModel.AddressComparor;
@@ -53,12 +63,6 @@ public class PartitionedRegionLoadModelJUnitTest {
   private static final boolean DEBUG = true;
   
   private MyBucketOperator bucketOperator;
-  
-  @BeforeClass
-  public static void beforeClass() {
-    //bogus initialization to be able to create InternalDistributedMembers
-    MemberAttributes.setDefaults(1, 1, 1, -1, null, null, null);
-  }
   
   @Before
   public void setUp() {
@@ -477,13 +481,14 @@ public class PartitionedRegionLoadModelJUnitTest {
     InternalDistributedMember member3 = new InternalDistributedMember(InetAddress.getByName("127.0.0.1"), 3);
     MyBucketOperator op = new MyBucketOperator() {
       @Override
-      public boolean createRedundantBucket(
+      public void createRedundantBucket(
           InternalDistributedMember targetMember, int i,
-          Map<String, Long> colocatedRegionBytes) {
+          Map<String, Long> colocatedRegionBytes, Completion completion) {
         if(targetMember.equals(member2)) {
-          return false;
+          completion.onFailure();
+        } else {
+          super.createRedundantBucket(targetMember, i, colocatedRegionBytes, completion);
         }
-        return super.createRedundantBucket(targetMember, i, colocatedRegionBytes);
       }
       
     };
@@ -507,6 +512,57 @@ public class PartitionedRegionLoadModelJUnitTest {
     expectedCreates.add(new Create(member3, 2));
     expectedCreates.add(new Create(member3, 3));
     assertEquals(expectedCreates, op.creates);
+  }
+  
+  /**
+   * Test that redundancy satisfation can handle asynchronous failures
+   * and complete the job correctly. 
+   * @throws Exception
+   */
+  @Test
+  public void testRedundancySatisfactionWithAsyncFailures() throws Exception {
+    InternalDistributedMember member1 = new InternalDistributedMember(InetAddress.getByName("127.0.0.1"), 1);
+    InternalDistributedMember member2 = new InternalDistributedMember(InetAddress.getByName("127.0.0.1"), 2);
+    InternalDistributedMember member3 = new InternalDistributedMember(InetAddress.getByName("127.0.0.1"), 3);
+    
+    BucketOperatorWithFailures operator = new BucketOperatorWithFailures();
+    operator.addBadMember(member2);
+    bucketOperator = operator;
+    PartitionedRegionLoadModel model = new PartitionedRegionLoadModel(
+        bucketOperator, 1, 6, getAddressComparor(false),
+        Collections.<InternalDistributedMember>emptySet(), null);
+    PartitionMemberInfoImpl details1 = buildDetails(member1, 500, 500, new long[] {1,1,1,1,1,1}, new long[] {1,1,1,1,1,1});
+    PartitionMemberInfoImpl details2 = buildDetails(member2, 500, 500, new long[] {0,0,0,0,0,0}, new long[] {0,0,0,0,0,0});
+    PartitionMemberInfoImpl details3 = buildDetails(member3, 500, 500, new long[] {0,0,0,0,0,0}, new long[] {0,0,0,0,0,0});
+    model.addRegion("a", Arrays.asList(details1, details2, details3), new FakeOfflineDetails(), true);
+    
+    Set<PartitionMemberInfo> details = model.getPartitionedMemberDetails("a");
+    assertEquals(3, details.size());
+    
+    //TODO - make some assertions about what's in the details
+
+    //we expect 6 moves (3 of these will fail)
+    assertEquals(6, doMoves(new CompositeDirector(true, true, false, false), model));
+    
+    assertEquals(3, bucketOperator.creates.size());
+    for(Completion completion: operator.pendingSuccesses) {
+      completion.onSuccess();
+    }
+    for(Completion completion: operator.pendingFailures) {
+      completion.onFailure();
+    }
+    
+    //Now the last two moves will get reattempted to a new location (because the last location failed)
+    assertEquals(3, doMoves(new CompositeDirector(true, true, false, false), model));
+    
+    List<Create> expectedCreates = new ArrayList<Create>();
+    expectedCreates.add(new Create(member3, 1));
+    expectedCreates.add(new Create(member3, 3));
+    expectedCreates.add(new Create(member3, 5));
+    expectedCreates.add(new Create(member3, 0));
+    expectedCreates.add(new Create(member3, 2));
+    expectedCreates.add(new Create(member3, 4));
+    assertEquals(expectedCreates, bucketOperator.creates);
   }
   
   /**
@@ -1229,7 +1285,7 @@ public class PartitionedRegionLoadModelJUnitTest {
     return new AddressComparor() {
       public boolean areSameZone(InternalDistributedMember member1,
           InternalDistributedMember member2) {
-        return member1.getIpAddress().equals(member2.getIpAddress());
+        return member1.getInetAddress().equals(member2.getInetAddress());
       }
 
       public boolean enforceUniqueZones() {
@@ -1394,14 +1450,15 @@ public class PartitionedRegionLoadModelJUnitTest {
     private MoveType lastMove = null;
     
 
-    public boolean createRedundantBucket(
-        InternalDistributedMember targetMember, int i, Map<String, Long> colocatedRegionBytes) {
+    @Override
+    public void createRedundantBucket(
+        InternalDistributedMember targetMember, int i, Map<String, Long> colocatedRegionBytes, Completion completion) {
       creates.add(new Create(targetMember, i));
       if(DEBUG) {
         System.out.println("Created bucket " + i + " on " + targetMember);
       }
       lastMove = MoveType.CREATE;
-      return true;
+      completion.onSuccess();
     }
 
     @Override
@@ -1439,6 +1496,35 @@ public class PartitionedRegionLoadModelJUnitTest {
     }
     
     
+  }
+  
+  public static class BucketOperatorWithFailures extends MyBucketOperator {
+    List<Completion> pendingSuccesses = new ArrayList<Completion>();
+    List<Completion> pendingFailures = new ArrayList<Completion>();
+    Set<InternalDistributedMember> badMembers = new HashSet<InternalDistributedMember> ();
+
+    public void addBadMember(InternalDistributedMember member) {
+      this.badMembers.add(member);
+    }
+    @Override
+    public void createRedundantBucket(InternalDistributedMember targetMember,
+        int i, Map<String, Long> colocatedRegionBytes, Completion completion) {
+      if(badMembers.contains(targetMember)) {
+        pendingFailures.add(completion);
+      } else {
+        super.createRedundantBucket(targetMember, i, colocatedRegionBytes, new Completion() {
+          @Override
+          public void onSuccess() {
+          }
+
+          @Override
+          public void onFailure() {
+          }
+        });
+        
+        pendingSuccesses.add(completion);
+;      }
+    }
   }
   
   private static enum MoveType {

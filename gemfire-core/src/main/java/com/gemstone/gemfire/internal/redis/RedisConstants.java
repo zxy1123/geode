@@ -1,9 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.redis;
 
 
 public class RedisConstants {
 
-  public static final int NUM_DEFAULT_KEYS = 4;
+  public static final int NUM_DEFAULT_KEYS = 3;
 
   /*
    * Responses
@@ -31,6 +47,9 @@ public class RedisConstants {
   public static final String ERROR_OUT_OF_RANGE = "The number provided is out of range";
   public static final String ERROR_NESTED_MULTI = "The MULTI command cannot be nested";
   public static final String ERROR_NAN_INF_INCR = "increment would produce NaN or Infinity";
+  public static final String ERROR_NO_PASS = "Attempting to authenticate when no password has been set";
+  public static final String ERROR_INVALID_PWD = "Attemping to authenticate with an invalid password";
+  public static final String ERROR_NOT_AUTH = "Must authenticate before sending any requests";
   
   public static class ArityDef {
 
@@ -38,6 +57,7 @@ public class RedisConstants {
      * General 
      */
     public static final int DBSIZE_ARITY = 0;
+    public static final String AUTH =           "The wrong number of arguments or syntax was provided, the format for the AUTH command is \"AUTH password\"";
     public static final String DBSIZE =         null;
     public static final String DEL =            "The wrong number of arguments or syntax was provided, the format for the DEL command is \"DEL key [key ...]\"";
     public static final String ECHO =           "The wrong number of arguments or syntax was provided, the format for the ECHO command is \"ECHO message\"";

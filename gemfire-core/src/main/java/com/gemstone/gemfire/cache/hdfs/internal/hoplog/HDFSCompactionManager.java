@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.cache.hdfs.internal.hoplog;
 
@@ -21,7 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.Logger;
 
 import com.gemstone.gemfire.cache.hdfs.HDFSStore;
-import com.gemstone.gemfire.cache.hdfs.HDFSStore.HDFSCompactionConfig;
 import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HoplogOrganizer.Compactor;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 import com.gemstone.gemfire.internal.logging.LogService;
@@ -57,17 +65,14 @@ public class HDFSCompactionManager {
   private HDFSCompactionManager(HDFSStore config) {
     this.storeConfig = config;
     // configure hdfs compaction manager
-    HDFSCompactionConfig compactionConf = config.getHDFSCompactionConfig();
-    
     int capacity = Integer.getInteger(HoplogConfig.COMPCATION_QUEUE_CAPACITY,
         HoplogConfig.COMPCATION_QUEUE_CAPACITY_DEFAULT);
 
-    minorCompactor = new CompactionExecutor(compactionConf.getMaxThreads(),
-        capacity, "MinorCompactor_" + config.getName());
+    minorCompactor = new CompactionExecutor(config.getMinorCompactionThreads(), capacity, "MinorCompactor_"
+        + config.getName());
 
-    majorCompactor = new CompactionExecutor(
-        compactionConf.getMajorCompactionMaxThreads(), capacity, "MajorCompactor_"
-            + config.getName());
+    majorCompactor = new CompactionExecutor(config.getMajorCompactionThreads(), capacity, "MajorCompactor_"
+        + config.getName());
 
     minorCompactor.allowCoreThreadTimeOut(true);
     majorCompactor.allowCoreThreadTimeOut(true);
@@ -172,7 +177,7 @@ public class HDFSCompactionManager {
       if (!isForced) {
         // this is a auto generated compaction request. If auto compaction is
         // disabled, ignore this call.
-        if (isMajor && !store.getHDFSCompactionConfig().getAutoMajorCompaction()) {
+        if (isMajor && !store.getMajorCompaction()) {
           if (logger.isDebugEnabled()) {
             logger.debug("{}Major compaction is disabled. Ignoring request",logPrefix);
           }
@@ -252,7 +257,7 @@ public class HDFSCompactionManager {
       boolean isEnabled = true;
       isEnabled = storeConfig.getMinorCompaction();
       if (req.isMajor) {
-        isEnabled = storeConfig.getHDFSCompactionConfig().getAutoMajorCompaction();
+        isEnabled = storeConfig.getMajorCompaction();
       }
       if (isEnabled || req.isForced) {
         return;
@@ -260,10 +265,10 @@ public class HDFSCompactionManager {
       throw new CompactionIsDisabled(name + " is disabled");
     }
 
-    private void throwIfPoolSizeChanged(CompactionRequest task, HDFSCompactionConfig config) {
-      int threadCount = config.getMaxThreads();
+    private void throwIfPoolSizeChanged(CompactionRequest task, HDFSStore config) {
+      int threadCount = config.getMinorCompactionThreads();
       if (task.isMajor) {
-        threadCount = config.getMajorCompactionMaxThreads();
+        threadCount = config.getMajorCompactionThreads();
       }
       
       if (getCorePoolSize() < threadCount) {
@@ -284,11 +289,8 @@ public class HDFSCompactionManager {
     
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-      HDFSCompactionConfig config;
-      config = HDFSCompactionManager.this.storeConfig.getHDFSCompactionConfig();
-      
       throwIfStopped((CompactionRequest) task, HDFSCompactionManager.this.storeConfig);
-      throwIfPoolSizeChanged((CompactionRequest) task, config);
+      throwIfPoolSizeChanged((CompactionRequest) task, HDFSCompactionManager.this.storeConfig);
       
       if (logger.isDebugEnabled()) {
         fineLog("New:", task, " pool:", getPoolSize(), " active:", getActiveCount());

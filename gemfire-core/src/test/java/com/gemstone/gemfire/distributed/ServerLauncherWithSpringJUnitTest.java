@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.distributed;
 
 import static org.junit.Assert.assertEquals;
@@ -9,12 +25,15 @@ import static org.junit.Assert.assertTrue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.springframework.data.gemfire.support.SpringContextBootstrappingInitializer;
 
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.distributed.AbstractLauncher.Status;
 import com.gemstone.gemfire.distributed.ServerLauncher.Builder;
+import com.gemstone.gemfire.distributed.internal.DistributionConfig;
 import com.gemstone.gemfire.internal.process.ProcessType;
+import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
 
 /**
  * Extracted from ServerLauncherLocalJUnitTest.
@@ -22,6 +41,7 @@ import com.gemstone.gemfire.internal.process.ProcessType;
  * @author John Blum
  * @author Kirk Lund
  */
+@Category(IntegrationTest.class)
 public class ServerLauncherWithSpringJUnitTest extends AbstractServerLauncherJUnitTestCase {
 
   @Before
@@ -44,6 +64,7 @@ public class ServerLauncherWithSpringJUnitTest extends AbstractServerLauncherJUn
       .setForce(true)
       .setMemberName(getUniqueName())
       .setSpringXmlLocation("spring/spring-gemfire-context.xml")
+      .set(DistributionConfig.MCAST_PORT_NAME, "0")
       .build();
 
     assertNotNull(this.launcher);

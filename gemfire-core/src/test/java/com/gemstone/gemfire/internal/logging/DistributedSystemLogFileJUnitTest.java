@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.logging;
 
 import static org.junit.Assert.assertEquals;
@@ -487,7 +503,7 @@ public class DistributedSystemLogFileJUnitTest {
     assertTrue(logWriter.fineEnabled());
     assertTrue(((LogWriterLogger)logWriter).isDebugEnabled());
     assertTrue(logWriter instanceof FastLogger);
-    assertTrue(((FastLogger)logWriter).isDebugAvailable());
+    assertTrue(((FastLogger)logWriter).isDelegating());
 
     DistributedTestCase.waitForCriterion(new WaitCriterion() {
       @Override
@@ -703,7 +719,7 @@ public class DistributedSystemLogFileJUnitTest {
     assertTrue(logWriter.fineEnabled());
     assertTrue(((LogWriterLogger)logWriter).isDebugEnabled());
     assertTrue(logWriter instanceof FastLogger);
-    assertTrue(((FastLogger)logWriter).isDebugAvailable());
+    assertTrue(((FastLogger)logWriter).isDelegating());
 
     DistributedTestCase.waitForCriterion(new WaitCriterion() {
       @Override
@@ -942,8 +958,8 @@ public class DistributedSystemLogFileJUnitTest {
     //Because debug available is a static volatile, it is shared between the two writers
     //However we should not see any debug level logging due to the config level set in 
     //the log writer itself
-    assertTrue(((FastLogger)securityLogWriter).isDebugAvailable());
-    assertTrue(((FastLogger)logWriter).isDebugAvailable());
+    assertTrue(((FastLogger)securityLogWriter).isDelegating());
+    assertTrue(((FastLogger)logWriter).isDelegating());
 
     
     DistributedTestCase.waitForCriterion(new WaitCriterion() {
@@ -1058,8 +1074,8 @@ public class DistributedSystemLogFileJUnitTest {
     assertTrue(((LogWriterLogger)logWriter).isDebugEnabled());
     assertTrue(securityLogWriter instanceof FastLogger);
     assertTrue(logWriter instanceof FastLogger);
-    assertTrue(((FastLogger)securityLogWriter).isDebugAvailable());
-    assertTrue(((FastLogger)logWriter).isDebugAvailable());
+    assertTrue(((FastLogger)securityLogWriter).isDelegating());
+    assertTrue(((FastLogger)logWriter).isDelegating());
 
     DistributedTestCase.waitForCriterion(new WaitCriterion() {
       @Override
@@ -1230,8 +1246,8 @@ public class DistributedSystemLogFileJUnitTest {
     assertTrue(((LogWriterLogger)logWriter).isDebugEnabled());
     assertTrue(securityLogWriter instanceof FastLogger);
     assertTrue(logWriter instanceof FastLogger);
-    assertTrue(((FastLogger)securityLogWriter).isDebugAvailable());
-    assertTrue(((FastLogger)logWriter).isDebugAvailable());
+    assertTrue(((FastLogger)securityLogWriter).isDelegating());
+    assertTrue(((FastLogger)logWriter).isDelegating());
 
     DistributedTestCase.waitForCriterion(new WaitCriterion() {
       @Override
@@ -1379,8 +1395,8 @@ public class DistributedSystemLogFileJUnitTest {
     assertFalse(((LogWriterLogger)logWriter).isDebugEnabled());
     assertTrue(securityLogWriter instanceof FastLogger);
     assertTrue(logWriter instanceof FastLogger);
-    assertTrue(((FastLogger)securityLogWriter).isDebugAvailable());
-    assertTrue(((FastLogger)logWriter).isDebugAvailable());
+    assertTrue(((FastLogger)securityLogWriter).isDelegating());
+    assertTrue(((FastLogger)logWriter).isDelegating());
 
     DistributedTestCase.waitForCriterion(new WaitCriterion() {
       @Override

@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal.cache.wan.parallel;
 
@@ -248,11 +257,11 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
       }
     }
     
-    if( this.buckToDispatchLock == null) {
-      this.buckToDispatchLock = new StoppableReentrantLock(sender.getCancelCriterion());
+    if( buckToDispatchLock == null) {
+      buckToDispatchLock = new StoppableReentrantLock(sender.getCancelCriterion());
     }
-    if(this.regionToDispatchedKeysMapEmpty == null) {
-      this.regionToDispatchedKeysMapEmpty = this.buckToDispatchLock.newCondition();
+    if(regionToDispatchedKeysMapEmpty == null) {
+      regionToDispatchedKeysMapEmpty = buckToDispatchLock.newCondition();
     }
     
     queueEmptyLock = new StoppableReentrantLock(sender.getCancelCriterion());
@@ -260,10 +269,10 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
     //at present, this won't be accessed by multiple threads, 
     //still, it is safer approach to synchronize it
     synchronized (ParallelGatewaySenderQueue.class) {
-      if (this.removalThread == null) {
-        this.removalThread = new BatchRemovalThread(
+      if (removalThread == null) {
+        removalThread = new BatchRemovalThread(
           (GemFireCacheImpl)sender.getCache(), this);
-        this.removalThread.start();
+        removalThread.start();
       }
     }
     
@@ -411,14 +420,14 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
         	handleShadowPRExistsScenario(cache, prQ);
       }
       /*
-       * Here, enqueTempEvents need to be invoked when a sender is already
+         * Here, enqueueTempEvents need to be invoked when a sender is already
        * running and userPR is created later. When the flow comes here through
        * start() method of sender i.e. userPR already exists and sender is
-       * started later, the enqueTempEvents is done in the start() method of
+       * started later, the enqueueTempEvents is done in the start() method of
        * ParallelGatewaySender
        */
       if ((this.index == this.nDispatcher - 1) && this.sender.isRunning()) {
-        ((AbstractGatewaySender)sender).enqueTempEvents();
+        ((AbstractGatewaySender)sender).enqueueTempEvents();
       }
     }
     finally {
@@ -567,14 +576,14 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
         this.userRegionNameToshadowPRMap.put(userPR.getFullPath(), prQ);
       }
       /*
-       * Here, enqueTempEvents need to be invoked when a sender is already
+       * Here, enqueueTempEvents need to be invoked when a sender is already
        * running and userPR is created later. When the flow comes here through
        * start() method of sender i.e. userPR already exists and sender is
-       * started later, the enqueTempEvents is done in the start() method of
+       * started later, the enqueueTempEvents is done in the start() method of
        * ParallelGatewaySender
        */
       if ((this.index == this.nDispatcher - 1) && this.sender.isRunning()) {
-        ((AbstractGatewaySender)sender).enqueTempEvents();
+        ((AbstractGatewaySender)sender).enqueueTempEvents();
       }
       afterRegionAdd(userPR);
       this.sender.lifeCycleLock.writeLock().unlock();
@@ -633,15 +642,20 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
    * Wait a while for existing tasks to terminate. If the existing tasks still don't 
    * complete, cancel them by calling shutdownNow. 
    */
-  private void cleanupConflationThreadPool() {
+  private static void cleanupConflationThreadPool(AbstractGatewaySender sender) {
     conflationExecutor.shutdown();// Disable new tasks from being submitted
     
     try {
     if (!conflationExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
       conflationExecutor.shutdownNow(); // Cancel currently executing tasks
       // Wait a while for tasks to respond to being cancelled
-      if (!conflationExecutor.awaitTermination(1, TimeUnit.SECONDS))
-        logger.warn(LocalizedMessage.create(LocalizedStrings.ParallelGatewaySenderQueue_COULD_NOT_TERMINATE_CONFLATION_THREADPOOL, this.sender));
+        if (!conflationExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
+          logger
+              .warn(LocalizedMessage
+                  .create(
+                      LocalizedStrings.ParallelGatewaySenderQueue_COULD_NOT_TERMINATE_CONFLATION_THREADPOOL,
+                      (sender == null ? "all" : sender)));
+        }
     }
     } catch (InterruptedException e) {
       // (Re-)Cancel if current thread also interrupted
@@ -1150,21 +1164,24 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
   // This method may need synchronization in case it is used by
   // ConcurrentParallelGatewaySender
   protected void addRemovedEvent(PartitionedRegion prQ, int bucketId, Object key) {
-    buckToDispatchLock.lock();
-    boolean wasEmpty = regionToDispatchedKeysMap.isEmpty();
-    try {
-      Map bucketIdToDispatchedKeys = (Map)regionToDispatchedKeysMap.get(prQ.getFullPath());
-      if (bucketIdToDispatchedKeys == null) {
-        bucketIdToDispatchedKeys = new ConcurrentHashMap();
-        regionToDispatchedKeysMap.put(prQ.getFullPath(), bucketIdToDispatchedKeys);
+    StoppableReentrantLock lock = buckToDispatchLock;
+    if (lock != null) {
+      lock.lock();
+      boolean wasEmpty = regionToDispatchedKeysMap.isEmpty();
+      try {
+        Map bucketIdToDispatchedKeys = (Map)regionToDispatchedKeysMap.get(prQ.getFullPath());
+        if (bucketIdToDispatchedKeys == null) {
+          bucketIdToDispatchedKeys = new ConcurrentHashMap();
+          regionToDispatchedKeysMap.put(prQ.getFullPath(), bucketIdToDispatchedKeys);
+        }
+        addRemovedEventToMap(bucketIdToDispatchedKeys, bucketId, key);
+        if (wasEmpty) {
+          regionToDispatchedKeysMapEmpty.signal();        
+        }
       }
-      addRemovedEventToMap(bucketIdToDispatchedKeys, bucketId, key);
-      if (wasEmpty) {
-        regionToDispatchedKeysMapEmpty.signal();        
+      finally {
+        lock.unlock();  
       }
-    }
-    finally {
-      buckToDispatchLock.unlock();  
     }
   }
 
@@ -1508,25 +1525,29 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
    * by the queue. Note that this cleanup doesn't clean the data held by the queue.
    */
   public void cleanUp() {
-    if(buckToDispatchLock != null){
-      this.buckToDispatchLock = null;
-    }
-    if(regionToDispatchedKeysMapEmpty != null) {
-      this.regionToDispatchedKeysMapEmpty = null;
-    }
-    this.regionToDispatchedKeysMap.clear();
+    cleanUpStatics(this.sender);
+  }
+
+  /**
+   * @param sender
+   *          can be null.
+   */
+  public static void cleanUpStatics(AbstractGatewaySender sender) {
+    buckToDispatchLock = null;
+    regionToDispatchedKeysMapEmpty = null;
+    regionToDispatchedKeysMap.clear();
     synchronized (ParallelGatewaySenderQueue.class) {
-      if (this.removalThread != null) {
-        this.removalThread.shutdown();
-        this.removalThread = null;
+      if (removalThread != null) {
+        removalThread.shutdown();
+        removalThread = null;
       }
     }
     if (conflationExecutor != null) {
-      cleanupConflationThreadPool();
-      this.conflationExecutor = null;
+      cleanupConflationThreadPool(sender);
+      conflationExecutor = null;
     }
   }
-  
+
   @Override
   public void close() {
     // Because of bug 49060 do not close the regions of a parallel queue

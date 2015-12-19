@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.gemstone.gemfire.internal.cache.control;
 
@@ -20,6 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.Logger;
 
@@ -36,7 +46,6 @@ import com.gemstone.gemfire.distributed.internal.OverflowQueueWithDMStats;
 import com.gemstone.gemfire.distributed.internal.SerialQueuedExecutorWithDMStats;
 import com.gemstone.gemfire.internal.ClassPathLoader;
 import com.gemstone.gemfire.internal.cache.GemFireCacheImpl;
-import com.gemstone.gemfire.internal.cache.LocalRegion;
 import com.gemstone.gemfire.internal.cache.PartitionedRegion;
 import com.gemstone.gemfire.internal.cache.control.ResourceAdvisor.ResourceManagerProfile;
 import com.gemstone.gemfire.internal.cache.partitioned.LoadProbe;
@@ -57,6 +66,8 @@ import com.gemstone.gemfire.internal.logging.log4j.LocalizedMessage;
  */
 public class InternalResourceManager implements ResourceManager {
   private static final Logger logger = LogService.getLogger();
+
+  final int MAX_RESOURCE_MANAGER_EXE_THREADS = Integer.getInteger("gemfire.resource.manager.threads", 1);
   
   public enum ResourceType {
     HEAP_MEMORY(0x1), OFFHEAP_MEMORY(0x2), MEMORY(0x3), ALL(0xFFFFFFFF);
@@ -78,7 +89,7 @@ public class InternalResourceManager implements ResourceManager {
 
   final GemFireCacheImpl cache;
   
-  private final LoadProbe loadProbe;
+  private LoadProbe loadProbe;
   
   private final ResourceManagerStats stats;
   private final ResourceAdvisor resourceAdvisor;
@@ -107,18 +118,23 @@ public class InternalResourceManager implements ResourceManager {
     
     // Create a new executor that other classes may use for handling resource
     // related tasks
-    final ThreadGroup thrdGrp = LoggingThreadGroup.createThreadGroup(
+    final ThreadGroup threadGroup = LoggingThreadGroup.createThreadGroup(
         "ResourceManagerThreadGroup", logger);
 
     ThreadFactory tf = new ThreadFactory() {
+      AtomicInteger ai = new AtomicInteger();
       @Override
       public Thread newThread(Runnable r) {
-        Thread thread = new Thread(thrdGrp, r, "ResourceManagerRecoveryThread");
+        int tId = ai.getAndIncrement();
+        Thread thread = new Thread(threadGroup, r,
+        "ResourceManagerRecoveryThread " + tId);
         thread.setDaemon(true);
         return thread;
       }
     };
-    this.scheduledExecutor = new ScheduledThreadPoolExecutor(1, tf);
+    int nThreads = MAX_RESOURCE_MANAGER_EXE_THREADS;
+
+    this.scheduledExecutor = new ScheduledThreadPoolExecutor(nThreads, tf);
 
     // Initialize the load probe
     try {
@@ -149,7 +165,7 @@ public class InternalResourceManager implements ResourceManager {
     // Create the monitors
     Map<ResourceType, ResourceMonitor> tempMonitors = new HashMap<ResourceType, ResourceMonitor>();
     tempMonitors.put(ResourceType.HEAP_MEMORY, new HeapMemoryMonitor(this, cache, this.stats));
-    tempMonitors.put(ResourceType.OFFHEAP_MEMORY, new OffHeapMemoryMonitor(this, cache, this.stats));
+    tempMonitors.put(ResourceType.OFFHEAP_MEMORY, new OffHeapMemoryMonitor(this, cache, cache.getOffHeapStore(), this.stats));
     this.resourceMonitors = Collections.unmodifiableMap(tempMonitors);
     
     // Initialize the listener sets so that it only needs to be done once
@@ -527,6 +543,15 @@ public class InternalResourceManager implements ResourceManager {
 
   public LoadProbe getLoadProbe() {
     return this.loadProbe;
+  }
+
+  /**
+   * This method is test purposes only.
+   */
+  public LoadProbe setLoadProbe(LoadProbe probe) {
+    LoadProbe old = this.loadProbe;
+    this.loadProbe = probe;
+    return old;
   }
 
   /* (non-Javadoc)

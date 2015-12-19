@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.gemstone.gemfire.internal.redis.executor.list;
 
 import java.util.List;
@@ -40,16 +56,16 @@ public class LTrimExecutor extends ListExecutor {
 
 
     checkDataType(key, RedisDataType.REDIS_LIST, context);
-    Region<Integer, ByteArrayWrapper> keyRegion = getRegion(context, key);
+    Region keyRegion = getRegion(context, key);
 
     if (keyRegion == null) {
       command.setResponse(Coder.getErrorResponse(context.getByteBufAllocator(), ERROR_KEY_NOT_EXISTS));
       return;
     }
 
-    int listSize = keyRegion.size();
+    int listSize = keyRegion.size() - LIST_EMPTY_SIZE;
     if (listSize == 0) {
-      command.setResponse(Coder.getEmptyArrayResponse(context.getByteBufAllocator()));
+      command.setResponse(Coder.getSimpleStringResponse(context.getByteBufAllocator(), SUCCESS));
       return;
     }
 
@@ -70,37 +86,35 @@ public class LTrimExecutor extends ListExecutor {
       command.setResponse(Coder.getSimpleStringResponse(context.getByteBufAllocator(), SUCCESS));
       return;
     } else if (redisStart == 0 && redisStop < redisStart) {
-      context.getRegionCache().removeKey(key, RedisDataType.REDIS_LIST);
+      context.getRegionProvider().removeKey(key, RedisDataType.REDIS_LIST);
       command.setResponse(Coder.getSimpleStringResponse(context.getByteBufAllocator(), SUCCESS));
       return;
     }
 
     List<Integer> keepList;
     try {
-      keepList = getRange(context, key, redisStart, redisStop);
+      keepList = getRange(context, key, redisStart, redisStop, keyRegion);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
     
-    for (Integer keyElement: keyRegion.keySet()) {
-      if (!keepList.contains(keyElement))
+    for (Object keyElement: keyRegion.keySet()) {
+      if (!keepList.contains(keyElement) && keyElement instanceof Integer)
         keyRegion.remove(keyElement);
     }
     
     // Reset indexes in meta data region
-    Region<String, Integer> meta = context.getRegionCache().getListsMetaRegion();
-    meta.put(key + "head", keepList.get(0));
-    meta.put(key + "tail", keepList.get(keepList.size() - 1));
+    keyRegion.put("head", keepList.get(0));
+    keyRegion.put("tail", keepList.get(keepList.size() - 1));
     command.setResponse(Coder.getSimpleStringResponse(context.getByteBufAllocator(), SUCCESS));
   }
 
-  private List<Integer> getRange(ExecutionHandlerContext context, ByteArrayWrapper key, int start, int stop) throws Exception {
+  private List<Integer> getRange(ExecutionHandlerContext context, ByteArrayWrapper key, int start, int stop, Region r) throws Exception {
     Query query = getQuery(key, ListQuery.LTRIM, context);
 
-    Object[] params = {new Integer(stop + 1)};
-
+    Object[] params = {Integer.valueOf(stop + 1)};
+    
     SelectResults<Integer> results = (SelectResults<Integer>) query.execute(params);
-
     if (results == null || results.size() <= start) {
       return null;
     }

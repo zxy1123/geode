@@ -1,9 +1,18 @@
-/*=========================================================================
- * Copyright (c) 2010-2014 Pivotal Software, Inc. All Rights Reserved.
- * This product is protected by U.S. and international copyright
- * and intellectual property laws. Pivotal products are covered by
- * one or more patents listed at http://www.pivotal.io/patents.
- *=========================================================================
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 /**
  * 
@@ -23,12 +32,16 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.query.AmbiguousNameException;
 import com.gemstone.gemfire.cache.query.CacheUtils;
+import com.gemstone.gemfire.cache.query.Index;
 import com.gemstone.gemfire.cache.query.IndexType;
 import com.gemstone.gemfire.cache.query.NameResolutionException;
+import com.gemstone.gemfire.cache.query.Query;
 import com.gemstone.gemfire.cache.query.QueryService;
+import com.gemstone.gemfire.cache.query.SelectResults;
 import com.gemstone.gemfire.cache.query.TypeMismatchException;
 import com.gemstone.gemfire.cache.query.data.Portfolio;
 import com.gemstone.gemfire.cache.query.internal.CompiledIteratorDef;
@@ -38,6 +51,7 @@ import com.gemstone.gemfire.cache.query.internal.QCompiler;
 import com.gemstone.gemfire.cache.query.internal.QueryExecutionContext;
 import com.gemstone.gemfire.cache.query.internal.RuntimeIterator;
 import com.gemstone.gemfire.cache.query.internal.parse.OQLLexerTokenTypes;
+import com.gemstone.gemfire.pdx.PdxInstance;
 import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
 
 /**
@@ -51,6 +65,7 @@ public class RangeIndexAPIJUnitTest {
   @Before
   public void setUp() throws java.lang.Exception {
     CacheUtils.startCache();
+    IndexManager.ENABLE_UPDATE_IN_PROGRESS_INDEX_CALCULATION = false;
     region = CacheUtils.createRegion("portfolios", Portfolio.class);
     for (int i = 0; i < 12; i++) {
       //CacheUtils.log(new Portfolio(i));
@@ -66,6 +81,7 @@ public class RangeIndexAPIJUnitTest {
 
   @After
   public void tearDown() throws java.lang.Exception {
+    IndexManager.ENABLE_UPDATE_IN_PROGRESS_INDEX_CALCULATION = true;
     CacheUtils.closeCache();
   }
 
@@ -364,8 +380,33 @@ public class RangeIndexAPIJUnitTest {
       assertTrue( results.contains(region.get(new Integer(i))));      
       ++i;      
     }
-    
   }  
+ 
+  @Test 
+  public void testQueryRVMapMultipleEntries() throws Exception {
+    Cache cache = CacheUtils.getCache();
+    QueryService queryService = CacheUtils.getCache().getQueryService();
+    CacheUtils.createRegion("TEST_REGION", null);
+    queryService.createIndex("tr.nested.id.index", "nested.id", "/TEST_REGION, nested IN nested_values");
+    Query queryInSet = queryService.newQuery("SELECT DISTINCT tr.id FROM /TEST_REGION tr, tr.nested_values nested WHERE nested.id IN SET ('1')");
+    Query queryEquals = queryService.newQuery("SELECT DISTINCT tr.id FROM /TEST_REGION tr, nested IN nested_values WHERE nested.id='1'");
+
+    Object[] nested = new Object[] {
+            cache.createPdxInstanceFactory("nested_1").writeString("id", "1").create(),
+            cache.createPdxInstanceFactory("nested_2").writeString("id", "1").create(),
+            cache.createPdxInstanceFactory("nested_3").writeString("id", "1").create(),
+            cache.createPdxInstanceFactory("nested_4").writeString("id", "4").create()
+    };
+
+    PdxInstance record = cache.createPdxInstanceFactory("root").writeString("id", "2").writeObjectArray("nested_values", nested).create();
+
+    cache.getRegion("TEST_REGION").put("100", record);
+    Index index = cache.getQueryService().getIndex(cache.getRegion("TEST_REGION"), "mdf.testRegion.nested.id");
+    SelectResults queryResults = (SelectResults) queryEquals.execute();
+    SelectResults inSetQueryResults = (SelectResults) queryInSet.execute();
+    assertEquals(queryResults.size(), inSetQueryResults.size());
+    assertTrue(inSetQueryResults.size() > 0);
+  }
 
   private void bindIterators(ExecutionContext context, String string) throws AmbiguousNameException, TypeMismatchException, NameResolutionException {
     QCompiler compiler = new QCompiler();
