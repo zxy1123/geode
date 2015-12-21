@@ -20,6 +20,7 @@ import java.io.PrintWriter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.gemstone.gemfire.test.junit.categories.UnitTest;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
@@ -30,6 +31,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.beans.PropertyChangeEvent;
 
@@ -38,7 +40,8 @@ import static junit.framework.Assert.*;
 /**
  *
  */
-public class TestSessions {
+@Category(UnitTest.class)
+public class TestSessionsJUnitTest {
     private static EmbeddedTomcat server;
 
     private static Region<String, HttpSession> region;
@@ -62,7 +65,7 @@ public class TestSessions {
         server = new EmbeddedTomcat("/test", 7890, "JVM-1");
 
         PeerToPeerCacheLifecycleListener p2pListener = new PeerToPeerCacheLifecycleListener();
-        p2pListener.setProperty("mcast-port", "19991");
+        p2pListener.setProperty("mcast-port", "0");
         p2pListener.setProperty("log-level", "config");
         p2pListener.setProperty("log-file", gemfireLog);
         p2pListener.setProperty("writable-working-dir", tmpDir.getPath());

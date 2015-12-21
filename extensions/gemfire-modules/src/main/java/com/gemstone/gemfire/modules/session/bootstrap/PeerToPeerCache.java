@@ -48,8 +48,7 @@ public class PeerToPeerCache extends AbstractCache {
     // If no cache exists, create one
     String message = null;
     if (this.cache == null) {
-      this.cache = new CacheFactory(
-          createDistributedSystemProperties()).create();
+      this.cache = new CacheFactory(createDistributedSystemProperties()).create();
       message = "Created ";
     } else {
       message = "Retrieved ";

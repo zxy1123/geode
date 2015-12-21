@@ -1,17 +1,22 @@
 
 test  {
-  include '**/TestSessions.class'
-  workingDir = "${projectDir}"
+  doFirst {
+    copy {
+      from 'build/resources/test/tomcat'
+      into 'build/test/tomcat/'
+    }
+  }
 }
 
 dependencies {
   compile project(':gemfire-core')
 
-  compile 'org.apache.tomcat:catalina:' + project.'modules.tomcat.version'
-  compile 'org.apache.tomcat:catalina-ha:' + project.'modules.tomcat.version'
-  compile 'org.apache.tomcat:juli:' + project.'modules.tomcat.version'
+  compile 'org.apache.tomcat:catalina:' + project.'tomcat6.version'
+  compile 'org.apache.tomcat:catalina-ha:' + project.'tomcat6.version'
+  compile 'org.apache.tomcat:juli:' + project.'tomcat6.version'
 
-  testCompile 'org.httpunit:httpunit:' + project.'modules.httpunit.version'
+  testCompile 'org.httpunit:httpunit:' + project.'httpunit.version'
+  testRuntime 'org.apache.tomcat:coyote:' + project.'tomcat6.version'
 
   provided project(path: ':gemfire-junit', configuration: 'testOutput')
 }
