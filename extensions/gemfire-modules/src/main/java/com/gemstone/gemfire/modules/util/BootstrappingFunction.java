@@ -170,7 +170,7 @@ public class BootstrappingFunction implements Function, MembershipListener {
 
   @Override
   public void memberSuspect(InternalDistributedMember id,
-      InternalDistributedMember whoSuspected) {
+      InternalDistributedMember whoSuspected, String reason) {
   }
 
   @Override

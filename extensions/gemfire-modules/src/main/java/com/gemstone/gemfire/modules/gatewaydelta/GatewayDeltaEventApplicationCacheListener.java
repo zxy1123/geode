@@ -15,7 +15,7 @@ import com.gemstone.gemfire.cache.Declarable;
 import com.gemstone.gemfire.cache.EntryEvent;
 import com.gemstone.gemfire.cache.util.CacheListenerAdapter;
 import com.gemstone.gemfire.internal.cache.EntryEventImpl;
-import com.gemstone.gemfire.internal.cache.GatewayEventCallbackArgument;
+import com.gemstone.gemfire.internal.cache.wan.GatewaySenderEventCallbackArgument;
 
 public class GatewayDeltaEventApplicationCacheListener extends CacheListenerAdapter<String,GatewayDeltaEvent> implements Declarable {
 
@@ -42,7 +42,7 @@ public class GatewayDeltaEventApplicationCacheListener extends CacheListenerAdap
     // If the event is from a remote site, apply it to the session
     Object callbackArgument = eventImpl.getRawCallbackArgument();
     System.out.println("GatewayDeltaApplierCacheListener callbackArgument: " + callbackArgument);
-    if (callbackArgument instanceof GatewayEventCallbackArgument) {
+    if (callbackArgument instanceof GatewaySenderEventCallbackArgument) {
       GatewayDeltaEvent delta = event.getNewValue();
       delta.apply(this.cache);
       System.out.println("Applied " + delta);

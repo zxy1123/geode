@@ -1,0 +1,17 @@
+
+test  {
+  include '**/TestSessions.class'
+  workingDir = "${projectDir}"
+}
+
+dependencies {
+  compile project(':gemfire-core')
+
+  compile 'org.apache.tomcat:catalina:' + project.'modules.tomcat.version'
+  compile 'org.apache.tomcat:catalina-ha:' + project.'modules.tomcat.version'
+  compile 'org.apache.tomcat:juli:' + project.'modules.tomcat.version'
+
+  testCompile 'org.httpunit:httpunit:' + project.'modules.httpunit.version'
+
+  provided project(path: ':gemfire-junit', configuration: 'testOutput')
+}

@@ -162,7 +162,8 @@ public class GatewayDeltaForwarderCacheListener extends CacheListenerAdapter<Str
         .setScope(Scope.LOCAL)
         .setDataPolicy(DataPolicy.EMPTY)
         .setSubscriptionAttributes(new SubscriptionAttributes(InterestPolicy.ALL))
-        .setEnableGateway(true)
+// TODO: Disabled for WAN
+//        .setEnableGateway(true)
         .addCacheListener(new GatewayDeltaEventApplicationCacheListener())
         .create(GatewayDelta.GATEWAY_DELTA_REGION_NAME);
     }

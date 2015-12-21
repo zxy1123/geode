@@ -39,7 +39,7 @@ public abstract class AbstractCache {
   
   protected static final float DEFAULT_EVICTION_HEAP_PERCENTAGE = LocalRegion.DEFAULT_HEAPLRU_EVICTION_HEAP_PERCENTAGE;
   
-  protected static final float DEFAULT_CRITICAL_HEAP_PERCENTAGE = ResourceManager.DEFAULT_CRITICAL_HEAP_PERCENTAGE;
+  protected static final float DEFAULT_CRITICAL_HEAP_PERCENTAGE = ResourceManager.DEFAULT_CRITICAL_PERCENTAGE;
   
   protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractCache.class);
   

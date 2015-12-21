@@ -139,7 +139,8 @@ public class RegionHelper {
     }
     
     // Enable gateway replication if necessary
-    requestedFactory.setEnableGateway(configuration.getEnableGatewayReplication());
+    // TODO: Disabled for WAN
+//    requestedFactory.setEnableGateway(configuration.getEnableGatewayReplication());
     
     // Add the debug cache listener if necessary
     if (configuration.getEnableDebugListener()) {
