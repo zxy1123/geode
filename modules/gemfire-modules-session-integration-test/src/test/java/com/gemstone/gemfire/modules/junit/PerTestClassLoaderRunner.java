@@ -95,7 +95,7 @@ public class PerTestClassLoaderRunner extends NamedRunner {
       }
     }
 
-    ClassLoader classLoader = new ChildFirstURLClassLoader(
+    ClassLoader classLoader = new ChildFirstClassLoader(
         urls.toArray(new URL[]{}),
         Thread.currentThread().getContextClassLoader()
     );

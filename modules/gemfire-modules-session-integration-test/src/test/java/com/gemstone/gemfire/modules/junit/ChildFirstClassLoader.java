@@ -5,9 +5,8 @@
  * one or more patents listed at http://www.pivotal.io/patents.
  *=========================================================================
  */
-package com.gemstone.gemfire.modules.session.filter;
+package com.gemstone.gemfire.modules.junit;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
