@@ -27,6 +27,7 @@ include 'gemfire-assembly'
 include 'gemfire-rebalancer'
 include 'gemfire-lucene'
 include 'extensions/gemfire-modules'
+include 'extensions/gemfire-modules-tomcat7'
 
 def minimumGradleVersion = '2.3'
 if (GradleVersion.current() < GradleVersion.version(minimumGradleVersion)) {

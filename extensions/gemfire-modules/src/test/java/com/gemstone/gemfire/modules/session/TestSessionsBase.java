@@ -8,40 +8,30 @@
 package com.gemstone.gemfire.modules.session;
 
 import com.gemstone.gemfire.cache.Region;
-import com.gemstone.gemfire.modules.session.catalina.CommitSessionValve;
 import com.gemstone.gemfire.modules.session.catalina.DeltaSessionManager;
 import com.gemstone.gemfire.modules.session.catalina.PeerToPeerCacheLifecycleListener;
-import com.gemstone.gemfire.modules.session.catalina.Tomcat6DeltaSessionManager;
-
-import javax.servlet.http.HttpSession;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import com.gemstone.gemfire.test.junit.categories.UnitTest;
-import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import org.apache.catalina.Valve;
 import org.apache.catalina.core.StandardWrapper;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.beans.PropertyChangeEvent;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 import static junit.framework.Assert.*;
 
 /**
  *
  */
-@Category(UnitTest.class)
-public class TestSessionsJUnitTest {
+public abstract class TestSessionsBase {
     private static EmbeddedTomcat server;
 
     private static Region<String, HttpSession> region;
@@ -51,26 +41,14 @@ public class TestSessionsJUnitTest {
     private static DeltaSessionManager sessionManager;
 
     // Set up the servers we need
-    @BeforeClass
-    public static void setupClass() throws Exception {
-        // Create a per-user scratch directory
-        File tmpDir = new File(System.getProperty("java.io.tmpdir"),
-                "gemfire_modules-" + System.getProperty("user.name"));
-        tmpDir.mkdirs();
-        tmpDir.deleteOnExit();
-
-        String gemfireLog = tmpDir.getPath() +
-                System.getProperty("file.separator") + "gemfire_modules.log";
-
+    public static void setupServer(DeltaSessionManager manager) throws Exception {
         server = new EmbeddedTomcat("/test", 7890, "JVM-1");
 
         PeerToPeerCacheLifecycleListener p2pListener = new PeerToPeerCacheLifecycleListener();
         p2pListener.setProperty("mcast-port", "0");
         p2pListener.setProperty("log-level", "config");
-        p2pListener.setProperty("log-file", gemfireLog);
-        p2pListener.setProperty("writable-working-dir", tmpDir.getPath());
         server.getEmbedded().addLifecycleListener(p2pListener);
-        sessionManager = new Tomcat6DeltaSessionManager();
+        sessionManager = manager;
         sessionManager.setEnableCommitValve(true);
         server.getRootContext().setManager(sessionManager);
 
@@ -510,6 +488,7 @@ public class TestSessionsJUnitTest {
         HttpSession session = (HttpSession) servlet.getServletContext().getAttribute("session");
         Long lastAccess = (Long) session.getAttribute("lastAccessTime");
 
-        assertEquals("Last access time not set correctly", lastAccess.longValue(), session.getLastAccessedTime());
+        assertTrue("Last access time not set correctly: " + lastAccess.longValue() + " not < " + session.getLastAccessedTime(),
+            lastAccess.longValue() < session.getLastAccessedTime());
     }
 }
