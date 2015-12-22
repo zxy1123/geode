@@ -12,24 +12,24 @@ import org.apache.catalina.session.StandardSessionFacade;
 import javax.servlet.http.HttpSession;
 
 public class DeltaSessionFacade extends StandardSessionFacade {
-  
+
   private DeltaSession session;
 
   /**
    * Construct a new session facade.
    */
   public DeltaSessionFacade(DeltaSession session) {
-    super((HttpSession)session);
+    super((HttpSession) session);
     // Store session locally since the super session is private and provides no accessor.
     this.session = session;
   }
 
   // ----------- DeltaSession Methods
-  
+
   public void commit() {
     this.session.commit();
   }
-  
+
   public void abort() {
     this.session.abort();
   }

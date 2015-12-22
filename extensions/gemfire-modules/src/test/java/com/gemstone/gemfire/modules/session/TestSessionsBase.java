@@ -32,153 +32,149 @@ import static junit.framework.Assert.*;
  *
  */
 public abstract class TestSessionsBase {
-    private static EmbeddedTomcat server;
+  private static EmbeddedTomcat server;
 
-    private static Region<String, HttpSession> region;
+  private static Region<String, HttpSession> region;
 
-    private static StandardWrapper servlet;
+  private static StandardWrapper servlet;
 
-    private static DeltaSessionManager sessionManager;
+  private static DeltaSessionManager sessionManager;
 
-    // Set up the servers we need
-    public static void setupServer(DeltaSessionManager manager) throws Exception {
-        server = new EmbeddedTomcat("/test", 7890, "JVM-1");
+  // Set up the servers we need
+  public static void setupServer(DeltaSessionManager manager) throws Exception {
+    server = new EmbeddedTomcat("/test", 7890, "JVM-1");
 
-        PeerToPeerCacheLifecycleListener p2pListener = new PeerToPeerCacheLifecycleListener();
-        p2pListener.setProperty("mcast-port", "0");
-        p2pListener.setProperty("log-level", "config");
-        server.getEmbedded().addLifecycleListener(p2pListener);
-        sessionManager = manager;
-        sessionManager.setEnableCommitValve(true);
-        server.getRootContext().setManager(sessionManager);
+    PeerToPeerCacheLifecycleListener p2pListener = new PeerToPeerCacheLifecycleListener();
+    p2pListener.setProperty("mcast-port", "0");
+    p2pListener.setProperty("log-level", "config");
+    server.getEmbedded().addLifecycleListener(p2pListener);
+    sessionManager = manager;
+    sessionManager.setEnableCommitValve(true);
+    server.getRootContext().setManager(sessionManager);
 
-        servlet = server.addServlet("/test/*", "default", CommandServlet.class.getName());
-        server.startContainer();
-
-        /**
-         * Can only retrieve the region once the container has started up
-         * (and the cache has started too).
-         */
-        region = sessionManager.getSessionCache().getSessionRegion();
-    }
-
-    @AfterClass
-    public static void teardownClass() throws Exception {
-        server.stopContainer();
-    }
-    /**
-     * Reset some data
-     */
-    @Before
-    public void setup() throws Exception {
-        sessionManager.setMaxInactiveInterval(30);
-        region.clear();
-    }
+    servlet = server.addServlet("/test/*", "default", CommandServlet.class.getName());
+    server.startContainer();
 
     /**
-     * Check that the basics are working
+     * Can only retrieve the region once the container has started up
+     * (and the cache has started too).
      */
-    @Test
-    public void testSanity() throws Exception {
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
-        req.setParameter("cmd", QueryCommand.GET.name());
-        req.setParameter("param", "null");
-        WebResponse response = wc.getResponse(req);
+    region = sessionManager.getSessionCache().getSessionRegion();
+  }
 
-        assertEquals("JSESSIONID", response.getNewCookieNames()[0]);
-    }
+  @AfterClass
+  public static void teardownClass() throws Exception {
+    server.stopContainer();
+  }
 
-    /**
-     * Test callback functionality. This is here really just as an example.
-     * Callbacks are useful to implement per test actions which can be defined
-     * within the actual test method instead of in a separate servlet class.
-     */
-    @Test
-    public void testCallback() throws Exception {
-        final String helloWorld = "Hello World";
-        Callback c = new Callback() {
+  /**
+   * Reset some data
+   */
+  @Before
+  public void setup() throws Exception {
+    sessionManager.setMaxInactiveInterval(30);
+    region.clear();
+  }
 
-            @Override
-            public void call(HttpServletRequest request, HttpServletResponse response)
-                    throws IOException {
-                PrintWriter out = response.getWriter();
-                out.write(helloWorld);
-            }
-        };
-        servlet.getServletContext().setAttribute("callback", c);
+  /**
+   * Check that the basics are working
+   */
+  @Test
+  public void testSanity() throws Exception {
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    req.setParameter("cmd", QueryCommand.GET.name());
+    req.setParameter("param", "null");
+    WebResponse response = wc.getResponse(req);
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    assertEquals("JSESSIONID", response.getNewCookieNames()[0]);
+  }
 
-        req.setParameter("cmd", QueryCommand.CALLBACK.name());
-        req.setParameter("param", "callback");
-        WebResponse response = wc.getResponse(req);
+  /**
+   * Test callback functionality. This is here really just as an example. Callbacks are useful to implement per test
+   * actions which can be defined within the actual test method instead of in a separate servlet class.
+   */
+  @Test
+  public void testCallback() throws Exception {
+    final String helloWorld = "Hello World";
+    Callback c = new Callback() {
 
-        assertEquals(helloWorld, response.getText());
-    }
+      @Override
+      public void call(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        PrintWriter out = response.getWriter();
+        out.write(helloWorld);
+      }
+    };
+    servlet.getServletContext().setAttribute("callback", c);
 
-    /**
-     * Test that calling session.isNew() works for the initial as well as
-     * subsequent requests.
-     */
-    @Test
-    public void testIsNew() throws Exception {
-        Callback c = new Callback() {
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-            @Override
-            public void call(HttpServletRequest request, HttpServletResponse response)
-                    throws IOException {
-                HttpSession session = request.getSession();
-                response.getWriter().write(Boolean.toString(session.isNew()));
-            }
-        };
-        servlet.getServletContext().setAttribute("callback", c);
+    req.setParameter("cmd", QueryCommand.CALLBACK.name());
+    req.setParameter("param", "callback");
+    WebResponse response = wc.getResponse(req);
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    assertEquals(helloWorld, response.getText());
+  }
 
-        req.setParameter("cmd", QueryCommand.CALLBACK.name());
-        req.setParameter("param", "callback");
-        WebResponse response = wc.getResponse(req);
+  /**
+   * Test that calling session.isNew() works for the initial as well as subsequent requests.
+   */
+  @Test
+  public void testIsNew() throws Exception {
+    Callback c = new Callback() {
 
-        assertEquals("true", response.getText());
-        response = wc.getResponse(req);
+      @Override
+      public void call(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession();
+        response.getWriter().write(Boolean.toString(session.isNew()));
+      }
+    };
+    servlet.getServletContext().setAttribute("callback", c);
 
-        assertEquals("false", response.getText());
-    }
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-    /**
-     * Check that our session persists. The values we pass in as query
-     * params are used to set attributes on the session.
-     */
-    @Test
-    public void testSessionPersists1() throws Exception {
-        String key = "value_testSessionPersists1";
-        String value = "Foo";
+    req.setParameter("cmd", QueryCommand.CALLBACK.name());
+    req.setParameter("param", "callback");
+    WebResponse response = wc.getResponse(req);
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
-        req.setParameter("cmd", QueryCommand.SET.name());
-        req.setParameter("param", key);
-        req.setParameter("value", value);
-        WebResponse response = wc.getResponse(req);
-        String sessionId = response.getNewCookieValue("JSESSIONID");
+    assertEquals("true", response.getText());
+    response = wc.getResponse(req);
 
-        assertNotNull("No apparent session cookie", sessionId);
+    assertEquals("false", response.getText());
+  }
 
-        // The request retains the cookie from the prior response...
-        req.setParameter("cmd", QueryCommand.GET.name());
-        req.setParameter("param", key);
-        req.removeParameter("value");
-        response = wc.getResponse(req);
+  /**
+   * Check that our session persists. The values we pass in as query params are used to set attributes on the session.
+   */
+  @Test
+  public void testSessionPersists1() throws Exception {
+    String key = "value_testSessionPersists1";
+    String value = "Foo";
 
-        assertEquals(value, response.getText());
-    }
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    req.setParameter("cmd", QueryCommand.SET.name());
+    req.setParameter("param", key);
+    req.setParameter("value", value);
+    WebResponse response = wc.getResponse(req);
+    String sessionId = response.getNewCookieValue("JSESSIONID");
 
-    /**
-     * Check that our session persists beyond the container restarting.
-     */
+    assertNotNull("No apparent session cookie", sessionId);
+
+    // The request retains the cookie from the prior response...
+    req.setParameter("cmd", QueryCommand.GET.name());
+    req.setParameter("param", key);
+    req.removeParameter("value");
+    response = wc.getResponse(req);
+
+    assertEquals(value, response.getText());
+  }
+
+  /**
+   * Check that our session persists beyond the container restarting.
+   */
 //    public void testSessionPersists2() throws Exception {
 //        String key = "value_testSessionPersists2";
 //        String value = "Foo";
@@ -206,289 +202,279 @@ public abstract class TestSessionsBase {
 //        assertEquals(value, response.getText());
 //    }
 
-    /**
-     * Test that invalidating a session makes it's attributes inaccessible.
-     */
-    @Test
-    public void testInvalidate() throws Exception {
-        String key = "value_testInvalidate";
-        String value = "Foo";
+  /**
+   * Test that invalidating a session makes it's attributes inaccessible.
+   */
+  @Test
+  public void testInvalidate() throws Exception {
+    String key = "value_testInvalidate";
+    String value = "Foo";
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-        // Set an attribute
-        req.setParameter("cmd", QueryCommand.SET.name());
-        req.setParameter("param", key);
-        req.setParameter("value", value);
-        WebResponse response = wc.getResponse(req);
+    // Set an attribute
+    req.setParameter("cmd", QueryCommand.SET.name());
+    req.setParameter("param", key);
+    req.setParameter("value", value);
+    WebResponse response = wc.getResponse(req);
 
-        // Invalidate the session
-        req.removeParameter("param");
-        req.removeParameter("value");
-        req.setParameter("cmd", QueryCommand.INVALIDATE.name());
-        wc.getResponse(req);
+    // Invalidate the session
+    req.removeParameter("param");
+    req.removeParameter("value");
+    req.setParameter("cmd", QueryCommand.INVALIDATE.name());
+    wc.getResponse(req);
 
-        // The attribute should not be accessible now...
-        req.setParameter("cmd", QueryCommand.GET.name());
-        req.setParameter("param", key);
-        response = wc.getResponse(req);
+    // The attribute should not be accessible now...
+    req.setParameter("cmd", QueryCommand.GET.name());
+    req.setParameter("param", key);
+    response = wc.getResponse(req);
 
-        assertEquals("", response.getText());
-    }
+    assertEquals("", response.getText());
+  }
 
-    /**
-     * Test setting the session expiration
-     */
-    @Test
-    public void testSessionExpiration1() throws Exception {
-        // TestSessions only live for a second
-        sessionManager.setMaxInactiveInterval(1);
+  /**
+   * Test setting the session expiration
+   */
+  @Test
+  public void testSessionExpiration1() throws Exception {
+    // TestSessions only live for a second
+    sessionManager.setMaxInactiveInterval(1);
 
-        String key = "value_testSessionExpiration1";
-        String value = "Foo";
+    String key = "value_testSessionExpiration1";
+    String value = "Foo";
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-        // Set an attribute
-        req.setParameter("cmd", QueryCommand.SET.name());
-        req.setParameter("param", key);
-        req.setParameter("value", value);
-        WebResponse response = wc.getResponse(req);
+    // Set an attribute
+    req.setParameter("cmd", QueryCommand.SET.name());
+    req.setParameter("param", key);
+    req.setParameter("value", value);
+    WebResponse response = wc.getResponse(req);
 
-        // Sleep a while
-        Thread.sleep(2000);
+    // Sleep a while
+    Thread.sleep(2000);
 
-        // The attribute should not be accessible now...
-        req.setParameter("cmd", QueryCommand.GET.name());
-        req.setParameter("param", key);
-        response = wc.getResponse(req);
+    // The attribute should not be accessible now...
+    req.setParameter("cmd", QueryCommand.GET.name());
+    req.setParameter("param", key);
+    response = wc.getResponse(req);
 
-        assertEquals("", response.getText());
-    }
+    assertEquals("", response.getText());
+  }
 
-    /**
-     * Test setting the session expiration via a property change as would happen
-     * under normal deployment conditions.
-     */
-    @Test
-    public void testSessionExpiration2() throws Exception {
-        // TestSessions only live for a minute
-        sessionManager.propertyChange(
-                new PropertyChangeEvent(server.getRootContext(),
-                        "sessionTimeout",
-                        new Integer(30), new Integer(1)));
+  /**
+   * Test setting the session expiration via a property change as would happen under normal deployment conditions.
+   */
+  @Test
+  public void testSessionExpiration2() throws Exception {
+    // TestSessions only live for a minute
+    sessionManager.propertyChange(
+        new PropertyChangeEvent(server.getRootContext(), "sessionTimeout", new Integer(30), new Integer(1)));
 
-        // Check that the value has been set to 60 seconds
-        assertEquals(60, sessionManager.getMaxInactiveInterval());
-    }
+    // Check that the value has been set to 60 seconds
+    assertEquals(60, sessionManager.getMaxInactiveInterval());
+  }
 
-    /**
-     * Test that removing a session attribute also removes it from the region
-     */
-    @Test
-    public void testRemoveAttribute() throws Exception {
-        String key = "value_testRemoveAttribute";
-        String value = "Foo";
+  /**
+   * Test that removing a session attribute also removes it from the region
+   */
+  @Test
+  public void testRemoveAttribute() throws Exception {
+    String key = "value_testRemoveAttribute";
+    String value = "Foo";
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-        // Set an attribute
-        req.setParameter("cmd", QueryCommand.SET.name());
-        req.setParameter("param", key);
-        req.setParameter("value", value);
-        WebResponse response = wc.getResponse(req);
-        String sessionId = response.getNewCookieValue("JSESSIONID");
+    // Set an attribute
+    req.setParameter("cmd", QueryCommand.SET.name());
+    req.setParameter("param", key);
+    req.setParameter("value", value);
+    WebResponse response = wc.getResponse(req);
+    String sessionId = response.getNewCookieValue("JSESSIONID");
 
-        // Implicitly remove the attribute
-        req.removeParameter("value");
-        wc.getResponse(req);
+    // Implicitly remove the attribute
+    req.removeParameter("value");
+    wc.getResponse(req);
 
-        // The attribute should not be accessible now...
-        req.setParameter("cmd", QueryCommand.GET.name());
-        req.setParameter("param", key);
-        response = wc.getResponse(req);
+    // The attribute should not be accessible now...
+    req.setParameter("cmd", QueryCommand.GET.name());
+    req.setParameter("param", key);
+    response = wc.getResponse(req);
 
-        assertEquals("", response.getText());
-        assertNull(region.get(sessionId).getAttribute(key));
-    }
+    assertEquals("", response.getText());
+    assertNull(region.get(sessionId).getAttribute(key));
+  }
 
-    /**
-     * Test that a session attribute gets set into the region too.
-     */
-    @Test
-    public void testBasicRegion() throws Exception {
-        String key = "value_testBasicRegion";
-        String value = "Foo";
+  /**
+   * Test that a session attribute gets set into the region too.
+   */
+  @Test
+  public void testBasicRegion() throws Exception {
+    String key = "value_testBasicRegion";
+    String value = "Foo";
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-        // Set an attribute
-        req.setParameter("cmd", QueryCommand.SET.name());
-        req.setParameter("param", key);
-        req.setParameter("value", value);
-        WebResponse response = wc.getResponse(req);
-        String sessionId = response.getNewCookieValue("JSESSIONID");
+    // Set an attribute
+    req.setParameter("cmd", QueryCommand.SET.name());
+    req.setParameter("param", key);
+    req.setParameter("value", value);
+    WebResponse response = wc.getResponse(req);
+    String sessionId = response.getNewCookieValue("JSESSIONID");
 
-        assertEquals(value, region.get(sessionId).getAttribute(key));
-    }
+    assertEquals(value, region.get(sessionId).getAttribute(key));
+  }
 
-    /**
-     * Test that a session attribute gets removed from the region when the
-     * session is invalidated.
-     */
-    @Test
-    public void testRegionInvalidate() throws Exception {
-        String key = "value_testRegionInvalidate";
-        String value = "Foo";
+  /**
+   * Test that a session attribute gets removed from the region when the session is invalidated.
+   */
+  @Test
+  public void testRegionInvalidate() throws Exception {
+    String key = "value_testRegionInvalidate";
+    String value = "Foo";
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-        // Set an attribute
-        req.setParameter("cmd", QueryCommand.SET.name());
-        req.setParameter("param", key);
-        req.setParameter("value", value);
-        WebResponse response = wc.getResponse(req);
-        String sessionId = response.getNewCookieValue("JSESSIONID");
+    // Set an attribute
+    req.setParameter("cmd", QueryCommand.SET.name());
+    req.setParameter("param", key);
+    req.setParameter("value", value);
+    WebResponse response = wc.getResponse(req);
+    String sessionId = response.getNewCookieValue("JSESSIONID");
 
-        // Invalidate the session
-        req.removeParameter("param");
-        req.removeParameter("value");
-        req.setParameter("cmd", QueryCommand.INVALIDATE.name());
-        wc.getResponse(req);
+    // Invalidate the session
+    req.removeParameter("param");
+    req.removeParameter("value");
+    req.setParameter("cmd", QueryCommand.INVALIDATE.name());
+    wc.getResponse(req);
 
-        assertNull("The region should not have an entry for this session",
-                region.get(sessionId));
-    }
+    assertNull("The region should not have an entry for this session", region.get(sessionId));
+  }
 
-    /**
-     * Test that multiple attribute updates, within the same request result in
-     * only the latest one being effective.
-     */
-    @Test
-    public void testMultipleAttributeUpdates() throws Exception {
-        final String key = "value_testMultipleAttributeUpdates";
-        Callback c = new Callback() {
+  /**
+   * Test that multiple attribute updates, within the same request result in only the latest one being effective.
+   */
+  @Test
+  public void testMultipleAttributeUpdates() throws Exception {
+    final String key = "value_testMultipleAttributeUpdates";
+    Callback c = new Callback() {
 
-            @Override
-            public void call(HttpServletRequest request, HttpServletResponse response)
-                    throws IOException {
-                HttpSession session = request.getSession();
-                for (int i = 0; i < 1000; i++) {
-                    session.setAttribute(key, Integer.toString(i));
-                }
-            }
-        };
-        servlet.getServletContext().setAttribute("callback", c);
-
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
-
-        // Execute the callback
-        req.setParameter("cmd", QueryCommand.CALLBACK.name());
-        req.setParameter("param", "callback");
-        WebResponse response = wc.getResponse(req);
-
-        String sessionId = response.getNewCookieValue("JSESSIONID");
-
-        assertEquals("999", region.get(sessionId).getAttribute(key));
-    }
-
-    /*
-     * Test for issue #38 CommitSessionValve throws exception on invalidated sessions
-     */
-    @Test
-    public void testCommitSessionValveInvalidSession() throws Exception {
-        Callback c = new Callback() {
-            @Override
-            public void call(HttpServletRequest request, HttpServletResponse response)
-                    throws IOException {
-                HttpSession session = request.getSession();
-                session.invalidate();
-                response.getWriter().write("done");
-            }
-        };
-        servlet.getServletContext().setAttribute("callback", c);
-
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
-
-        // Execute the callback
-        req.setParameter("cmd", QueryCommand.CALLBACK.name());
-        req.setParameter("param", "callback");
-        WebResponse response = wc.getResponse(req);
-
-        assertEquals("done", response.getText());
-    }
-
-    /**
-     * Test for issue #45 Sessions are being created for every request
-     */
-    @Test
-    public void testExtraSessionsNotCreated() throws Exception {
-      Callback c = new Callback() {
-        @Override
-        public void call(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
-          // Do nothing with sessions
-          response.getWriter().write("done");
+      @Override
+      public void call(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession();
+        for (int i = 0; i < 1000; i++) {
+          session.setAttribute(key, Integer.toString(i));
         }
-      };
-      servlet.getServletContext().setAttribute("callback", c);
+      }
+    };
+    servlet.getServletContext().setAttribute("callback", c);
 
-      WebConversation wc = new WebConversation();
-      WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-      // Execute the callback
-      req.setParameter("cmd", QueryCommand.CALLBACK.name());
-      req.setParameter("param", "callback");
-      WebResponse response = wc.getResponse(req);
+    // Execute the callback
+    req.setParameter("cmd", QueryCommand.CALLBACK.name());
+    req.setParameter("param", "callback");
+    WebResponse response = wc.getResponse(req);
 
-      assertEquals("done", response.getText());
-      assertEquals("The region should be empty", 0, region.size());
-    }
+    String sessionId = response.getNewCookieValue("JSESSIONID");
 
-    /**
-     * Test for issue #46 lastAccessedTime is not updated at the start of the
-     * request, but only at the end.
-     */
-    @Test
-    public void testLastAccessedTime() throws Exception {
-        Callback c = new Callback() {
-            @Override
-            public void call(HttpServletRequest request, HttpServletResponse response)
-                    throws IOException {
-                HttpSession session = request.getSession();
-                // Hack to expose the session to our test context
-                session.getServletContext().setAttribute("session", session);
-                session.setAttribute("lastAccessTime", session.getLastAccessedTime());
-                try {
-                  Thread.sleep(100);
-                } catch (InterruptedException ex) {
-                }
-                session.setAttribute("somethingElse", 1);
-                request.getSession();
-                response.getWriter().write("done");
-            }
-        };
-        servlet.getServletContext().setAttribute("callback", c);
+    assertEquals("999", region.get(sessionId).getAttribute(key));
+  }
 
-        WebConversation wc = new WebConversation();
-        WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+  /*
+   * Test for issue #38 CommitSessionValve throws exception on invalidated sessions
+   */
+  @Test
+  public void testCommitSessionValveInvalidSession() throws Exception {
+    Callback c = new Callback() {
+      @Override
+      public void call(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession();
+        session.invalidate();
+        response.getWriter().write("done");
+      }
+    };
+    servlet.getServletContext().setAttribute("callback", c);
 
-        // Execute the callback
-        req.setParameter("cmd", QueryCommand.CALLBACK.name());
-        req.setParameter("param", "callback");
-        WebResponse response = wc.getResponse(req);
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
 
-        HttpSession session = (HttpSession) servlet.getServletContext().getAttribute("session");
-        Long lastAccess = (Long) session.getAttribute("lastAccessTime");
+    // Execute the callback
+    req.setParameter("cmd", QueryCommand.CALLBACK.name());
+    req.setParameter("param", "callback");
+    WebResponse response = wc.getResponse(req);
 
-        assertTrue("Last access time not set correctly: " + lastAccess.longValue() + " not < " + session.getLastAccessedTime(),
-            lastAccess.longValue() < session.getLastAccessedTime());
-    }
+    assertEquals("done", response.getText());
+  }
+
+  /**
+   * Test for issue #45 Sessions are being created for every request
+   */
+  @Test
+  public void testExtraSessionsNotCreated() throws Exception {
+    Callback c = new Callback() {
+      @Override
+      public void call(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // Do nothing with sessions
+        response.getWriter().write("done");
+      }
+    };
+    servlet.getServletContext().setAttribute("callback", c);
+
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+
+    // Execute the callback
+    req.setParameter("cmd", QueryCommand.CALLBACK.name());
+    req.setParameter("param", "callback");
+    WebResponse response = wc.getResponse(req);
+
+    assertEquals("done", response.getText());
+    assertEquals("The region should be empty", 0, region.size());
+  }
+
+  /**
+   * Test for issue #46 lastAccessedTime is not updated at the start of the request, but only at the end.
+   */
+  @Test
+  public void testLastAccessedTime() throws Exception {
+    Callback c = new Callback() {
+      @Override
+      public void call(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession();
+        // Hack to expose the session to our test context
+        session.getServletContext().setAttribute("session", session);
+        session.setAttribute("lastAccessTime", session.getLastAccessedTime());
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException ex) {
+        }
+        session.setAttribute("somethingElse", 1);
+        request.getSession();
+        response.getWriter().write("done");
+      }
+    };
+    servlet.getServletContext().setAttribute("callback", c);
+
+    WebConversation wc = new WebConversation();
+    WebRequest req = new GetMethodWebRequest("http://localhost:7890/test");
+
+    // Execute the callback
+    req.setParameter("cmd", QueryCommand.CALLBACK.name());
+    req.setParameter("param", "callback");
+    WebResponse response = wc.getResponse(req);
+
+    HttpSession session = (HttpSession) servlet.getServletContext().getAttribute("session");
+    Long lastAccess = (Long) session.getAttribute("lastAccessTime");
+
+    assertTrue(
+        "Last access time not set correctly: " + lastAccess.longValue() + " not < " + session.getLastAccessedTime(),
+        lastAccess.longValue() < session.getLastAccessedTime());
+  }
 }

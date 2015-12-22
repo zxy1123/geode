@@ -7,14 +7,6 @@
  */
 package com.gemstone.gemfire.modules.session.bootstrap;
 
-import java.io.File;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.gemstone.gemfire.cache.GemFireCache;
 import com.gemstone.gemfire.cache.control.ResourceManager;
 import com.gemstone.gemfire.distributed.internal.AbstractDistributionConfig;
@@ -23,44 +15,51 @@ import com.gemstone.gemfire.internal.cache.LocalRegion;
 import com.gemstone.gemfire.modules.util.Banner;
 import com.gemstone.gemfire.modules.util.RegionHelper;
 import com.gemstone.gemfire.modules.util.ResourceManagerValidator;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public abstract class AbstractCache {
-  
+
   protected GemFireCache cache;
-  
+
   private static final DateFormat FORMAT = new SimpleDateFormat("yyyy-MM-dd");
-  
+
   protected static final String DEFAULT_LOG_FILE_NAME = RegionHelper.NAME + "." + FORMAT.format(new Date()) + ".log";
-  
+
   protected static final String DEFAULT_STATISTIC_ARCHIVE_FILE_NAME = RegionHelper.NAME + ".gfs";
-  
+
   protected static final float DEFAULT_EVICTION_HEAP_PERCENTAGE = LocalRegion.DEFAULT_HEAPLRU_EVICTION_HEAP_PERCENTAGE;
-  
+
   protected static final float DEFAULT_CRITICAL_HEAP_PERCENTAGE = ResourceManager.DEFAULT_CRITICAL_PERCENTAGE;
-  
+
   protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractCache.class);
-  
+
   protected float evictionHeapPercentage = DEFAULT_EVICTION_HEAP_PERCENTAGE;
-  
+
   protected float criticalHeapPercentage = DEFAULT_CRITICAL_HEAP_PERCENTAGE;
-  
+
   protected boolean rebalance = false;
 
-  protected final Map<String,String> gemfireProperties;
+  protected final Map<String, String> gemfireProperties;
 
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   /**
-   * Instance reference which is set in static initialization blocks of any
-   * subclasses.
+   * Instance reference which is set in static initialization blocks of any subclasses.
    */
   protected static AbstractCache instance = null;
 
   public AbstractCache() {
-    this.gemfireProperties = new ConcurrentHashMap<String,String>();
+    this.gemfireProperties = new ConcurrentHashMap<String, String>();
   }
 
   public void lifecycleEvent(LifecycleTypeAdapter eventType) {
@@ -68,8 +67,7 @@ public abstract class AbstractCache {
       getLogger().debug("Received " + eventType + " event");
     }
 
-    if (eventType.equals(LifecycleTypeAdapter.START) && 
-            started.compareAndSet(false, true)) {
+    if (eventType.equals(LifecycleTypeAdapter.START) && started.compareAndSet(false, true)) {
       // Create or retrieve the cache
       getLogger().info("Initializing " + Banner.getString());
       createOrRetrieveCache();
@@ -93,7 +91,7 @@ public abstract class AbstractCache {
 
   public void close() {
     getCache().close();
-    while (! getCache().isClosed()) {
+    while (!getCache().isClosed()) {
     }
 
     started.set(false);
@@ -102,7 +100,7 @@ public abstract class AbstractCache {
   public GemFireCache getCache() {
     return this.cache;
   }
-  
+
   public String getLogFileName() {
     String logFileName = getGemFireProperties().get(DistributionConfig.LOG_FILE_NAME);
     if (logFileName == null) {
@@ -110,7 +108,7 @@ public abstract class AbstractCache {
     }
     return logFileName;
   }
-  
+
   public String getStatisticArchiveFileName() {
     String statisticsArchiveFileName = getGemFireProperties().get(DistributionConfig.STATISTIC_ARCHIVE_FILE_NAME);
     if (statisticsArchiveFileName == null) {
@@ -154,25 +152,25 @@ public abstract class AbstractCache {
   public void setCriticalHeapPercentage(String criticalHeapPercentage) {
     this.criticalHeapPercentage = Float.valueOf(criticalHeapPercentage);
   }
-  
+
   public void setRebalance(boolean rebalance) {
     this.rebalance = rebalance;
   }
-  
+
   public boolean getRebalance() {
     return this.rebalance;
   }
 
-  public Map<String,String> getGemFireProperties() {
+  public Map<String, String> getGemFireProperties() {
     return this.gemfireProperties;
   }
-  
+
   public void setProperty(String name, String value) {
     //TODO Look at fake attributes
     if (name.equals("className")) {
       return;
     }
-    
+
     // Determine the validity of the input property
     boolean validProperty = false;
     for (String gemfireProperty : AbstractDistributionConfig._getAttNames()) {
@@ -181,7 +179,7 @@ public abstract class AbstractCache {
         break;
       }
     }
-    
+
     // If it is a valid GemFire property, add it to the the GemFire properties.
     // Otherwise, log a warning.
     if (validProperty) {
@@ -190,19 +188,19 @@ public abstract class AbstractCache {
       getLogger().warn("The input property named " + name + " is not a valid GemFire property. It is being ignored.");
     }
   }
-  
+
   public Logger getLogger() {
     return LOGGER;
   }
-  
+
   protected Properties createDistributedSystemProperties() {
     Properties properties = new Properties();
-    
+
     // Add any additional gemfire properties
-    for (Map.Entry<String,String> entry : this.gemfireProperties.entrySet()) {
+    for (Map.Entry<String, String> entry : this.gemfireProperties.entrySet()) {
       properties.put(entry.getKey(), entry.getValue());
     }
-    
+
     // Replace the cache xml file in the properties
     File cacheXmlFile = getCacheXmlFile();
     String absoluteCacheXmlFileName = cacheXmlFile.getAbsolutePath();
@@ -216,13 +214,13 @@ public abstract class AbstractCache {
 
     // Replace the log file in the properties
     properties.put(DistributionConfig.LOG_FILE_NAME, getLogFile().getAbsolutePath());
-    
+
     // Replace the statistics archive file in the properties
     File statisticArchiveFile = getStatisticArchiveFile();
     if (statisticArchiveFile == null) {
-        // Remove the statistics archive file name since statistic sampling is disabled
-        properties.remove(DistributionConfig.STATISTIC_ARCHIVE_FILE_NAME);
-        properties.remove(DistributionConfig.STATISTIC_SAMPLING_ENABLED_NAME);
+      // Remove the statistics archive file name since statistic sampling is disabled
+      properties.remove(DistributionConfig.STATISTIC_ARCHIVE_FILE_NAME);
+      properties.remove(DistributionConfig.STATISTIC_SAMPLING_ENABLED_NAME);
     } else {
       properties.put(DistributionConfig.STATISTIC_ARCHIVE_FILE_NAME, statisticArchiveFile.getAbsolutePath());
     }
@@ -230,7 +228,7 @@ public abstract class AbstractCache {
 
     return properties;
   }
-  
+
   protected void closeCache() {
     if (getLogger().isDebugEnabled()) {
       getLogger().debug("Closing " + this.cache);
@@ -240,26 +238,26 @@ public abstract class AbstractCache {
     }
     getLogger().info("Closed " + this.cache);
   }
-  
+
   protected File getLogFile() {
     String logFileName = getLogFileName();
     File logFile = new File(logFileName);
     // If the log file is not absolute, point it at the logs directory.
     if (!logFile.isAbsolute()) {
       if (System.getProperty("catalina.base") != null) {
-          logFile = new File(System.getProperty("catalina.base") + "/logs/", logFileName);
+        logFile = new File(System.getProperty("catalina.base") + "/logs/", logFileName);
       } else if (System.getProperty("weblogic.Name") != null) {
         String weblogicName = System.getProperty("weblogic.Name");
         String separator = System.getProperty("file.separator");
-        logFile = new File("servers" + separator + weblogicName + separator + 
-                "logs" + separator + logFileName);
+        logFile = new File("servers" + separator + weblogicName + separator +
+            "logs" + separator + logFileName);
       } else {
         logFile = new File(System.getProperty("gemfire.logdir"), logFileName);
       }
     }
     return logFile;
   }
-  
+
   protected File getStatisticArchiveFile() {
     File statisticsArchiveFile = null;
     String statisticSamplingEnabled = getGemFireProperties().get(DistributionConfig.STATISTIC_SAMPLING_ENABLED_NAME);
@@ -269,16 +267,14 @@ public abstract class AbstractCache {
       // If the statistics archive file is not absolute, point it at the logs directory.
       if (!statisticsArchiveFile.isAbsolute()) {
         if (System.getProperty("catalina.base") != null) {
-          statisticsArchiveFile = new File(System.getProperty("catalina.base") + 
-              "/logs/", statisticsArchiveFileName);
+          statisticsArchiveFile = new File(System.getProperty("catalina.base") + "/logs/", statisticsArchiveFileName);
         } else if (System.getProperty("weblogic.Name") != null) {
           String weblogicName = System.getProperty("weblogic.Name");
           String separator = System.getProperty("file.separator");
-          statisticsArchiveFile = new File("servers" + separator + weblogicName + separator + 
+          statisticsArchiveFile = new File("servers" + separator + weblogicName + separator +
               "logs" + separator + statisticsArchiveFileName);
         } else {
-          statisticsArchiveFile = new File(System.getProperty("gemfire.statisticsdir"),
-              statisticsArchiveFileName);
+          statisticsArchiveFile = new File(System.getProperty("gemfire.statisticsdir"), statisticsArchiveFileName);
         }
       }
     }
@@ -290,24 +286,21 @@ public abstract class AbstractCache {
     ResourceManager rm = getCache().getResourceManager();
     float currentEvictionHeapPercentage = rm.getEvictionHeapPercentage();
     float currentCriticalHeapPercentage = rm.getCriticalHeapPercentage();
-    
+
     // Set new eviction and critical heap percentages if necessary
-    if (getEvictionHeapPercentage() != currentEvictionHeapPercentage
-        || getCriticalHeapPercentage() != currentCriticalHeapPercentage) {
+    if (getEvictionHeapPercentage() != currentEvictionHeapPercentage || getCriticalHeapPercentage() != currentCriticalHeapPercentage) {
       if (getLogger().isDebugEnabled()) {
         StringBuilder builder = new StringBuilder();
-        builder
-          .append("Previous eviction heap percentage=")
-          .append(currentEvictionHeapPercentage)
-          .append("; critical heap percentage=")
-          .append(currentCriticalHeapPercentage);
+        builder.append("Previous eviction heap percentage=")
+            .append(currentEvictionHeapPercentage)
+            .append("; critical heap percentage=")
+            .append(currentCriticalHeapPercentage);
         getLogger().debug(builder.toString());
         builder.setLength(0);
-        builder
-          .append("Requested eviction heap percentage=")
-          .append(getEvictionHeapPercentage())
-          .append("; critical heap percentage=")
-          .append(getCriticalHeapPercentage());
+        builder.append("Requested eviction heap percentage=")
+            .append(getEvictionHeapPercentage())
+            .append("; critical heap percentage=")
+            .append(getCriticalHeapPercentage());
         getLogger().debug(builder.toString());
       }
       if (currentCriticalHeapPercentage == 0.0f) {
@@ -349,51 +342,48 @@ public abstract class AbstractCache {
       }
       if (getLogger().isDebugEnabled()) {
         StringBuilder builder = new StringBuilder();
-        builder
-          .append("Actual eviction heap percentage=")
-          .append(rm.getEvictionHeapPercentage())
-          .append("; critical heap percentage=")
-          .append(rm.getCriticalHeapPercentage());
+        builder.append("Actual eviction heap percentage=")
+            .append(rm.getEvictionHeapPercentage())
+            .append("; critical heap percentage=")
+            .append(rm.getCriticalHeapPercentage());
         getLogger().debug(builder.toString());
       }
     }
-    
+
     // Validate java startup parameters (done after setting the eviction and
     // critical heap percentages so that the CMSInitiatingOccupancyFraction can
     // be compared against them.
     ResourceManagerValidator.validateJavaStartupParameters(getCache());
   }
-  
-  private void handleResourceManagerException(IllegalArgumentException e,
-      float currentEvictionHeapPercentage, float currentCriticalHeapPercentage) {
+
+  private void handleResourceManagerException(IllegalArgumentException e, float currentEvictionHeapPercentage,
+      float currentCriticalHeapPercentage) {
     StringBuilder builder = new StringBuilder();
-    builder
-      .append("Caught exception attempting to set eviction heap percentage=")
-      .append(getEvictionHeapPercentage())
-      .append(" and critical heap percentage=")
-      .append(getCriticalHeapPercentage())
-      .append(". The percentages will be set back to their previous values (eviction heap percentage=")
-      .append(currentEvictionHeapPercentage)
-      .append(" and critical heap percentage=")
-      .append(currentCriticalHeapPercentage)
-      .append(").");
-    getLogger().warn(builder.toString(), e);  
+    builder.append("Caught exception attempting to set eviction heap percentage=")
+        .append(getEvictionHeapPercentage())
+        .append(" and critical heap percentage=")
+        .append(getCriticalHeapPercentage())
+        .append(". The percentages will be set back to their previous values (eviction heap percentage=")
+        .append(currentEvictionHeapPercentage)
+        .append(" and critical heap percentage=")
+        .append(currentCriticalHeapPercentage)
+        .append(").");
+    getLogger().warn(builder.toString(), e);
   }
 
   @Override
   public String toString() {
-    return new StringBuilder()
-      .append(getClass().getSimpleName())
-      .append("[")
-      .append("cache=")
-      .append(this.cache)
-      .append("]")
-      .toString();
+    return new StringBuilder().append(getClass().getSimpleName())
+        .append("[")
+        .append("cache=")
+        .append(this.cache)
+        .append("]")
+        .toString();
   }
 
   protected abstract void createOrRetrieveCache();
-  
+
   protected abstract void rebalanceCache();
-  
+
   protected abstract String getDefaultCacheXmlFileName();
 }

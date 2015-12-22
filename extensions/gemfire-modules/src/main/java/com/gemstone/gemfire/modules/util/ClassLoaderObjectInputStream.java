@@ -13,22 +13,19 @@ import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 
 /**
- * This class is used when session attributes need to be reconstructed with a
- * new classloader.
+ * This class is used when session attributes need to be reconstructed with a new classloader.
  */
 public class ClassLoaderObjectInputStream extends ObjectInputStream {
 
   private final ClassLoader loader;
 
-  public ClassLoaderObjectInputStream(InputStream in,
-      ClassLoader loader) throws IOException {
+  public ClassLoaderObjectInputStream(InputStream in, ClassLoader loader) throws IOException {
     super(in);
     this.loader = loader;
   }
 
   @Override
-  public Class<?> resolveClass(
-      ObjectStreamClass desc) throws ClassNotFoundException {
+  public Class<?> resolveClass(ObjectStreamClass desc) throws ClassNotFoundException {
     return Class.forName(desc.getName(), false, loader);
   }
 }

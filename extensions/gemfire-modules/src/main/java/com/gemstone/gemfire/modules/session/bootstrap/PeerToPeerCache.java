@@ -13,8 +13,7 @@ import com.gemstone.gemfire.cache.control.RebalanceResults;
 import com.gemstone.gemfire.modules.util.RegionHelper;
 
 /**
- * This is a singleton class which maintains configuration properties as well as
- * starting a Peer-To-Peer cache.
+ * This is a singleton class which maintains configuration properties as well as starting a Peer-To-Peer cache.
  */
 
 public class PeerToPeerCache extends AbstractCache {
@@ -66,8 +65,7 @@ public class PeerToPeerCache extends AbstractCache {
         getLogger().debug(RegionHelper.getRebalanceResultsMessage(results));
       }
     } catch (Exception e) {
-      getLogger().warn("Rebalance failed because of the following exception:",
-          e);
+      getLogger().warn("Rebalance failed because of the following exception:", e);
     }
   }
 

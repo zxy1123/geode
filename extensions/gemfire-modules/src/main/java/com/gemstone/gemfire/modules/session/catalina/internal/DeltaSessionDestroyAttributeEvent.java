@@ -7,28 +7,28 @@
  */
 package com.gemstone.gemfire.modules.session.catalina.internal;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import com.gemstone.gemfire.DataSerializable;
 import com.gemstone.gemfire.DataSerializer;
 import com.gemstone.gemfire.Instantiator;
 import com.gemstone.gemfire.modules.session.catalina.DeltaSession;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 
 @SuppressWarnings("serial")
 public class DeltaSessionDestroyAttributeEvent implements DeltaSessionAttributeEvent {
 
   private String attributeName;
-  
+
   public DeltaSessionDestroyAttributeEvent() {
   }
 
   public DeltaSessionDestroyAttributeEvent(String attributeName) {
     this.attributeName = attributeName;
   }
-  
+
   public String getAttributeName() {
     return this.attributeName;
   }
@@ -44,7 +44,7 @@ public class DeltaSessionDestroyAttributeEvent implements DeltaSessionAttributeE
   public void toData(DataOutput out) throws IOException {
     DataSerializer.writeString(this.attributeName, out);
   }
-  
+
   public static void registerInstantiator(int id) {
     Instantiator.register(new Instantiator(DeltaSessionDestroyAttributeEvent.class, id) {
       public DataSerializable newInstance() {
@@ -52,14 +52,13 @@ public class DeltaSessionDestroyAttributeEvent implements DeltaSessionAttributeE
       }
     });
   }
-  
+
   public String toString() {
-    return new StringBuilder()
-      .append("DeltaSessionDestroyAttributeEvent[")
-      .append("attributeName=")
-      .append(this.attributeName)
-      .append("]")
-      .toString();
+    return new StringBuilder().append("DeltaSessionDestroyAttributeEvent[")
+        .append("attributeName=")
+        .append(this.attributeName)
+        .append("]")
+        .toString();
   }
 }
 

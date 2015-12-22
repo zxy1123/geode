@@ -11,8 +11,7 @@ import com.gemstone.gemfire.cache.CacheClosedException;
 import com.gemstone.gemfire.cache.client.ClientCacheFactory;
 
 /**
- * This is a singleton class which maintains configuration properties as well
- * as starting a Client-Server cache.
+ * This is a singleton class which maintains configuration properties as well as starting a Client-Server cache.
  */
 public class ClientServerCache extends AbstractCache {
 
@@ -23,12 +22,12 @@ public class ClientServerCache extends AbstractCache {
   }
 
   private ClientServerCache() {
-      // Singleton
-      super();
+    // Singleton
+    super();
   }
 
   public static AbstractCache getInstance() {
-      return instance;
+    return instance;
   }
 
   @Override
@@ -39,8 +38,9 @@ public class ClientServerCache extends AbstractCache {
     // Get the existing cache if any
     try {
       this.cache = ClientCacheFactory.getAnyInstance();
-    } catch (CacheClosedException e) {}
-    
+    } catch (CacheClosedException e) {
+    }
+
     // If no cache exists, create one
     String message = null;
     if (this.cache == null) {
@@ -52,12 +52,12 @@ public class ClientServerCache extends AbstractCache {
     }
     getLogger().info(message + this.cache);
   }
-  
+
   @Override
   protected void rebalanceCache() {
     getLogger().warn("The client cannot rebalance the server's cache.");
   }
-  
+
   @Override
   protected String getDefaultCacheXmlFileName() {
     return DEFAULT_CACHE_XML_FILE_NAME;

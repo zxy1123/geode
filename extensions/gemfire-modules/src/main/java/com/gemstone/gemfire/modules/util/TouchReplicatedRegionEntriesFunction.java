@@ -7,19 +7,20 @@
  */
 package com.gemstone.gemfire.modules.util;
 
-import com.gemstone.gemfire.cache.*;
-
-import com.gemstone.gemfire.cache.execute.*;
-import com.gemstone.gemfire.cache.partition.PartitionRegionHelper;
+import com.gemstone.gemfire.cache.Cache;
+import com.gemstone.gemfire.cache.CacheFactory;
+import com.gemstone.gemfire.cache.Declarable;
+import com.gemstone.gemfire.cache.Region;
+import com.gemstone.gemfire.cache.execute.Function;
+import com.gemstone.gemfire.cache.execute.FunctionContext;
 
 import java.util.Properties;
 import java.util.Set;
 
 /**
- * Touches the keys contained in the set of keys by performing a get on the
- * replicated region. This is a non-data-aware function invoked using onMembers
- * or onServers.
- * 
+ * Touches the keys contained in the set of keys by performing a get on the replicated region. This is a non-data-aware
+ * function invoked using onMembers or onServers.
+ *
  * @author Barry Oglesby
  */
 public class TouchReplicatedRegionEntriesFunction implements Function, Declarable {
@@ -27,30 +28,29 @@ public class TouchReplicatedRegionEntriesFunction implements Function, Declarabl
   private static final long serialVersionUID = -7424895036162243564L;
 
   private final Cache cache;
-  
+
   public static final String ID = "touch-replicated-region-entries";
-  
+
   public TouchReplicatedRegionEntriesFunction() {
     this(CacheFactory.getAnyInstance());
   }
-  
+
   public TouchReplicatedRegionEntriesFunction(Cache cache) {
     this.cache = cache;
   }
-  
+
   public void execute(FunctionContext context) {
     Object[] arguments = (Object[]) context.getArguments();
     String regionName = (String) arguments[0];
     Set<String> keys = (Set<String>) arguments[1];
     if (this.cache.getLogger().fineEnabled()) {
       StringBuilder builder = new StringBuilder();
-      builder
-        .append("Function ")
-        .append(ID)
-        .append(" received request to touch ")
-        .append(regionName)
-        .append("->")
-        .append(keys);
+      builder.append("Function ")
+          .append(ID)
+          .append(" received request to touch ")
+          .append(regionName)
+          .append("->")
+          .append(keys);
       this.cache.getLogger().fine(builder.toString());
     }
 
@@ -59,11 +59,11 @@ public class TouchReplicatedRegionEntriesFunction implements Function, Declarabl
     if (region != null) {
       region.getAll(keys);
     }
-    
+
     // Return result to get around NPE in LocalResultCollectorImpl
     context.getResultSender().lastResult(true);
   }
-  
+
   public String getId() {
     return ID;
   }

@@ -7,13 +7,13 @@
  */
 package com.gemstone.gemfire.modules.util;
 
+import com.gemstone.gemfire.internal.GemFireVersion;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Properties;
-
-import com.gemstone.gemfire.internal.GemFireVersion;
 
 public class Banner {
 
@@ -29,7 +29,7 @@ public class Banner {
     } catch (IOException e) {
     }
   }
-	
+
   public static String getString() {
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
@@ -37,13 +37,14 @@ public class Banner {
     pw.close();
     return sw.toString();
   }
-  
+
   private static void print(PrintWriter pw) {
     pw.println("GemFire Modules");
     pw.print("Modules version: ");
     pw.println(VERSION);
     GemFireVersion.print(pw);
   }
-  
-  private Banner() {}
+
+  private Banner() {
+  }
 }

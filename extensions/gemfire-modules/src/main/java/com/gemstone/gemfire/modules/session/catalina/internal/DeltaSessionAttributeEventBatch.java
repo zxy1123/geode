@@ -7,53 +7,48 @@
  */
 package com.gemstone.gemfire.modules.session.catalina.internal;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.gemstone.gemfire.DataSerializer;
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.modules.gatewaydelta.AbstractGatewayDeltaEvent;
 import com.gemstone.gemfire.modules.session.catalina.DeltaSession;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 @SuppressWarnings("serial")
 public class DeltaSessionAttributeEventBatch extends AbstractGatewayDeltaEvent {
 
   private List<DeltaSessionAttributeEvent> eventQueue;
-  
+
   public DeltaSessionAttributeEventBatch() {
   }
 
-  public DeltaSessionAttributeEventBatch(String regionName, String sessionId, List<DeltaSessionAttributeEvent> eventQueue) {
+  public DeltaSessionAttributeEventBatch(String regionName, String sessionId,
+      List<DeltaSessionAttributeEvent> eventQueue) {
     super(regionName, sessionId);
     this.eventQueue = eventQueue;
   }
-  
+
   public List<DeltaSessionAttributeEvent> getEventQueue() {
     return this.eventQueue;
   }
 
   public void apply(Cache cache) {
-    Region<String,DeltaSession> region = getRegion(cache);
+    Region<String, DeltaSession> region = getRegion(cache);
     DeltaSession session = region.get(this.key);
     if (session == null) {
       StringBuilder builder = new StringBuilder();
-      builder
-        .append("Session ")
-        .append(this.key)
-        .append(" was not found while attempting to apply ")
-        .append(this);
+      builder.append("Session ").append(this.key).append(" was not found while attempting to apply ").append(this);
       cache.getLogger().warning(builder.toString());
     } else {
       session.applyAttributeEvents(region, this.eventQueue);
       if (cache.getLogger().fineEnabled()) {
         StringBuilder builder = new StringBuilder();
-          builder
-            .append("Applied ")
-            .append(this);
+        builder.append("Applied ").append(this);
         cache.getLogger().fine(builder.toString());
       }
     }
@@ -70,16 +65,15 @@ public class DeltaSessionAttributeEventBatch extends AbstractGatewayDeltaEvent {
   }
 
   public String toString() {
-    return new StringBuilder()
-      .append("DeltaSessionAttributeEventBatch[")
-      .append("regionName=")
-      .append(this.regionName)
-      .append("; sessionId=")
-      .append(this.key)
-      .append("; numberOfEvents=")
-      .append(this.eventQueue.size())
-      .append("]")
-      .toString();
+    return new StringBuilder().append("DeltaSessionAttributeEventBatch[")
+        .append("regionName=")
+        .append(this.regionName)
+        .append("; sessionId=")
+        .append(this.key)
+        .append("; numberOfEvents=")
+        .append(this.eventQueue.size())
+        .append("]")
+        .toString();
   }
 }
 

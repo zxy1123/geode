@@ -10,19 +10,17 @@ package com.gemstone.gemfire.modules.session.catalina.callback;
 import com.gemstone.gemfire.cache.Declarable;
 import com.gemstone.gemfire.cache.EntryEvent;
 import com.gemstone.gemfire.cache.Operation;
-
 import com.gemstone.gemfire.cache.util.CacheListenerAdapter;
 import com.gemstone.gemfire.modules.session.catalina.DeltaSession;
 import com.gemstone.gemfire.modules.session.catalina.DeltaSessionManager;
 import com.gemstone.gemfire.modules.util.ContextMapper;
 
+import javax.servlet.http.HttpSession;
 import java.util.Properties;
 
-import javax.servlet.http.HttpSession;
+public class SessionExpirationCacheListener extends CacheListenerAdapter<String, HttpSession> implements Declarable {
 
-public class SessionExpirationCacheListener extends CacheListenerAdapter<String,HttpSession> implements Declarable {
-
-  public void afterDestroy(EntryEvent<String,HttpSession> event) {
+  public void afterDestroy(EntryEvent<String, HttpSession> event) {
     // A Session expired. If it was destroyed by GemFire expiration, process it.
     // If it was destroyed via Session.invalidate, ignore it since it has
     // already been processed.
@@ -40,8 +38,7 @@ public class SessionExpirationCacheListener extends CacheListenerAdapter<String,
       Object callback = event.getCallbackArgument();
       if (callback != null && callback instanceof DeltaSession) {
         session = (DeltaSession) callback;
-        DeltaSessionManager m = ContextMapper.getContext(
-            session.getContextName());
+        DeltaSessionManager m = ContextMapper.getContext(session.getContextName());
         if (m != null) {
           session.setOwner(m);
         }
@@ -52,7 +49,8 @@ public class SessionExpirationCacheListener extends CacheListenerAdapter<String,
     }
   }
 
-  public void init(Properties p) {}
+  public void init(Properties p) {
+  }
 
   public boolean equals(Object obj) {
     // This method is only implemented so that RegionAttributesCreation.sameAs

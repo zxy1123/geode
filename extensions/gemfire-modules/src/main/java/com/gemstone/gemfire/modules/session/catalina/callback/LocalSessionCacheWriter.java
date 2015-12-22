@@ -7,36 +7,33 @@
  */
 package com.gemstone.gemfire.modules.session.catalina.callback;
 
-import java.util.Properties;
-
-import org.apache.catalina.Session;
-
 import com.gemstone.gemfire.cache.CacheWriterException;
 import com.gemstone.gemfire.cache.Declarable;
 import com.gemstone.gemfire.cache.EntryEvent;
 import com.gemstone.gemfire.cache.EntryNotFoundException;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.util.CacheWriterAdapter;
+
 import javax.servlet.http.HttpSession;
+import java.util.Properties;
 
-public class LocalSessionCacheWriter extends
-    CacheWriterAdapter<String, HttpSession> implements Declarable {
+public class LocalSessionCacheWriter extends CacheWriterAdapter<String, HttpSession> implements Declarable {
 
-  private final Region<String,HttpSession> backingRegion;
-  
-  public LocalSessionCacheWriter(Region<String,HttpSession> backingRegion) {
+  private final Region<String, HttpSession> backingRegion;
+
+  public LocalSessionCacheWriter(Region<String, HttpSession> backingRegion) {
     this.backingRegion = backingRegion;
   }
 
-  public void beforeCreate(EntryEvent<String,HttpSession> event) throws CacheWriterException {
+  public void beforeCreate(EntryEvent<String, HttpSession> event) throws CacheWriterException {
     this.backingRegion.put(event.getKey(), event.getNewValue(), event.getCallbackArgument());
   }
 
-  public void beforeUpdate(EntryEvent<String,HttpSession> event) throws CacheWriterException {
+  public void beforeUpdate(EntryEvent<String, HttpSession> event) throws CacheWriterException {
     this.backingRegion.put(event.getKey(), event.getNewValue(), event.getCallbackArgument());
   }
 
-  public void beforeDestroy(EntryEvent<String,HttpSession> event) throws CacheWriterException {
+  public void beforeDestroy(EntryEvent<String, HttpSession> event) throws CacheWriterException {
     try {
       this.backingRegion.destroy(event.getKey(), event.getCallbackArgument());
     } catch (EntryNotFoundException e) {
@@ -45,7 +42,9 @@ public class LocalSessionCacheWriter extends
     }
   }
 
-  public void close() {}
+  public void close() {
+  }
 
-  public void init(Properties p) {}
+  public void init(Properties p) {
+  }
 }

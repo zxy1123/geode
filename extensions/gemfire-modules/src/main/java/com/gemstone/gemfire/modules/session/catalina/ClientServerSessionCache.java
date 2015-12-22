@@ -7,21 +7,15 @@
  */
 package com.gemstone.gemfire.modules.session.catalina;
 
-import java.lang.IllegalStateException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import com.gemstone.gemfire.cache.InterestResultPolicy;
-import com.gemstone.gemfire.cache.client.PoolManager;
-import com.gemstone.gemfire.cache.client.internal.PoolImpl;
-
 import com.gemstone.gemfire.cache.GemFireCache;
+import com.gemstone.gemfire.cache.InterestResultPolicy;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.RegionShortcut;
 import com.gemstone.gemfire.cache.client.ClientCache;
 import com.gemstone.gemfire.cache.client.ClientRegionFactory;
 import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
+import com.gemstone.gemfire.cache.client.PoolManager;
+import com.gemstone.gemfire.cache.client.internal.PoolImpl;
 import com.gemstone.gemfire.cache.execute.Execution;
 import com.gemstone.gemfire.cache.execute.FunctionService;
 import com.gemstone.gemfire.cache.execute.ResultCollector;
@@ -36,11 +30,14 @@ import com.gemstone.gemfire.modules.util.TouchPartitionedRegionEntriesFunction;
 import com.gemstone.gemfire.modules.util.TouchReplicatedRegionEntriesFunction;
 
 import javax.servlet.http.HttpSession;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class ClientServerSessionCache extends AbstractSessionCache {
 
   private ClientCache cache;
-  
+
   protected static final String DEFAULT_REGION_ATTRIBUTES_ID = RegionShortcut.PARTITION_REDUNDANT.toString();
 
   protected static final boolean DEFAULT_ENABLE_LOCAL_CACHE = true;
@@ -54,7 +51,7 @@ public class ClientServerSessionCache extends AbstractSessionCache {
   public void initialize() {
     // Bootstrap the servers
     bootstrapServers();
-    
+
     // Create or retrieve the region
     try {
       createOrRetrieveRegion();
@@ -62,7 +59,7 @@ public class ClientServerSessionCache extends AbstractSessionCache {
       sessionManager.getLogger().fatal("Unable to create or retrieve region", ex);
       throw new IllegalStateException(ex);
     }
-    
+
     // Set the session region directly as the operating region since there is no difference
     // between the local cache region and the session region.
     this.operatingRegion = this.sessionRegion;
@@ -70,12 +67,12 @@ public class ClientServerSessionCache extends AbstractSessionCache {
     // Create or retrieve the statistics
     createStatistics();
   }
-  
+
   @Override
   public String getDefaultRegionAttributesId() {
     return DEFAULT_REGION_ATTRIBUTES_ID;
   }
-  
+
   @Override
   public boolean getDefaultEnableLocalCache() {
     return DEFAULT_ENABLE_LOCAL_CACHE;
@@ -102,8 +99,8 @@ public class ClientServerSessionCache extends AbstractSessionCache {
       }
     } else {
       // Execute the member touch function on all the server(s)
-      Execution execution = FunctionService.onServers(getCache()).withArgs(
-          new Object[] {this.sessionRegion.getFullPath(), sessionIds});
+      Execution execution = FunctionService.onServers(getCache())
+          .withArgs(new Object[]{this.sessionRegion.getFullPath(), sessionIds});
       try {
         ResultCollector collector = execution.execute(TouchReplicatedRegionEntriesFunction.ID, true, false, false);
         collector.getResult();
@@ -113,12 +110,12 @@ public class ClientServerSessionCache extends AbstractSessionCache {
       }
     }
   }
-  
+
   @Override
   public boolean isPeerToPeer() {
     return false;
   }
-  
+
   @Override
   public boolean isClientServer() {
     return true;
@@ -128,18 +125,18 @@ public class ClientServerSessionCache extends AbstractSessionCache {
   public Set<String> keySet() {
     return getSessionRegion().keySetOnServer();
   }
-  
+
   @Override
   public int size() {
-  	// Add a single dummy key to force the function to go to one server
+    // Add a single dummy key to force the function to go to one server
     Set<String> filters = new HashSet<String>();
     filters.add("test-key");
-    
+
     // Execute the function on the session region
     Execution execution = FunctionService.onRegion(getSessionRegion()).withFilter(filters);
     ResultCollector collector = execution.execute(RegionSizeFunction.ID, true, true, true);
     List<Integer> result = (List<Integer>) collector.getResult();
-    
+
     // Return the first (and only) element
     return result.get(0);
   }
@@ -156,7 +153,7 @@ public class ClientServerSessionCache extends AbstractSessionCache {
   public GemFireCache getCache() {
     return this.cache;
   }
-  
+
   private void bootstrapServers() {
     Execution execution = FunctionService.onServers(this.cache);
     ResultCollector collector = execution.execute(new BootstrappingFunction());
@@ -177,7 +174,7 @@ public class ClientServerSessionCache extends AbstractSessionCache {
     if (this.sessionRegion == null) {
       // Create the PR on the servers
       createSessionRegionOnServers();
-      
+
       // Create the region on the client
       this.sessionRegion = createLocalSessionRegion();
       if (getSessionManager().getLogger().isDebugEnabled()) {
@@ -193,31 +190,30 @@ public class ClientServerSessionCache extends AbstractSessionCache {
   private void createSessionRegionOnServers() {
     // Create the RegionConfiguration
     RegionConfiguration configuration = createRegionConfiguration();
-    
+
     // Send it to the server tier
     Execution execution = FunctionService.onServer(this.cache).withArgs(configuration);
     ResultCollector collector = execution.execute(CreateRegionFunction.ID);
-    
+
     // Verify the region was successfully created on the servers
     List<RegionStatus> results = (List<RegionStatus>) collector.getResult();
     for (RegionStatus status : results) {
       if (status == RegionStatus.INVALID) {
         StringBuilder builder = new StringBuilder();
-        builder
-          .append("An exception occurred on the server while attempting to create or validate region named ")
-          .append(getSessionManager().getRegionName())
-          .append(". See the server log for additional details.");
+        builder.append("An exception occurred on the server while attempting to create or validate region named ")
+            .append(getSessionManager().getRegionName())
+            .append(". See the server log for additional details.");
         throw new IllegalStateException(builder.toString());
       }
     }
   }
-  
-  private Region<String,HttpSession> createLocalSessionRegion() {
-    ClientRegionFactory<String,HttpSession> factory = null;
+
+  private Region<String, HttpSession> createLocalSessionRegion() {
+    ClientRegionFactory<String, HttpSession> factory = null;
     if (getSessionManager().getEnableLocalCache()) {
       // Create the region factory with caching and heap LRU enabled
       factory = this.cache.createClientRegionFactory(ClientRegionShortcut.CACHING_PROXY_HEAP_LRU);
-  
+
       // Set the expiration time, action and listener if necessary
       int maxInactiveInterval = getSessionManager().getMaxInactiveInterval();
       if (maxInactiveInterval != RegionConfiguration.DEFAULT_MAX_INACTIVE_INTERVAL) {
@@ -238,7 +234,7 @@ public class ClientServerSessionCache extends AbstractSessionCache {
      * If we're using an empty client region, we register interest so that
      * expired sessions are destroyed correctly.
      */
-    if (! getSessionManager().getEnableLocalCache()) {
+    if (!getSessionManager().getEnableLocalCache()) {
       region.registerInterest("ALL_KEYS", InterestResultPolicy.KEYS);
     }
 

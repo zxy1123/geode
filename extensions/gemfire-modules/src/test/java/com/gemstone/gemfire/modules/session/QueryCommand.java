@@ -5,14 +5,14 @@ package com.gemstone.gemfire.modules.session;
  */
 public enum QueryCommand {
 
-    SET,
+  SET,
 
-    GET,
+  GET,
 
-    INVALIDATE,
-    
-    CALLBACK,
+  INVALIDATE,
 
-    UNKNOWN;
+  CALLBACK,
+
+  UNKNOWN;
 
 }

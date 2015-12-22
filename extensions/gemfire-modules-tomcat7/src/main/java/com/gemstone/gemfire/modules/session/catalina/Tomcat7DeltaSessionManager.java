@@ -15,12 +15,10 @@ import java.io.IOException;
 public class Tomcat7DeltaSessionManager extends DeltaSessionManager {
 
   /**
-   * Prepare for the beginning of active use of the public methods of this
-   * component.  This method should be called after <code>configure()</code>,
-   * and before any of the public methods of the component are utilized.
+   * Prepare for the beginning of active use of the public methods of this component.  This method should be called
+   * after <code>configure()</code>, and before any of the public methods of the component are utilized.
    *
-   * @throws LifecycleException if this component detects a fatal error that
-   *                            prevents this component from being used
+   * @throws LifecycleException if this component detects a fatal error that prevents this component from being used
    */
   @Override
   public void startInternal() throws LifecycleException {
@@ -60,12 +58,10 @@ public class Tomcat7DeltaSessionManager extends DeltaSessionManager {
   }
 
   /**
-   * Gracefully terminate the active use of the public methods of this
-   * component.  This method should be the last one called on a given instance
-   * of this component.
+   * Gracefully terminate the active use of the public methods of this component.  This method should be the last one
+   * called on a given instance of this component.
    *
-   * @throws LifecycleException if this component detects a fatal error that
-   *                            needs to be reported
+   * @throws LifecycleException if this component detects a fatal error that needs to be reported
    */
   @Override
   public void stopInternal() throws LifecycleException {

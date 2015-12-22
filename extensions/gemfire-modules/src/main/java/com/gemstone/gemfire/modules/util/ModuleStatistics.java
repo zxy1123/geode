@@ -32,25 +32,15 @@ public class ModuleStatistics {
 
   static {
     StatisticsTypeFactory f = StatisticsTypeFactoryImpl.singleton();
-    type = f
-        .createType(
-            "pluginStats",
-            "statistics for hibernate plugin and hibernate L2 cache",
-            new StatisticDescriptor[]{
-                f.createLongCounter("cacheHits",
-                    "number of times an entity was found in L2 cache", "count"),
-                f.createLongCounter("cacheMisses",
-                    "number of times an entity was NOT found in l2 cache",
-                    "count"),
-                f.createLongCounter(
-                    "hibernateEntityDestroyJobsScheduled",
-                    "number of entities scheduled for destroy because of version conflict with a remote member",
-                    "jobs")});
+    type = f.createType("pluginStats", "statistics for hibernate plugin and hibernate L2 cache",
+        new StatisticDescriptor[]{f.createLongCounter("cacheHits", "number of times an entity was found in L2 cache",
+            "count"), f.createLongCounter("cacheMisses", "number of times an entity was NOT found in l2 cache",
+            "count"), f.createLongCounter("hibernateEntityDestroyJobsScheduled",
+            "number of entities scheduled for destroy because of version conflict with a remote member", "jobs")});
 
     cacheHitsId = type.nameToId("cacheHits");
     cacheMissesId = type.nameToId("cacheMisses");
-    hibernateEntityDestroyJobsScheduledId = type
-        .nameToId("hibernateEntityDestroyJobsScheduled");
+    hibernateEntityDestroyJobsScheduledId = type.nameToId("hibernateEntityDestroyJobsScheduled");
   }
 
   private final Statistics stats;

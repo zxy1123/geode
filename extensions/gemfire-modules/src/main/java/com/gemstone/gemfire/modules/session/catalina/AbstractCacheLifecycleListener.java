@@ -16,7 +16,7 @@ import org.apache.catalina.LifecycleListener;
 
 public abstract class AbstractCacheLifecycleListener implements LifecycleListener {
   protected AbstractCache cache;
-    
+
   @Override
   public void lifecycleEvent(LifecycleEvent le) {
     cache.lifecycleEvent(LifecycleTypeAdapter.valueOf(le.getType().toUpperCase()));
@@ -48,11 +48,11 @@ public abstract class AbstractCacheLifecycleListener implements LifecycleListene
   public void setCriticalHeapPercentage(String criticalHeapPercentage) {
     cache.setCriticalHeapPercentage(criticalHeapPercentage);
   }
-  
+
   public void setRebalance(boolean rebalance) {
     cache.setRebalance(rebalance);
   }
-  
+
   public boolean getRebalance() {
     return cache.getRebalance();
   }

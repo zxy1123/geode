@@ -7,15 +7,15 @@
  */
 package com.gemstone.gemfire.modules.util;
 
-import java.io.Serializable;
-import java.util.Properties;
-
 import com.gemstone.gemfire.cache.CustomExpiry;
 import com.gemstone.gemfire.cache.Declarable;
 import com.gemstone.gemfire.cache.ExpirationAction;
 import com.gemstone.gemfire.cache.ExpirationAttributes;
 import com.gemstone.gemfire.cache.Region;
+
 import javax.servlet.http.HttpSession;
+import java.io.Serializable;
+import java.util.Properties;
 
 @SuppressWarnings("serial")
 public class SessionCustomExpiry implements CustomExpiry<String, HttpSession>, Serializable, Declarable {
@@ -33,10 +33,12 @@ public class SessionCustomExpiry implements CustomExpiry<String, HttpSession>, S
     }
   }
 
-  public void close() {}
-  
-  public void init(Properties props) {}
-  
+  public void close() {
+  }
+
+  public void init(Properties props) {
+  }
+
   public boolean equals(Object obj) {
     // This method is only implemented so that RegionCreator.validateRegion works properly.
     // The EntryIdleTimeout comparison fails because two of these instances are not equal.
@@ -47,7 +49,7 @@ public class SessionCustomExpiry implements CustomExpiry<String, HttpSession>, S
     if (obj == null || !(obj instanceof SessionCustomExpiry)) {
       return false;
     }
-    
+
     return true;
   }
 }

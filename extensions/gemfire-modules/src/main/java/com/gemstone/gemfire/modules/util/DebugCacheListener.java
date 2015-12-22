@@ -7,11 +7,11 @@
  */
 package com.gemstone.gemfire.modules.util;
 
-import java.util.Properties;
-
 import com.gemstone.gemfire.cache.Declarable;
 import com.gemstone.gemfire.cache.EntryEvent;
 import com.gemstone.gemfire.cache.util.CacheListenerAdapter;
+
+import java.util.Properties;
 
 @SuppressWarnings("unchecked")
 public class DebugCacheListener extends CacheListenerAdapter implements Declarable {
@@ -27,28 +27,26 @@ public class DebugCacheListener extends CacheListenerAdapter implements Declarab
   public void afterInvalidate(EntryEvent event) {
     log(event);
   }
-  
+
   public void afterDestroy(EntryEvent event) {
     log(event);
   }
-  
+
   private void log(EntryEvent event) {
     StringBuilder builder = new StringBuilder();
-    builder
-      .append("DebugCacheListener: Received ")
-      .append(event.getOperation())
-      .append(" for key=")
-      .append(event.getKey());
+    builder.append("DebugCacheListener: Received ")
+        .append(event.getOperation())
+        .append(" for key=")
+        .append(event.getKey());
     if (event.getNewValue() != null) {
-      builder
-        .append("; value=")
-        .append(event.getNewValue());
+      builder.append("; value=").append(event.getNewValue());
     }
     event.getRegion().getCache().getLogger().info(builder.toString());
   }
 
-  public void init(Properties p) {}
-  
+  public void init(Properties p) {
+  }
+
   public boolean equals(Object obj) {
     // This method is only implemented so that RegionCreator.validateRegion works properly.
     // The CacheListener comparison fails because two of these instances are not equal.
@@ -59,7 +57,7 @@ public class DebugCacheListener extends CacheListenerAdapter implements Declarab
     if (obj == null || !(obj instanceof DebugCacheListener)) {
       return false;
     }
-    
+
     return true;
   }
 }

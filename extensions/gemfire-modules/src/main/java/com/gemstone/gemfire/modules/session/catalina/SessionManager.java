@@ -12,15 +12,15 @@ import org.apache.juli.logging.Log;
 public interface SessionManager {
 
   public String getRegionName();
-  
+
   public String getRegionAttributesId();
-  
+
   public int getMaxInactiveInterval();
-  
+
   public boolean getEnableGatewayReplication();
-  
+
   public boolean getEnableGatewayDeltaReplication();
-  
+
   public boolean getEnableDebugListener();
 
   public boolean getEnableLocalCache();
@@ -34,6 +34,6 @@ public interface SessionManager {
   public boolean getPreferDeserializedForm();
 
   public String getStatisticsName();
-  
+
   public Log getLogger();
 }

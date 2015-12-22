@@ -21,8 +21,8 @@ public class DeltaSessionStatistics {
   private static final StatisticsType type;
 
   private static final String SESSIONS_CREATED = "sessionsCreated";
-  private static final String SESSIONS_INVALIDATED= "sessionsInvalidated";
-  private static final String SESSIONS_EXPIRED= "sessionsExpired";
+  private static final String SESSIONS_INVALIDATED = "sessionsInvalidated";
+  private static final String SESSIONS_EXPIRED = "sessionsExpired";
 
   private static final int sessionsCreatedId;
   private static final int sessionsInvalidatedId;
@@ -32,12 +32,10 @@ public class DeltaSessionStatistics {
     // Initialize type
     StatisticsTypeFactory f = StatisticsTypeFactoryImpl.singleton();
     type = f.createType(typeName, typeName,
-      new StatisticDescriptor[] {
-        f.createIntCounter(SESSIONS_CREATED, "The number of sessions created", "operations"),
-        f.createIntCounter(SESSIONS_INVALIDATED, "The number of sessions invalidated by invoking invalidate", "operations"),
-        f.createIntCounter(SESSIONS_EXPIRED, "The number of sessions invalidated by timeout", "operations"),
-      }
-    );
+        new StatisticDescriptor[]{f.createIntCounter(SESSIONS_CREATED, "The number of sessions created",
+            "operations"), f.createIntCounter(SESSIONS_INVALIDATED,
+            "The number of sessions invalidated by invoking invalidate", "operations"), f.createIntCounter(
+            SESSIONS_EXPIRED, "The number of sessions invalidated by timeout", "operations"),});
 
     // Initialize id fields
     sessionsCreatedId = type.nameToId(SESSIONS_CREATED);

@@ -12,45 +12,42 @@
 
 package com.gemstone.gemfire.modules.session;
 
-import junit.framework.TestCase;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import static junit.framework.Assert.*;
+import junit.framework.TestCase;
 
 /**
  *
  */
 public class DualCacheTest extends TestCase {
 
-    /**
-     * Check that our session persists. The values we pass in as query
-     * params are used to set attributes on the session.
-     */
-    public void testSessionFailover() throws Exception {
-        String key = "value_testSessionFailover";
-        String value = "Foo";
+  /**
+   * Check that our session persists. The values we pass in as query params are used to set attributes on the session.
+   */
+  public void testSessionFailover() throws Exception {
+    String key = "value_testSessionFailover";
+    String value = "Foo";
 
-        WebConversation wc = new WebConversation();
-        WebRequest req1 = new GetMethodWebRequest("http://localhost:7890/test");
-        req1.setParameter("cmd", QueryCommand.SET.name());
-        req1.setParameter("param", key);
-        req1.setParameter("value", value);
-        WebResponse response = wc.getResponse(req1);
-        String sessionId = response.getNewCookieValue("JSESSIONID");
+    WebConversation wc = new WebConversation();
+    WebRequest req1 = new GetMethodWebRequest("http://localhost:7890/test");
+    req1.setParameter("cmd", QueryCommand.SET.name());
+    req1.setParameter("param", key);
+    req1.setParameter("value", value);
+    WebResponse response = wc.getResponse(req1);
+    String sessionId = response.getNewCookieValue("JSESSIONID");
 
-        assertNotNull("No apparent session cookie", sessionId);
+    assertNotNull("No apparent session cookie", sessionId);
 
-        WebRequest req2 = new GetMethodWebRequest("http://localhost:7891/test");
-        req2.setHeaderField("Cookie", "JSESSIONID=" + sessionId);
-        req2.setParameter("cmd", QueryCommand.GET.name());
-        req2.setParameter("param", key);
-        response = wc.getResponse(req2);
-        sessionId = response.getNewCookieValue("JSESSIONID");
+    WebRequest req2 = new GetMethodWebRequest("http://localhost:7891/test");
+    req2.setHeaderField("Cookie", "JSESSIONID=" + sessionId);
+    req2.setParameter("cmd", QueryCommand.GET.name());
+    req2.setParameter("param", key);
+    response = wc.getResponse(req2);
+    sessionId = response.getNewCookieValue("JSESSIONID");
 
-        assertEquals(value, response.getText());
-        assertTrue("The sessionId does not contain the correct JVM route value",
-                sessionId.contains("JVM-2"));
-    }
+    assertEquals(value, response.getText());
+    assertTrue("The sessionId does not contain the correct JVM route value", sessionId.contains("JVM-2"));
+  }
 }

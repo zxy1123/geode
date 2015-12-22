@@ -12,13 +12,11 @@ import org.apache.catalina.LifecycleException;
 public class Tomcat6DeltaSessionManager extends DeltaSessionManager {
 
   /**
-   * Prepare for the beginning of active use of the public methods of this
-   * component.  This method should be called after <code>configure()</code>,
-   * and before any of the public methods of the component are utilized.
+   * Prepare for the beginning of active use of the public methods of this component.  This method should be called
+   * after <code>configure()</code>, and before any of the public methods of the component are utilized.
    *
-   * @exception LifecycleException if this component detects a fatal error
-   *  that prevents this component from being used
-   */ 
+   * @throws LifecycleException if this component detects a fatal error that prevents this component from being used
+   */
   @Override
   public void start() throws LifecycleException {
     if (getLogger().isDebugEnabled()) {
@@ -33,14 +31,14 @@ public class Tomcat6DeltaSessionManager extends DeltaSessionManager {
     } catch (Throwable t) {
       getLogger().error(t.getMessage(), t);
     }
-    
+
     // Register our various valves
     registerJvmRouteBinderValve();
 
     if (isCommitValveEnabled()) {
       registerCommitSessionValve();
     }
-    
+
     // Initialize the appropriate session cache interface
     initializeSessionCache();
 
@@ -51,12 +49,10 @@ public class Tomcat6DeltaSessionManager extends DeltaSessionManager {
   }
 
   /**
-   * Gracefully terminate the active use of the public methods of this
-   * component.  This method should be the last one called on a given
-   * instance of this component.
+   * Gracefully terminate the active use of the public methods of this component.  This method should be the last one
+   * called on a given instance of this component.
    *
-   * @exception LifecycleException if this component detects a fatal error
-   *  that needs to be reported
+   * @throws LifecycleException if this component detects a fatal error that needs to be reported
    */
   @Override
   public void stop() throws LifecycleException {
@@ -68,7 +64,7 @@ public class Tomcat6DeltaSessionManager extends DeltaSessionManager {
 
     // StandardManager expires all Sessions here.
     // All Sessions are not known by this Manager.
-    
+
     // Require a new random number generator if we are restarted
     this.random = null;
 
@@ -76,13 +72,13 @@ public class Tomcat6DeltaSessionManager extends DeltaSessionManager {
     if (this.initialized) {
       destroy();
     }
-    
+
     // Clear any sessions to be touched
     getSessionsToTouch().clear();
-    
+
     // Cancel the timer
     cancelTimer();
-    
+
     // Unregister the JVM route valve
     unregisterJvmRouteBinderValve();
 

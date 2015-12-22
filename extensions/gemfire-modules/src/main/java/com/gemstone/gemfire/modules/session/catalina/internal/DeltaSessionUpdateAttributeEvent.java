@@ -7,14 +7,14 @@
  */
 package com.gemstone.gemfire.modules.session.catalina.internal;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import com.gemstone.gemfire.DataSerializable;
 import com.gemstone.gemfire.DataSerializer;
 import com.gemstone.gemfire.Instantiator;
 import com.gemstone.gemfire.modules.session.catalina.DeltaSession;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 @SuppressWarnings("serial")
 public class DeltaSessionUpdateAttributeEvent implements DeltaSessionAttributeEvent {
@@ -22,7 +22,7 @@ public class DeltaSessionUpdateAttributeEvent implements DeltaSessionAttributeEv
   private String attributeName;
 
   private Object attributeValue;
-  
+
   public DeltaSessionUpdateAttributeEvent() {
   }
 
@@ -30,7 +30,7 @@ public class DeltaSessionUpdateAttributeEvent implements DeltaSessionAttributeEv
     this.attributeName = attributeName;
     this.attributeValue = attributeValue;
   }
-  
+
   public String getAttributeName() {
     return this.attributeName;
   }
@@ -52,7 +52,7 @@ public class DeltaSessionUpdateAttributeEvent implements DeltaSessionAttributeEv
     DataSerializer.writeString(this.attributeName, out);
     DataSerializer.writeObject(this.attributeValue, out);
   }
-  
+
   public static void registerInstantiator(int id) {
     Instantiator.register(new Instantiator(DeltaSessionUpdateAttributeEvent.class, id) {
       public DataSerializable newInstance() {
@@ -60,16 +60,15 @@ public class DeltaSessionUpdateAttributeEvent implements DeltaSessionAttributeEv
       }
     });
   }
-  
+
   public String toString() {
-    return new StringBuilder()
-      .append("DeltaSessionUpdateAttributeEvent[")
-      .append("attributeName=")
-      .append(this.attributeName)
-      .append("; attributeValue=")
-      .append(this.attributeValue)
-      .append("]")
-      .toString();
+    return new StringBuilder().append("DeltaSessionUpdateAttributeEvent[")
+        .append("attributeName=")
+        .append(this.attributeName)
+        .append("; attributeValue=")
+        .append(this.attributeValue)
+        .append("]")
+        .toString();
   }
 }
 

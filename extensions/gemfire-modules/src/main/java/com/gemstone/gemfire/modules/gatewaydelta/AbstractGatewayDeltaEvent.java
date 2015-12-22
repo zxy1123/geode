@@ -7,15 +7,14 @@
  */
 package com.gemstone.gemfire.modules.gatewaydelta;
 
+import com.gemstone.gemfire.DataSerializable;
+import com.gemstone.gemfire.DataSerializer;
+import com.gemstone.gemfire.cache.Cache;
+import com.gemstone.gemfire.cache.Region;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import com.gemstone.gemfire.DataSerializable;
-import com.gemstone.gemfire.DataSerializer;
-
-import com.gemstone.gemfire.cache.Cache;
-import com.gemstone.gemfire.cache.Region;
 
 @SuppressWarnings("serial")
 public abstract class AbstractGatewayDeltaEvent implements GatewayDeltaEvent, DataSerializable {
@@ -30,7 +29,7 @@ public abstract class AbstractGatewayDeltaEvent implements GatewayDeltaEvent, Da
     this.regionName = regionName;
     this.key = key;
   }
-  
+
   public String getRegionName() {
     return this.regionName;
   }
@@ -38,7 +37,7 @@ public abstract class AbstractGatewayDeltaEvent implements GatewayDeltaEvent, Da
   public String getKey() {
     return this.key;
   }
-  
+
   @SuppressWarnings("unchecked")
   public Region getRegion(Cache cache) {
     return cache.getRegion(this.regionName);

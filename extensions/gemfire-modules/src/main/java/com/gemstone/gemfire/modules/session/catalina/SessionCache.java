@@ -7,48 +7,48 @@
  */
 package com.gemstone.gemfire.modules.session.catalina;
 
-import java.util.Set;
-
 import com.gemstone.gemfire.cache.GemFireCache;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.modules.session.catalina.internal.DeltaSessionStatistics;
-import javax.servlet.http.HttpSession;
 import org.apache.catalina.Session;
 
+import javax.servlet.http.HttpSession;
+import java.util.Set;
+
 public interface SessionCache {
-  
+
   public void initialize();
-  
+
   public String getDefaultRegionAttributesId();
 
   public boolean getDefaultEnableLocalCache();
-  
+
   public String getSessionRegionName();
-  
+
   public String getOperatingRegionName();
 
   public void putSession(Session session);
-  
+
   public HttpSession getSession(String sessionId);
-  
+
   public void destroySession(String sessionId);
-  
+
   public void touchSessions(Set<String> sessionIds);
-  
+
   public DeltaSessionStatistics getStatistics();
-  
+
   public GemFireCache getCache();
-  
-  public Region<String,HttpSession> getSessionRegion();
-  
-  public Region<String,HttpSession> getOperatingRegion();
-  
+
+  public Region<String, HttpSession> getSessionRegion();
+
+  public Region<String, HttpSession> getOperatingRegion();
+
   public boolean isPeerToPeer();
-  
+
   public boolean isClientServer();
-  
+
   public Set<String> keySet();
-  
+
   public int size();
 
   public boolean isBackingCacheAvailable();

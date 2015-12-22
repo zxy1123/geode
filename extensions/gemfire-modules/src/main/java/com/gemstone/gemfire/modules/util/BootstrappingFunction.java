@@ -25,28 +25,28 @@ import java.util.Set;
 public class BootstrappingFunction implements Function, MembershipListener {
 
   private static final long serialVersionUID = 1856043174458190605L;
-    
+
   public static final String ID = "bootstrapping-function";
-  
+
   private static final int TIME_TO_WAIT_FOR_CACHE = Integer.getInteger("gemfiremodules.timeToWaitForCache", 30000);
-  
+
   @Override
   public void execute(FunctionContext context) {
     // Verify that the cache exists before continuing.
     // When this function is executed by a remote membership listener, it is
     // being invoked before the cache is started.
     Cache cache = verifyCacheExists();
-    
+
     // Register as membership listener
     registerAsMembershipListener(cache);
 
     // Register functions
     registerFunctions();
-    
+
     // Return status
     context.getResultSender().lastResult(Boolean.TRUE);
   }
-  
+
   private Cache verifyCacheExists() {
     int timeToWait = 0;
     Cache cache = null;
@@ -65,11 +65,11 @@ public class BootstrappingFunction implements Function, MembershipListener {
       }
       timeToWait += 250;
     }
-    
+
     if (cache == null) {
       cache = new CacheFactory().create();
     }
-    
+
     return cache;
   }
 
@@ -86,20 +86,20 @@ public class BootstrappingFunction implements Function, MembershipListener {
       if (!FunctionService.isRegistered(CreateRegionFunction.ID)) {
         FunctionService.registerFunction(new CreateRegionFunction());
       }
-      
+
       // Register the touch partitioned region entries function if it is not already registered
       if (!FunctionService.isRegistered(TouchPartitionedRegionEntriesFunction.ID)) {
         FunctionService.registerFunction(new TouchPartitionedRegionEntriesFunction());
       }
-      
+
       // Register the touch replicated region entries function if it is not already registered
       if (!FunctionService.isRegistered(TouchReplicatedRegionEntriesFunction.ID)) {
         FunctionService.registerFunction(new TouchReplicatedRegionEntriesFunction());
       }
-      
+
       // Register the region size function if it is not already registered
       if (!FunctionService.isRegistered(RegionSizeFunction.ID)) {
-      	FunctionService.registerFunction(new RegionSizeFunction());
+        FunctionService.registerFunction(new RegionSizeFunction());
       }
     }
   }
@@ -138,13 +138,13 @@ public class BootstrappingFunction implements Function, MembershipListener {
   public boolean optimizeForWrite() {
     return false;
   }
-  
+
   public int hashCode() {
     // This method is only implemented so that multiple instances of this class
     // don't get added as membership listeners.
     return ID.hashCode();
   }
-  
+
   public boolean equals(Object obj) {
     // This method is only implemented so that multiple instances of this class
     // don't get added as membership listeners.
@@ -155,7 +155,7 @@ public class BootstrappingFunction implements Function, MembershipListener {
     if (obj == null || !(obj instanceof BootstrappingFunction)) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -169,8 +169,7 @@ public class BootstrappingFunction implements Function, MembershipListener {
   }
 
   @Override
-  public void memberSuspect(InternalDistributedMember id,
-      InternalDistributedMember whoSuspected, String reason) {
+  public void memberSuspect(InternalDistributedMember id, InternalDistributedMember whoSuspected, String reason) {
   }
 
   @Override
