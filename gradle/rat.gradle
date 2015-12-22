@@ -21,6 +21,7 @@ rat {
     // git
     '.git/**',
     '**/.gitignore',
+    '**/.gitkeep',
 
     // gradle
     '**/.gradle/**',
@@ -40,7 +41,9 @@ rat {
     '**/.classpath',
     '**/.settings/**',
     '**/build-eclipse/**',
-    '*.iml',
+    '**/*.iml',
+    '**/*.ipr',
+    '**/*.iws',
     '.idea/**',
     '**/tags',
 
@@ -69,7 +72,14 @@ rat {
     // other text files
     'gemfire-spark-connector/project/plugins.sbt',
     'gemfire-spark-connector/project/build.properties',
-    '**/log4j2*.xml',
+    '**/log4j*.xml',
+    'extensions/gemfire-modules/src/main/java/com/gemstone/gemfire/modules/session/catalina/LocalStrings.properties',
+    'extensions/gemfire-modules/src/main/resources/modules-version.properties',
+    'extensions/gemfire-modules/src/test/resources/tomcat/conf/tomcat-users.xml',
+    'extensions/gemfire-modules/src/test/resources/com/gemstone/gemfire/modules/Event.hbm.xml',
+    'extensions/gemfire-modules/src/test/resources/com/gemstone/gemfire/modules/Person.hbm.xml',
+    'extensions/gemfire-modules/src/test/resources/log4j.properties',
+    'extensions/gemfire-modules-tomcat7/src/test/resources/tomcat/conf/tomcat-users.xml',
 
     // these are test files that don't expect the first element to be a comment
     'gemfire-core/src/test/resources/com/gemstone/gemfire/management/internal/configuration/domain/CacheElementJUnitTest.xml',
