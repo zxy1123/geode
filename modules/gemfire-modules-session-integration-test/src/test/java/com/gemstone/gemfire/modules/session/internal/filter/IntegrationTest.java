@@ -30,6 +30,7 @@ import javax.servlet.http.HttpSession;
 
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.modules.junit.PerTestClassLoaderRunner;
+import com.gemstone.gemfire.modules.session.filter.SessionCachingFilter;
 import org.apache.jasper.servlet.JspServlet;
 import org.junit.After;
 import org.junit.Before;

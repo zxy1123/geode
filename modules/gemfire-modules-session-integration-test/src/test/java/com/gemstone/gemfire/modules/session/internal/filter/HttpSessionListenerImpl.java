@@ -12,6 +12,8 @@
 
 package com.gemstone.gemfire.modules.session.internal.filter;
 
+import com.gemstone.gemfire.modules.session.filter.SessionCachingFilter;
+
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;

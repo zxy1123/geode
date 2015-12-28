@@ -15,7 +15,6 @@ import com.mockrunner.mock.web.MockHttpServletRequest;
 import com.mockrunner.mock.web.MockHttpServletResponse;
 import com.mockrunner.mock.web.MockHttpSession;
 import com.mockrunner.servlet.BasicServletTestCaseAdapter;
-import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -36,11 +35,6 @@ import static org.junit.Assert.*;
 public abstract class CommonTests extends BasicServletTestCaseAdapter {
 
   protected static final String CONTEXT_PATH = "/test";
-
-  @After
-  public void tearDown() throws Exception {
-    super.tearDown();
-  }
 
   @Test
   public void testGetSession1() throws Exception {

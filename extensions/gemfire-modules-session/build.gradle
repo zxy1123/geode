@@ -1,4 +1,11 @@
 dependencies {
   compile project(':extensions/gemfire-modules')
   compile project(':gemfire-core')
+
+  testCompile 'javax.servlet:servlet-api:2.5'
+  testCompile 'org.slf4j:slf4j-jdk14:1.7.7'
+  testCompile('com.mockrunner:mockrunner-servlet:1.0.8') {
+    exclude group: 'jboss'
+  }
+  provided project(path: ':gemfire-junit', configuration: 'testOutput')
 }

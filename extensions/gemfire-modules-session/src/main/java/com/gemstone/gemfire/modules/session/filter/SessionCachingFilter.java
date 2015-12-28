@@ -5,8 +5,11 @@
  * one or more patents listed at http://www.pivotal.io/patents.
  *=========================================================================
  */
-package com.gemstone.gemfire.modules.session.internal.filter;
+package com.gemstone.gemfire.modules.session.filter;
 
+import com.gemstone.gemfire.modules.session.internal.filter.GemfireHttpSession;
+import com.gemstone.gemfire.modules.session.internal.filter.GemfireSessionManager;
+import com.gemstone.gemfire.modules.session.internal.filter.SessionManager;
 import com.gemstone.gemfire.modules.session.internal.filter.util.ThreadLocalSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

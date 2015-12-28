@@ -130,10 +130,10 @@ public class PeerToPeerSessionCache extends AbstractSessionCache {
     if (region == null) {
       // Create the region
       region = RegionHelper.createRegion(cache, configuration);
-      LOG.info("Created new session region: " + region);
+      LOG.info("Created new session region: {}", region);
     } else {
       // Validate the existing region
-      LOG.info("Retrieved existing session region: " + region);
+      LOG.info("Retrieved existing session region: {}", region);
       RegionHelper.validateRegion(cache, configuration, region);
     }
 
