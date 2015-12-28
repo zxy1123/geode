@@ -1,0 +1,4 @@
+dependencies {
+  compile project(':extensions/gemfire-modules')
+  compile project(':gemfire-core')
+}

@@ -36,10 +36,10 @@ import java.io.OutputStream;
 public class Installer {
 
   private static final String GEMFIRE_FILTER_CLASS =
-      "com.gemstone.gemfire.modules.session.filter.SessionCachingFilter";
+      "com.gemstone.gemfire.modules.session.filter.internal.SessionCachingFilter";
 
   private static final String GEMFIRE_LISTENER_CLASS =
-      "com.gemstone.gemfire.modules.session.filter.SessionListener";
+      "com.gemstone.gemfire.modules.session.filter.internal.SessionListener";
 
   private ArgumentValues argValues;
 
