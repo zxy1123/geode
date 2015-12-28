@@ -80,6 +80,7 @@ rat {
     'extensions/gemfire-modules/src/test/resources/com/gemstone/gemfire/modules/Person.hbm.xml',
     'extensions/gemfire-modules/src/test/resources/log4j.properties',
     'extensions/gemfire-modules-tomcat7/src/test/resources/tomcat/conf/tomcat-users.xml',
+    'extensions/gemfire-modules-hibernate/src/test/resources/log4j.properties',
 
     // these are test files that don't expect the first element to be a comment
     'gemfire-core/src/test/resources/com/gemstone/gemfire/management/internal/configuration/domain/CacheElementJUnitTest.xml',
