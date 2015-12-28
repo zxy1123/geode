@@ -15,27 +15,6 @@
  * limitations under the License.
  */
 
-test {
-  doFirst {
-    copy {
-      from 'build/resources/test/tomcat'
-      into 'build/test/tomcat/'
-    }
-  }
-
-  testLogging {
-    events 'passed', 'skipped', 'failed'
-    exceptionFormat = 'full'
-  }
-
-//  include '**/HibernateTestCase.class'
-//  include '**/SecondVMTest.class'
-//
-//  testLogging {
-//    exceptionFormat = 'full'
-//  }
-}
-
 dependencies {
   compile project(':extensions/gemfire-modules')
   compile 'org.hibernate:hibernate-core:3.5.0-Final'
@@ -43,7 +22,6 @@ dependencies {
   compile 'javax.persistence:persistence-api:1.0.2'
 
   runtime 'dom4j:dom4j:1.6.1'
-//  runtime 'org.hibernate.javax.persistence:hibernate-jpa-2.0-api:1.0.0.Final'
 
   testRuntime 'org.hibernate:hibernate-annotations:3.5.5-Final'
   testRuntime 'org.slf4j:slf4j-jdk14:1.7.7'
