@@ -10,7 +10,6 @@ package com.gemstone.gemfire.modules;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Properties;
-import java.util.Set;
 import java.util.logging.Level;
 
 import junit.framework.TestCase;
@@ -53,7 +52,7 @@ public class SecondVMTest extends TestCase {
   
   public void _testStartVM() throws Exception {
     java.util.logging.Logger.getLogger("org.hibernate").setLevel(Level.ALL);
-    Session session = HibernateTestCase.getSessionFactory(null).openSession();
+    Session session = HibernateJUnitTest.getSessionFactory(null).openSession();
     log.info("SWAP:new session open");
     long id = 1;
     log.info("loading new person:"+(id));

@@ -22,10 +22,16 @@ test  {
       into 'build/test/tomcat/'
     }
   }
+
+  testLogging {
+    events 'passed', 'skipped', 'failed'
+    exceptionFormat = 'full'
+  }
 }
 
 dependencies {
   compile(project(':extensions/gemfire-modules')) {
+    // Remove everything related to Tomcat 6.x
     exclude group: 'org.apache.tomcat'
   }
 
@@ -33,9 +39,19 @@ dependencies {
   compile 'org.apache.tomcat:tomcat-catalina:' + project.'tomcat7.version'
   compile 'org.apache.tomcat:tomcat-coyote:' + project.'tomcat7.version'
   compile 'org.apache.tomcat:tomcat-util:' + project.'tomcat7.version'
+  compile 'org.apache.tomcat:tomcat-juli:' + project.'tomcat7.version'
 
   testCompile 'org.httpunit:httpunit:' + project.'httpunit.version'
+  testRuntime 'javax.servlet:javax.servlet-api:3.1.0'
+  testRuntime 'javax.annotation:jsr250-api:1.0'
+  testRuntime 'javax.ejb:ejb-api:3.0'
+  testRuntime 'javax.persistence:persistence-api:1.0.2'
 
-  provided project(path: ':extensions/gemfire-modules', configuration: 'testOutput')
+  provided(project(path: ':extensions/gemfire-modules', configuration: 'testOutput')) {
+    // Remove everything related to Tomcat 6.x
+    exclude group: 'org.apache.tomcat', module: 'catalina'
+    exclude group: 'org.apache.tomcat', module: 'catalina-ha'
+    exclude group: 'org.apache.tomcat', module: 'juli'
+  }
   provided project(path: ':gemfire-junit', configuration: 'testOutput')
 }

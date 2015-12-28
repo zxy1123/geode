@@ -11,12 +11,15 @@ import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.Region.Entry;
 import com.gemstone.gemfire.internal.cache.GemFireCacheImpl;
 import com.gemstone.gemfire.modules.Owner.Status;
-import junit.framework.TestCase;
+import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.AnnotationConfiguration;
 import org.hibernate.cfg.Configuration;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +34,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
-public class HibernateTestCase extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+@Category(IntegrationTest.class)
+public class HibernateJUnitTest {
 
   private Logger log = LoggerFactory.getLogger(getClass());
 
@@ -42,10 +48,8 @@ public class HibernateTestCase extends TestCase {
 
   static String gemfireLog;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-
+  @Before
+  public void setUp() throws Exception {
     // Create a per-user scratch directory
     tmpDir = new File(System.getProperty("java.io.tmpdir"),
             "gemfire_modules-" + System.getProperty("user.name"));
@@ -75,7 +79,7 @@ public class HibernateTestCase extends TestCase {
     cfg.setProperty("hibernate.show_sql", "true");
     cfg.setProperty("hibernate.cache.use_query_cache", "true");
     //cfg.setProperty("gemfire.mcast-port", AvailablePort.getRandomAvailablePort(AvailablePort.JGROUPS)+"");
-    cfg.setProperty("gemfire.mcast-port", "5555");
+    cfg.setProperty("gemfire.mcast-port", "0");
     cfg.setProperty("gemfire.statistic-sampling-enabled", "true");
     cfg.setProperty("gemfire.log-file", gemfireLog);
     cfg.setProperty("gemfire.writable-working-dir", tmpDir.getPath());
@@ -97,6 +101,7 @@ public class HibernateTestCase extends TestCase {
     return cfg.buildSessionFactory();
   }
 
+  @Test
   public void testpreload() {
     log.info("SWAP:creating session factory In hibernateTestCase");
 
@@ -114,7 +119,8 @@ public class HibernateTestCase extends TestCase {
     log.info("SWAP:load complete: " + ev);
     session.getTransaction().commit();
   }
-  
+
+  @Test
   public void testNothing() throws Exception {
     java.util.logging.Logger.getLogger("org.hibernate").setLevel(Level.ALL);
     log.info("SWAP:creating session factory In hibernateTestCase");
@@ -185,6 +191,8 @@ public class HibernateTestCase extends TestCase {
   }
 
   static Long personId;
+
+  @Test
   public void testRelationship() throws Exception {
     //java.util.logging.Logger.getLogger("org.hibernate").setLevel(Level.ALL);
     Properties props = new Properties();
@@ -278,7 +286,8 @@ public class HibernateTestCase extends TestCase {
     l = q.list();
     log.info("list3:"+l);
   }
-  
+
+  @Test
   public void testInsert() {
     Session session = getSessionFactory(null).openSession();
     Region r = GemFireCacheImpl.getExisting().getRegion(Person.class.getCanonicalName());
@@ -299,8 +308,9 @@ public class HibernateTestCase extends TestCase {
     session.saveOrUpdate(p);
     session.getTransaction().commit();
     assertEquals(1, session.getStatistics().getEntityCount());
-}
-  
+  }
+
+  @Test
   public void testNormalRegion() {
     Properties props = new Properties();
     props.setProperty("gemfire.default-region-attributes-id", "LOCAL");
@@ -341,7 +351,8 @@ public class HibernateTestCase extends TestCase {
       log.info("Query result:" + b.toString());
     }
   }
-  
+
+  @Test
   public void testEnum() {
     AnnotationConfiguration cfg = new AnnotationConfiguration();
     cfg.addAnnotatedClass(Owner.class);
@@ -362,7 +373,7 @@ public class HibernateTestCase extends TestCase {
     cfg.setProperty("gemfire.statistic-sampling-enabled", "true");
     cfg.setProperty("gemfire.log-file", gemfireLog);
     cfg.setProperty("gemfire.writable-working-dir", tmpDir.getPath());
-    cfg.setProperty("gemfire.mcast-port", "5555");
+    cfg.setProperty("gemfire.mcast-port", "0");
     //cfg.setProperty("gemfire.cache-topology", "client-server");
 
     SessionFactory sf = cfg.buildSessionFactory();

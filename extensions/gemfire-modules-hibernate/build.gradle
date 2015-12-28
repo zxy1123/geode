@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-test  {
+test {
   doFirst {
     copy {
       from 'build/resources/test/tomcat'
@@ -27,17 +27,28 @@ test  {
     events 'passed', 'skipped', 'failed'
     exceptionFormat = 'full'
   }
+
+//  include '**/HibernateTestCase.class'
+//  include '**/SecondVMTest.class'
+//
+//  testLogging {
+//    exceptionFormat = 'full'
+//  }
 }
 
 dependencies {
-  compile project(':gemfire-core')
+  compile project(':extensions/gemfire-modules')
+  compile 'org.hibernate:hibernate-core:3.5.0-Final'
+  compile 'org.hibernate:hibernate-annotations:3.5.5-Final'
+  compile 'javax.persistence:persistence-api:1.0.2'
 
-  compile 'org.apache.tomcat:catalina:' + project.'tomcat6.version'
-  compile 'org.apache.tomcat:catalina-ha:' + project.'tomcat6.version'
-  compile 'org.apache.tomcat:juli:' + project.'tomcat6.version'
+  runtime 'dom4j:dom4j:1.6.1'
+//  runtime 'org.hibernate.javax.persistence:hibernate-jpa-2.0-api:1.0.0.Final'
 
-  testCompile 'org.httpunit:httpunit:' + project.'httpunit.version'
-  testRuntime 'org.apache.tomcat:coyote:' + project.'tomcat6.version'
+  testRuntime 'org.hibernate:hibernate-annotations:3.5.5-Final'
+  testRuntime 'org.slf4j:slf4j-jdk14:1.7.7'
+  testRuntime 'org.hsqldb:hsqldb:2.0.0'
+  testRuntime 'org.javassist:javassist:3.13.0-GA'
 
   provided project(path: ':gemfire-junit', configuration: 'testOutput')
 }

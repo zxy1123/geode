@@ -483,7 +483,7 @@ public abstract class TestSessionsBase {
     Long lastAccess = (Long) session.getAttribute("lastAccessTime");
 
     assertTrue(
-        "Last access time not set correctly: " + lastAccess.longValue() + " not < " + session.getLastAccessedTime(),
-        lastAccess.longValue() < session.getLastAccessedTime());
+        "Last access time not set correctly: " + lastAccess.longValue() + " not <= " + session.getLastAccessedTime(),
+        lastAccess.longValue() <= session.getLastAccessedTime());
   }
 }
