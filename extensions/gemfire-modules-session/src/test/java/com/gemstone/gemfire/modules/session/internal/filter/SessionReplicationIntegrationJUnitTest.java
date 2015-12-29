@@ -29,12 +29,14 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import com.gemstone.gemfire.cache.Region;
-import com.gemstone.gemfire.modules.junit.PerTestClassLoaderRunner;
+import com.gemstone.gemfire.modules.session.junit.PerTestClassLoaderRunner;
 import com.gemstone.gemfire.modules.session.filter.SessionCachingFilter;
+import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
 import org.apache.jasper.servlet.JspServlet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -46,8 +48,9 @@ import static org.junit.Assert.*;
  * In-container testing using Jetty. This allows us to test context listener
  * events as well as dispatching actions.
  */
+@Category(IntegrationTest.class)
 @RunWith(PerTestClassLoaderRunner.class)
-public class IntegrationTest {
+public class SessionReplicationIntegrationJUnitTest {
 
   private MyServletTester tester;
 
@@ -81,14 +84,10 @@ public class IntegrationTest {
     tester = new MyServletTester();
     tester.setContextPath("/test");
 
-    filterHolder = tester.addFilter(SessionCachingFilter.class, "/*",
-        EnumSet.of(DispatcherType.REQUEST));
+    filterHolder = tester.addFilter(SessionCachingFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
     filterHolder.setInitParameter("gemfire.property.mcast-port", "0");
-    filterHolder.setInitParameter("gemfire.property.writable-working-dir",
-        tmpdir.getPath());
+    filterHolder.setInitParameter("gemfire.property.log-file", gemfire_log);
     filterHolder.setInitParameter("cache-type", "peer-to-peer");
-    filterHolder.setInitParameter("gemfire.property.log-file",
-        gemfire_log);
 
     servletHolder = tester.addServlet(BasicServlet.class, "/hello");
     servletHolder.setInitParameter("test.callback", "callback_1");
@@ -102,10 +101,10 @@ public class IntegrationTest {
 
   @After
   public void tearDown() throws Exception {
-    if (tester.isStarted()) {
-      ContextManager.getInstance().removeContext(
-          servletHolder.getServlet().getServletConfig().getServletContext());
-    }
+//    if (tester.isStarted()) {
+//      ContextManager.getInstance().removeContext(
+//          servletHolder.getServlet().getServletConfig().getServletContext());
+//    }
     tester.stop();
   }
 
@@ -122,8 +121,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -149,8 +148,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -193,8 +192,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -226,8 +225,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -265,8 +264,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -301,7 +300,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         request.getSession().setAttribute("foo", "bar");
       }
     };
@@ -310,7 +309,7 @@ public class IntegrationTest {
     Callback c_2 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         request.getSession().setAttribute("foo", "baz");
       }
     };
@@ -324,8 +323,8 @@ public class IntegrationTest {
     sh2.setInitParameter("test.callback", "callback_2");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -356,7 +355,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         request.getSession().setAttribute("foo", "bar");
       }
     };
@@ -365,7 +364,7 @@ public class IntegrationTest {
     Callback c_2 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         request.getSession().setAttribute("foo", null);
       }
     };
@@ -379,8 +378,8 @@ public class IntegrationTest {
     sh2.setInitParameter("test.callback", "callback_2");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -485,7 +484,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         request.getSession().setAttribute("foo", "bar");
       }
     };
@@ -494,7 +493,7 @@ public class IntegrationTest {
     Callback c_2 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         request.getSession(false).invalidate();
       }
     };
@@ -508,8 +507,8 @@ public class IntegrationTest {
     sh2.setInitParameter("test.callback", "callback_2");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -538,7 +537,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         PrintWriter out = response.getWriter();
@@ -555,8 +554,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -575,7 +574,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         PrintWriter out = response.getWriter();
@@ -592,8 +591,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -612,7 +611,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         PrintWriter out = response.getWriter();
@@ -629,8 +628,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -650,7 +649,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         s.getId();
@@ -664,8 +663,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -684,7 +683,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         PrintWriter out = response.getWriter();
@@ -701,8 +700,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -725,7 +724,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request,
-          HttpServletResponse response) throws IOException, ServletException {
+          HttpServletResponse response) throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         s.getMaxInactiveInterval();
@@ -739,8 +738,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -760,7 +759,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         s.getServletContext();
@@ -774,8 +773,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -794,7 +793,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         PrintWriter out = response.getWriter();
@@ -811,8 +810,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -831,7 +830,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         PrintWriter out = response.getWriter();
@@ -848,8 +847,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -868,7 +867,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         PrintWriter out = response.getWriter();
@@ -885,8 +884,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -906,7 +905,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         s.setMaxInactiveInterval(1);
@@ -920,8 +919,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -941,7 +940,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
         s = request.getSession(false);
@@ -959,8 +958,8 @@ public class IntegrationTest {
     servletHolder.setInitParameter("test.callback", "callback_1");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -980,7 +979,7 @@ public class IntegrationTest {
     Callback c_1 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
 
         PrintWriter out = response.getWriter();
         out.write(request.getSession().getId());
@@ -990,7 +989,7 @@ public class IntegrationTest {
     Callback c_2 = new Callback() {
       @Override
       public void call(HttpServletRequest request, HttpServletResponse response)
-          throws IOException, ServletException {
+          throws IOException {
         HttpSession s = request.getSession();
         s.invalidate();
 
@@ -1006,8 +1005,8 @@ public class IntegrationTest {
     sh.setInitParameter("test.callback", "callback_2");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        sh.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        sh.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1044,8 +1043,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1088,8 +1087,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1129,8 +1128,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1175,8 +1174,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1233,8 +1232,8 @@ public class IntegrationTest {
     sh.setInitParameter("test.callback", "callback_2");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        sh.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        sh.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1244,8 +1243,8 @@ public class IntegrationTest {
     response = HttpTester.parseResponse(tester.getResponses(request.generate()));
     assertEquals("dispatched", response.getContent());
 
-    ContextManager.getInstance().removeContext(
-        sh.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().removeContext(
+//        sh.getServlet().getServletConfig().getServletContext());
   }
 
 
@@ -1284,8 +1283,8 @@ public class IntegrationTest {
     sh.setInitParameter("test.callback", "callback_2");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        sh.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        sh.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1295,8 +1294,8 @@ public class IntegrationTest {
     response = HttpTester.parseResponse(tester.getResponses(request.generate()));
     assertEquals("dispatched_bang", response.getContent());
 
-    ContextManager.getInstance().removeContext(
-        sh.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().removeContext(
+//        sh.getServlet().getServletConfig().getServletContext());
   }
 
 
@@ -1335,8 +1334,8 @@ public class IntegrationTest {
     sh.setInitParameter("test.callback", "callback_2");
 
     tester.start();
-    ContextManager.getInstance().putContext(
-        sh.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        sh.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1379,8 +1378,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");
@@ -1424,8 +1423,8 @@ public class IntegrationTest {
 
     tester.setAttribute("callback_1", c);
     tester.start();
-    ContextManager.getInstance().putContext(
-        servletHolder.getServlet().getServletConfig().getServletContext());
+//    ContextManager.getInstance().putContext(
+//        servletHolder.getServlet().getServletConfig().getServletContext());
 
     request.setMethod("GET");
     request.setURI("/test/hello");

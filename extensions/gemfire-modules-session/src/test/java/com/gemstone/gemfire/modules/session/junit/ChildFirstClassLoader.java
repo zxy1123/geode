@@ -5,7 +5,7 @@
  * one or more patents listed at http://www.pivotal.io/patents.
  *=========================================================================
  */
-package com.gemstone.gemfire.modules.junit;
+package com.gemstone.gemfire.modules.session.junit;
 
 import java.net.URL;
 import java.net.URLClassLoader;

@@ -8,7 +8,7 @@
 package com.gemstone.gemfire.modules.session.internal.filter;
 
 import com.gemstone.gemfire.modules.session.filter.SessionCachingFilter;
-import com.gemstone.gemfire.test.junit.categories.UnitTest;
+import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
 import com.mockrunner.mock.web.MockFilterConfig;
 import com.mockrunner.mock.web.WebMockObjectFactory;
 import org.junit.Before;
@@ -17,7 +17,7 @@ import org.junit.experimental.categories.Category;
 /**
  * This runs all tests with a local cache enabled
  */
-@Category(UnitTest.class)
+@Category(IntegrationTest.class)
 public class SessionReplicationLocalCacheJUnitTest extends CommonTests {
 
   @Before
