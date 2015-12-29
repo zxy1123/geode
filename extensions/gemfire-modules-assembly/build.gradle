@@ -230,7 +230,7 @@ task distAppServer(type: Zip) {
   }
 
   into('conf') {
-    from('release/session/conf')
+    from('release/conf')
   }
 
   from('release/session') {
