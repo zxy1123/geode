@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
+jar {
+  baseName = 'gemfire-modules-hibernate'
+}
+
 dependencies {
   compile project(':extensions/gemfire-modules')
   compile 'org.hibernate:hibernate-core:3.5.0-Final'

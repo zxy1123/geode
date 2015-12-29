@@ -29,3 +29,23 @@ dependencies {
 
   provided project(path: ':gemfire-junit', configuration: 'testOutput')
 }
+
+jar {
+  include '**/session/filter/**/*'
+  include '**/session/installer/**/*'
+  includeEmptyDirs = false
+  baseName = 'gemfire-modules-session-external'
+
+  manifest {
+    attributes 'Main-Class': 'com.gemstone.gemfire.modules.session.installer.Installer'
+  }
+}
+
+task internalJar(type: Jar) {
+  from sourceSets.main.output
+  include '**/internal/**/*'
+  includeEmptyDirs = false
+  baseName = 'gemfire-modules-session'
+}
+
+assemble.dependsOn(internalJar)

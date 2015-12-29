@@ -22,11 +22,10 @@ test  {
       into 'build/test/tomcat/'
     }
   }
+}
 
-  testLogging {
-    events 'passed', 'skipped', 'failed'
-    exceptionFormat = 'full'
-  }
+jar {
+  baseName = 'gemfire-modules'
 }
 
 dependencies {

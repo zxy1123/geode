@@ -479,6 +479,21 @@ subprojects {
     description 'Run this task before checking in code to validate changes. This task combines the following tasks: build, integrationTest, and distributedTest'
   }
 
+  task modulesDist(dependsOn: [ ':extensions/gemfire-modules-assembly:dist' ])
+
+  task modulesTest(dependsOn: [
+      ':extensions/gemfire-modules:test',
+      ':extensions/gemfire-modules:test',
+      ':extensions/gemfire-modules-tomcat7:test',
+      ':extensions/gemfire-modules-session:test',
+      ':extensions/gemfire-modules-hibernate:test',
+      ':extensions/gemfire-modules:integrationTest',
+      ':extensions/gemfire-modules:integrationTest',
+      ':extensions/gemfire-modules-tomcat7:integrationTest',
+      ':extensions/gemfire-modules-session:integrationTest',
+      ':extensions/gemfire-modules-hibernate:integrationTest',
+  ])
+
   check.dependsOn checkMissedTests, rat
   combineReports.mustRunAfter check, test, integrationTest, distributedTest, checkMissedTests
   build.finalizedBy combineReports

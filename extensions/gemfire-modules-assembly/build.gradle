@@ -32,6 +32,8 @@ dependencies {
   servletApiDeps 'javax.servlet:servlet-api:2.5'
 }
 
+jar.enabled = false
+
 def configureTcServerAssembly = {
   archiveName = "Apache_Geode_Modules-${version}-tcServer.zip"
 
