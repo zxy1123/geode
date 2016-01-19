@@ -377,8 +377,7 @@ public class FunctionServiceStatsDUnitTest extends PRClientServerTestBase{
           DistributedSystem ds = getSystem(props);
           assertNotNull(ds);
           ds.disconnect();
-          ds = getSystem(props);
-          cache = CacheFactory.create(ds);
+          cache = new CacheFactory(props).create();
           getLogWriter().info("Created Cache on Server");
           assertNotNull(cache);
           AttributesFactory factory = new AttributesFactory();
@@ -423,11 +422,7 @@ public class FunctionServiceStatsDUnitTest extends PRClientServerTestBase{
           Properties props = new Properties();
           props.put("mcast-port", "0");
           props.put("locators", "");
-          DistributedSystem ds = getSystem(props);
-          assertNotNull(ds);
-          ds.disconnect();
-          ds = getSystem(props);
-          cache = CacheFactory.create(ds);
+          cache = new CacheFactory(props).create();
           getLogWriter().info("Created Cache on Client");
           assertNotNull(cache);
 

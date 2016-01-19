@@ -173,8 +173,7 @@ public abstract class LocatorTestBase  extends DistributedTestCase {
             Properties props = new Properties();
             props.setProperty(DistributionConfig.MCAST_PORT_NAME, String.valueOf(0));
             props.setProperty(DistributionConfig.LOCATORS_NAME, locators);
-            DistributedSystem ds = getSystem(props);
-            Cache cache = CacheFactory.create(ds);
+            Cache cache = new CacheFactory(props).create();
             AttributesFactory factory = new AttributesFactory();
             factory.setScope(Scope.DISTRIBUTED_ACK);
             factory.setEnableBridgeConflation(true);
@@ -207,8 +206,7 @@ public abstract class LocatorTestBase  extends DistributedTestCase {
             props.setProperty(DistributionConfig.MCAST_PORT_NAME, String.valueOf(0));
             props.setProperty(DistributionConfig.START_LOCATOR_NAME, locators);
             props.setProperty(DistributionConfig.LOCATORS_NAME, locators);
-            DistributedSystem ds = getSystem(props);
-            Cache cache = CacheFactory.create(ds);
+            Cache cache = new CacheFactory(props).create();
             AttributesFactory factory = new AttributesFactory();
             factory.setScope(Scope.DISTRIBUTED_ACK);
             factory.setEnableBridgeConflation(true);

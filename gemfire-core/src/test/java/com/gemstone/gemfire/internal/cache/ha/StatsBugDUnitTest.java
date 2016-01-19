@@ -134,11 +134,7 @@ public class StatsBugDUnitTest extends DistributedTestCase
    */
   private Cache createCache(Properties props) throws Exception
   {
-    DistributedSystem ds = getSystem(props);
-    ds.disconnect();
-    ds = getSystem(props);
-    Cache cache = null;
-    cache = CacheFactory.create(ds);
+    Cache cache =  new CacheFactory(props).create();
     if (cache == null) {
       throw new Exception("CacheFactory.create() returned null ");
     }

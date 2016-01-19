@@ -20,6 +20,8 @@ import static org.junit.Assert.*;
 
 import java.util.Properties;
 
+import com.gemstone.gemfire.cache.client.ClientCacheFactory;
+import com.gemstone.gemfire.internal.cache.xmlcache.ClientCacheCreation;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,22 +41,23 @@ import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
  */
 @Category(IntegrationTest.class)
 public class PoolManagerJUnitTest {
-  
-  private DistributedSystem ds;
-  
+
+  private Properties props;
+  private Cache cache;
+
   @Before
   public void setUp() {
-    Properties props = new Properties();
+    props = new Properties();
     props.setProperty("mcast-port", "0");
     props.setProperty("locators", "");
-    ds = DistributedSystem.connect(props);
     assertEquals(0, PoolManager.getAll().size());
+    cache = new CacheFactory(props).create();
   }
   
   @After
   public void tearDown() {
     PoolManager.close();
-    ds.disconnect();
+    cache.close();
   }
   
   @Test
@@ -101,11 +104,12 @@ public class PoolManagerJUnitTest {
     PoolFactory cpf = PoolManager.createFactory();
     ((PoolFactoryImpl)cpf).setStartDisabled(true);
     Pool pool = cpf.addLocator("localhost", 12345).create("mypool");
-    Cache cache = CacheFactory.create(ds);
+
     AttributesFactory fact = new AttributesFactory();
     fact.setPoolName(pool.getName());
     Region region = cache.createRegion("myRegion", fact.create());
     assertEquals(pool, PoolManager.find(region));
+
   }
 
   @Test

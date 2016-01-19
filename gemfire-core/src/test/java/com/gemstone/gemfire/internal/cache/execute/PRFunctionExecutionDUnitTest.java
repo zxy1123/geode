@@ -3009,7 +3009,7 @@ public class PRFunctionExecutionDUnitTest extends
     DM dm = ds.getDistributionManager();
     assertEquals("Distributed System is not loner", true, dm instanceof LonerDistributionManager);
     
-    Cache cache = CacheFactory.create(ds);
+    Cache cache = new CacheFactory(props).create();
     AttributesFactory factory = new AttributesFactory();
     factory.setDataPolicy(DataPolicy.PARTITION);
     assertNotNull(cache);
