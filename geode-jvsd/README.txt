@@ -19,7 +19,7 @@ $git branch feature/GEODE-78 origin/feature/GEODE-78
 $git checkout feature/GEODE-78
 
 # Build and install the third party charting library, MultiAxisChartFX.
-$./gradlew geode-jvsd:MultiAxisChart
+$./gradlew geode-jvsd:clean geode-jvsd:MultiAxisChart
 
 #######################################################################################################################
 ####################################################		BUILD 		###############################################
