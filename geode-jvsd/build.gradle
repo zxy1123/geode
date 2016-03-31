@@ -79,9 +79,18 @@ task MultiAxisChartFX {
 		println "Cloning MultiAxisChartFX... Done!"
 
 		println "Installing MultiAxisChartFX into local maven repository..."
-		ant.exec(executable: 'mvn', dir: 'build/MultiAxisChartFX') {
-			arg(line: 'clean install')
-		}
+
+                def mvnStdout = new ByteArrayOutputStream()
+                try {
+                  exec {
+                    workingDir = 'build/MultiAxisChartFX'
+                    commandLine = ['mvn', 'clean', 'install']
+                    standardOutput = mvnStdout
+                  }
+                } catch (Throwable e) {
+                  println mvnStdout.toString()
+                  throw e
+                }
 		println "Installing MultiAxisChartFX into local maven repository... Done!"
 	}
 }
