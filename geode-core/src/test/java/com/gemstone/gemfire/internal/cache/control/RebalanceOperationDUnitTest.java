@@ -980,10 +980,6 @@ public class RebalanceOperationDUnitTest extends CacheTestCase {
   }
   
   public void testRecoverRedundancyBalancingIfCreateBucketFails() {
-    recoverRedundancyBalancingIfCreateBucketFails(false);
-  }
-  
-  public void recoverRedundancyBalancingIfCreateBucketFails(boolean simulate) {
     Host host = Host.getHost(0);
     VM vm0 = host.getVM(0);
     VM vm1 = host.getVM(1);
@@ -1031,39 +1027,31 @@ public class RebalanceOperationDUnitTest extends CacheTestCase {
       public void run() {
         GemFireCacheImpl cache = spy(getGemfireCache());
         //set the spied cache instance
-        GemFireCacheImpl.setInstanceForTests(cache);
-
-        PartitionedRegion realRegion = (PartitionedRegion) cache.getRegion("region1");
-        PartitionedRegion spyRegion = spy(realRegion);
+        GemFireCacheImpl origCache = GemFireCacheImpl.setInstanceForTests(cache);
+        
+        PartitionedRegion origRegion = (PartitionedRegion) cache.getRegion("region1");
+        PartitionedRegion spyRegion = spy(origRegion);
         PRHARedundancyProvider redundancyProvider = spy(new PRHARedundancyProvider(spyRegion));   
 
+        //return the spied region when ever getPartitionedRegions() is invoked
         Set<PartitionedRegion> parRegions = cache.getPartitionedRegions();
-        parRegions.remove(realRegion);
+        parRegions.remove(origRegion);
         parRegions.add(spyRegion);
 
-        doReturn(spyRegion).when(cache).getRegion("region1");
         doReturn(parRegions).when(cache).getPartitionedRegions();
-                
         doReturn(redundancyProvider).when(spyRegion).getRedundancyProvider();
         
-        //simulate create bucket fails on member2
+        //simulate create bucket fails on member2 and test if it creates on member3
         doReturn(false).when(redundancyProvider).createBackupBucketOnMember(anyInt(), eq((InternalDistributedMember) member2), anyBoolean(), anyBoolean(), any(), anyBoolean());
-        
-      }
-    });
-        
-    //Now simulate a rebalance
-    vm0.invoke(new SerializableRunnable("rebalance") {
-      
-      public void run() {
-        //Retrieve spied cache from GemFireCacheImpl and not using getCache()
-        GemFireCacheImpl cache = GemFireCacheImpl.getInstance();
+
+        //Now simulate a rebalance
+        //Create operationImpl and not factory as we need spied cache to be passed to operationImpl
         RegionFilter filter = new FilterByPath(null, null);
-        RebalanceOperationImpl factory = new RebalanceOperationImpl(cache, false, filter);
-        factory.start();
+        RebalanceOperationImpl operation = new RebalanceOperationImpl(cache, false, filter);
+        operation.start();
         RebalanceResults results = null;
         try {
-          results = factory.getResults(MAX_WAIT, TimeUnit.SECONDS);
+          results = operation.getResults(MAX_WAIT, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
           Assert.fail("Interrupted waiting on rebalance", e);
         } catch (TimeoutException e) {
@@ -1096,43 +1084,34 @@ public class RebalanceOperationDUnitTest extends CacheTestCase {
           }
         }
         
-        if(!simulate) {
-          ResourceManagerStats stats = cache.getResourceManager().getStats();
-          
-          assertEquals(0, stats.getRebalancesInProgress());
-          assertEquals(1, stats.getRebalancesCompleted());
-          assertEquals(0, stats.getRebalanceBucketCreatesInProgress());
-          assertEquals(results.getTotalBucketCreatesCompleted(), stats.getRebalanceBucketCreatesCompleted());
-          assertEquals(1, stats.getRebalanceBucketCreatesFailed());
-        }
+        ResourceManagerStats stats = cache.getResourceManager().getStats();
+        
+        assertEquals(0, stats.getRebalancesInProgress());
+        assertEquals(1, stats.getRebalancesCompleted());
+        assertEquals(0, stats.getRebalanceBucketCreatesInProgress());
+        assertEquals(results.getTotalBucketCreatesCompleted(), stats.getRebalanceBucketCreatesCompleted());
+        assertEquals(1, stats.getRebalanceBucketCreatesFailed());
+        
+        //set the original cache
+        GemFireCacheImpl.setInstanceForTests(origCache);
       }
     });
     
-    if(!simulate) {
-      SerializableRunnable checkRedundancyFixed = new SerializableRunnable("checkLowRedundancy") {
+    SerializableRunnable checkRedundancyFixed = new SerializableRunnable("checkLowRedundancy") {
 
-        public void run() {
-          Cache cache = getCache();
-          Region region = cache.getRegion("region1");
-          PartitionRegionInfo details = PartitionRegionHelper.getPartitionRegionInfo(region);
-          assertEquals(1, details.getCreatedBucketCount());
-          assertEquals(1,details.getActualRedundantCopies());
-          assertEquals(0,details.getLowRedundancyBucketCount());
-        }
-      };
-
-      vm0.invoke(checkRedundancyFixed);
-      vm1.invoke(checkRedundancyFixed);
-      vm2.invoke(checkRedundancyFixed);
-    }
-    
-    //reset the cache
-    vm0.invoke(new SerializableRunnable() {   
-      @Override
-      public void run() throws Exception {
-        GemFireCacheImpl.setInstanceForTests(null);
+      public void run() {
+        Cache cache = getCache();
+        Region region = cache.getRegion("region1");
+        PartitionRegionInfo details = PartitionRegionHelper.getPartitionRegionInfo(region);
+        assertEquals(1, details.getCreatedBucketCount());
+        assertEquals(1,details.getActualRedundantCopies());
+        assertEquals(0,details.getLowRedundancyBucketCount());
       }
-    });
+    };
+
+    vm0.invoke(checkRedundancyFixed);
+    vm1.invoke(checkRedundancyFixed);
+    vm2.invoke(checkRedundancyFixed);
   }
   
   public void testRecoverRedundancyColocatedRegionsSimulation() {
