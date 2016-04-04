@@ -3,20 +3,15 @@ package com.gemstone.gemfire.internal.cache.partitioned.rebalance;
 import java.util.Map;
 
 import com.gemstone.gemfire.distributed.internal.membership.InternalDistributedMember;
-import com.gemstone.gemfire.internal.cache.PartitionedRegion;
 import com.gemstone.gemfire.internal.cache.control.InternalResourceManager;
 import com.gemstone.gemfire.internal.cache.partitioned.PartitionedRegionRebalanceOp;
 
 public class BucketOperatorImpl implements BucketOperator {
   
-  private PartitionedRegion leaderRegion;
-  private boolean isRebalance;
-  private boolean replaceOfflineData;
+  private PartitionedRegionRebalanceOp rebalanceOp;
 
-  public BucketOperatorImpl(PartitionedRegion leaderRegion, boolean isRebalance, boolean replaceOfflineData) {
-    this.leaderRegion = leaderRegion;
-    this.isRebalance = isRebalance;
-    this.replaceOfflineData = replaceOfflineData;
+  public BucketOperatorImpl(PartitionedRegionRebalanceOp rebalanceOp) {
+    this.rebalanceOp = rebalanceOp;
   }
 
   @Override
@@ -25,8 +20,8 @@ public class BucketOperatorImpl implements BucketOperator {
       Map<String, Long> colocatedRegionBytes) {
 
     InternalResourceManager.getResourceObserver().movingBucket(
-        leaderRegion, bucketId, source, target);
-    return PartitionedRegionRebalanceOp.moveBucketForRegion(source, target, bucketId, leaderRegion);
+        rebalanceOp.getLeaderRegion(), bucketId, source, target);
+    return rebalanceOp.moveBucketForRegion(source, target, bucketId);
   }
 
   @Override
@@ -34,8 +29,8 @@ public class BucketOperatorImpl implements BucketOperator {
       InternalDistributedMember target, int bucketId) {
 
     InternalResourceManager.getResourceObserver().movingPrimary(
-        leaderRegion, bucketId, source, target);
-    return PartitionedRegionRebalanceOp.movePrimaryBucketForRegion(target, bucketId, leaderRegion, isRebalance); 
+        rebalanceOp.getLeaderRegion(), bucketId, source, target);
+    return rebalanceOp.movePrimaryBucketForRegion(target, bucketId); 
   }
 
   @Override
@@ -44,8 +39,7 @@ public class BucketOperatorImpl implements BucketOperator {
       Map<String, Long> colocatedRegionBytes, Completion completion) {
     boolean result = false;
     try {
-      result = PartitionedRegionRebalanceOp.createRedundantBucketForRegion(targetMember, bucketId,
-        leaderRegion, isRebalance, replaceOfflineData);
+      result = rebalanceOp.createRedundantBucketForRegion(targetMember, bucketId);
     } finally {
       if(result) {
         completion.onSuccess();
@@ -63,7 +57,6 @@ public class BucketOperatorImpl implements BucketOperator {
   @Override
   public boolean removeBucket(InternalDistributedMember targetMember, int bucketId,
       Map<String, Long> colocatedRegionBytes) {
-    return PartitionedRegionRebalanceOp.removeRedundantBucketForRegion(targetMember, bucketId,
-        leaderRegion);
+    return rebalanceOp.removeRedundantBucketForRegion(targetMember, bucketId);
   }
 }
