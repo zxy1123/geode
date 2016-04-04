@@ -1015,13 +1015,15 @@ public class RebalanceOperationDUnitTest extends CacheTestCase {
     vm0.invoke(checkRedundancy);
         
     //Now create the region in 2 more VMs
+    //Let localMaxMemory(VM1) > localMaxMemory(VM2)
+    //so that redundant bucket will always be attempted on VM1
     final DistributedMember member2 = createPrRegion(vm1, "region1", 100, null);
-    final DistributedMember member3 = createPrRegion(vm2, "region1", 100, null);
+    final DistributedMember member3 = createPrRegion(vm2, "region1", 90, null);
     
     vm0.invoke(checkRedundancy);
     
     //Inject mock PRHARedundancyProvider to simulate createBucketFailures
-    vm0.invoke(new SerializableRunnable("inject failure") {
+    vm0.invoke(new SerializableRunnable("injectCreateBucketFailureAndRebalance") {
       
       @Override
       public void run() {

@@ -20,7 +20,8 @@ public class BucketOperatorWrapper implements BucketOperator {
   private final ResourceManagerStats stats;
   private final PartitionedRegion leaderRegion;
 
-  public BucketOperatorWrapper(BucketOperator delegate, Set<PartitionRebalanceDetailsImpl> rebalanceDetails, ResourceManagerStats stats, PartitionedRegion leaderRegion) {
+  public BucketOperatorWrapper(BucketOperator delegate, Set<PartitionRebalanceDetailsImpl> rebalanceDetails, 
+      ResourceManagerStats stats, PartitionedRegion leaderRegion) {
     this.delegate = delegate;
     this.detailSet = rebalanceDetails;
     this.regionCount = detailSet.size();
@@ -29,7 +30,9 @@ public class BucketOperatorWrapper implements BucketOperator {
   }
 
   @Override
-  public boolean moveBucket(InternalDistributedMember sourceMember, InternalDistributedMember targetMember, int id, Map<String, Long> colocatedRegionBytes) {
+  public boolean moveBucket(InternalDistributedMember sourceMember, 
+      InternalDistributedMember targetMember, int id, 
+      Map<String, Long> colocatedRegionBytes) {
     long start = System.nanoTime();
     boolean result = false;
     long elapsed = 0;
@@ -50,7 +53,8 @@ public class BucketOperatorWrapper implements BucketOperator {
           Long regionBytes = colocatedRegionBytes.get(regionPath);
           if (regionBytes != null) {
             // only increment the elapsed time for the leader region
-            details.incTransfers(regionBytes.longValue(), details.getRegion().equals(leaderRegion) ? elapsed : 0);
+            details.incTransfers(regionBytes.longValue(), 
+                details.getRegion().equals(leaderRegion) ? elapsed : 0);
             totalBytes += regionBytes.longValue();
           }
         }
@@ -69,15 +73,17 @@ public class BucketOperatorWrapper implements BucketOperator {
   }
 
   @Override
-  public void createRedundantBucket(final InternalDistributedMember targetMember, final int i, final Map<String, Long> colocatedRegionBytes,
-      final Completion completion) {
+  public void createRedundantBucket(
+      final InternalDistributedMember targetMember, final int i, 
+      final Map<String, Long> colocatedRegionBytes, final Completion completion) {
 
     if (stats != null) {
       stats.startBucketCreate(regionCount);
     }
 
     final long start = System.nanoTime();
-    delegate.createRedundantBucket(targetMember, i, colocatedRegionBytes, new Completion() {
+    delegate.createRedundantBucket(targetMember, i, 
+        colocatedRegionBytes, new Completion() {
 
       @Override
       public void onSuccess() {
@@ -109,9 +115,9 @@ public class BucketOperatorWrapper implements BucketOperator {
       public void onFailure() {
         long elapsed = System.nanoTime() - start;
 
-        //if (logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
           logger.info("Rebalancing {} redundant bucket {} failed creation on {}", leaderRegion, i, targetMember);
-        //}
+        }
 
         if (stats != null) {
           stats.endBucketCreate(regionCount, false, 0, elapsed);
@@ -124,7 +130,9 @@ public class BucketOperatorWrapper implements BucketOperator {
   }
 
   @Override
-  public boolean removeBucket(InternalDistributedMember targetMember, int i, Map<String, Long> colocatedRegionBytes) {
+  public boolean removeBucket(
+      InternalDistributedMember targetMember, int i, 
+      Map<String, Long> colocatedRegionBytes) {
     boolean result = false;
     long elapsed = 0;
     long totalBytes = 0;
@@ -146,7 +154,8 @@ public class BucketOperatorWrapper implements BucketOperator {
           if (lrb != null) { // region could have gone away - esp during shutdow
             long regionBytes = lrb.longValue();
             // Only add the elapsed time to the leader region.
-            details.incRemoves(regionBytes, details.getRegion().equals(leaderRegion) ? elapsed : 0);
+            details.incRemoves(regionBytes, 
+                details.getRegion().equals(leaderRegion) ? elapsed : 0);
             totalBytes += regionBytes;
           }
         }
@@ -165,7 +174,8 @@ public class BucketOperatorWrapper implements BucketOperator {
   }
 
   @Override
-  public boolean movePrimary(InternalDistributedMember source, InternalDistributedMember target, int bucketId) {
+  public boolean movePrimary(InternalDistributedMember source, 
+      InternalDistributedMember target, int bucketId) {
     boolean result = false;
     long elapsed = 0;
 
