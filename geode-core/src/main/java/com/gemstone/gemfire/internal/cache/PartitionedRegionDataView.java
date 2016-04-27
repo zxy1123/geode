@@ -65,19 +65,12 @@ public class PartitionedRegionDataView extends LocalRegionDataView {
   }
 
   @Override
-  public Object findObject(KeyInfo key,
-                           LocalRegion r,
-                           boolean isCreate,
-                           boolean generateCallbacks,
-                           Object value,
-                           boolean disableCopyOnRead,
-                           boolean preferCD,
-                           ClientProxyMembershipID requestingClient,
-                           EntryEventImpl clientEvent,
-                           boolean returnTombstones) {
+  public Object findObject(KeyInfo key, LocalRegion r, boolean isCreate,
+      boolean generateCallbacks, Object value, boolean disableCopyOnRead,
+      boolean preferCD, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) {
     TXStateProxy tx = r.cache.getTXMgr().internalSuspend();
     try {
-      return r.findObjectInSystem(key, isCreate, tx, generateCallbacks, value, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
+      return r.findObjectInSystem(key, isCreate, tx, generateCallbacks, value, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones, allowReadFromHDFS);
     } finally {
       r.cache.getTXMgr().resume(tx);
     }
@@ -89,14 +82,10 @@ public class PartitionedRegionDataView extends LocalRegionDataView {
     return pr.nonTXContainsKey(keyInfo);
   }
   @Override
-  public Object getSerializedValue(LocalRegion localRegion,
-                                   KeyInfo keyInfo,
-                                   boolean doNotLockEntry,
-                                   ClientProxyMembershipID requestingClient,
-                                   EntryEventImpl clientEvent,
-                                   boolean returnTombstones) throws DataLocationException {
+  public Object getSerializedValue(LocalRegion localRegion, KeyInfo keyInfo, boolean doNotLockEntry, ClientProxyMembershipID requestingClient,
+  EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) throws DataLocationException {
     PartitionedRegion pr = (PartitionedRegion)localRegion;
-    return pr.getDataStore().getSerializedLocally(keyInfo, doNotLockEntry, requestingClient, clientEvent, returnTombstones);
+    return pr.getDataStore().getSerializedLocally(keyInfo, doNotLockEntry, requestingClient, clientEvent, returnTombstones, allowReadFromHDFS);
   }
   @Override
   public boolean putEntryOnRemote(EntryEventImpl event, boolean ifNew,
@@ -129,7 +118,7 @@ public class PartitionedRegionDataView extends LocalRegionDataView {
       boolean allowTombstones) throws DataLocationException {
     PartitionedRegion pr = (PartitionedRegion)localRegion;
     return pr.getDataStore().getEntryLocally(keyInfo.getBucketId(),
-        keyInfo.getKey(), false, allowTombstones);
+        keyInfo.getKey(), false, allowTombstones, true);
   }
 
   @Override

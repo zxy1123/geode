@@ -34,6 +34,8 @@ import com.gemstone.gemfire.cache.Operation;
 import com.gemstone.gemfire.cache.RegionAttributes;
 import com.gemstone.gemfire.cache.RegionDestroyedException;
 import com.gemstone.gemfire.cache.TimeoutException;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSBucketRegionQueue;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSGatewayEventImpl;
 import com.gemstone.gemfire.internal.cache.lru.LRUStatistics;
 import com.gemstone.gemfire.internal.cache.versions.RegionVersionVector;
 import com.gemstone.gemfire.internal.cache.versions.VersionSource;
@@ -457,8 +459,17 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
     }
     waitIfQueueFull();
     
+    int sizeOfHdfsEvent = -1;
     try {
-
+      if (this instanceof HDFSBucketRegionQueue) {
+        // need to fetch the size before event is inserted in queue.
+        // fix for #50016
+        if (this.getBucketAdvisor().isPrimary()) {
+          HDFSGatewayEventImpl hdfsEvent = (HDFSGatewayEventImpl)event.getValue();
+          sizeOfHdfsEvent = hdfsEvent.getSizeOnHDFSInBytes(!((HDFSBucketRegionQueue)this).isBucketSorted);
+        }
+      }
+      
       didPut = virtualPut(event, false, false, null, false, startPut, true);
       
       checkReadiness();
@@ -481,7 +492,7 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
       destroyKey(key);
       didPut = false;
     } else {
-      addToEventQueue(key, didPut, event);
+      addToEventQueue(key, didPut, event, sizeOfHdfsEvent);
     }
     return didPut;
   }
@@ -511,7 +522,8 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
   }
   
   protected abstract void clearQueues();
-  protected abstract void addToEventQueue(Object key, boolean didPut, EntryEventImpl event);
+  protected abstract void addToEventQueue(Object key, boolean didPut, EntryEventImpl event, 
+      int sizeOfHdfsEvent);
   
   @Override
   public void afterAcquiringPrimaryState() {

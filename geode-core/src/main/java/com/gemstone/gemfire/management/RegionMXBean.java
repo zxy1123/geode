@@ -127,6 +127,8 @@ public interface RegionMXBean {
    * partitioned regions it will be the entry count for the primary buckets
    * hosted within this member.
    *
+   * For HDFS regions it will be count of only in memory data.
+   * 
    */
   public long getEntryCount();
 
@@ -348,4 +350,12 @@ public interface RegionMXBean {
    */
   public int getLocalMaxMemory();
   
+  /**
+   * Estimated entry count for HDFS Read-Write regions.This may not be accurate but
+   * acts as an indicative value. All HDFS Read-Write regions regions are PartitionedRegions. Hence
+   * the estimated value will be for primary buckets hosted within the member.
+   * 
+   * For other regions it will be -1 ( Not Available)
+   */
+  public long getEstimatedSizeForHDFSRegion();
 }

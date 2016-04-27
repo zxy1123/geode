@@ -1321,7 +1321,7 @@ function createRegionsGridDefault() {
                      'Persistence', 'Entry Count', 'Empty Nodes', 'Data Usage',
                      'Total Data Usage', 'Memory Usage', 'Total Memory',
                      'Member Names', 'Writes', 'Reads','Off Heap Enabled',
-                     'Compression Codec' ],
+                     'Compression Codec','HDFS Write Only' ],
         colModel : [ {
           name : 'name',
           index : 'name',
@@ -1420,6 +1420,10 @@ function createRegionsGridDefault() {
         }, {
           name : 'compressionCodec',
           index : 'compressionCodec',
+          hidden : true
+        }, {
+          name : 'isHDFSWriteOnly',
+          index : 'isHDFSWriteOnly',
           hidden : true
         }],
         userData : {
@@ -1850,6 +1854,7 @@ function buildRegionsTreeMapData(clusterRegions) {
       "persistence" : clusterRegions[i].persistence,
       "isEnableOffHeapMemory" : clusterRegions[i].isEnableOffHeapMemory,
       "compressionCodec" : clusterRegions[i].compressionCodec,
+      "isHDFSWriteOnly" : clusterRegions[i].isHDFSWriteOnly,
       "memberNames" : clusterRegions[i].memberNames,
       "memoryWritesTrend" : clusterRegions[i].memoryWritesTrend,
       "memoryReadsTrend" : clusterRegions[i].memoryReadsTrend,

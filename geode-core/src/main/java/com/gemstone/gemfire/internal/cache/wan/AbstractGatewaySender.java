@@ -157,6 +157,8 @@ public abstract class AbstractGatewaySender implements GatewaySender,
   
   protected boolean isBucketSorted;
   
+  protected boolean isHDFSQueue;
+  
   protected boolean isMetaQueue;
   
   private int parallelismForReplicatedRegion;
@@ -258,6 +260,7 @@ public abstract class AbstractGatewaySender implements GatewaySender,
     this.maxMemoryPerDispatcherQueue = this.queueMemory / this.dispatcherThreads;
     this.myDSId = InternalDistributedSystem.getAnyInstance().getDistributionManager().getDistributedSystemId();
     this.serialNumber = DistributionAdvisor.createSerialNumber();
+    this.isHDFSQueue = attrs.isHDFSQueue();
     this.isMetaQueue = attrs.isMetaQueue();
     if (!(this.cache instanceof CacheCreation)) {
       this.stopper = new Stopper(cache.getCancelCriterion());
@@ -266,7 +269,8 @@ public abstract class AbstractGatewaySender implements GatewaySender,
         this.statistics = new GatewaySenderStats(cache.getDistributedSystem(),
             id);
       }
-      initializeEventIdIndex();
+      if (!attrs.isHDFSQueue())
+        initializeEventIdIndex();
     }
     this.isBucketSorted = attrs.isBucketSorted();
   }
@@ -314,10 +318,12 @@ public abstract class AbstractGatewaySender implements GatewaySender,
             cache.getDistributedSystem(), AsyncEventQueueImpl
                 .getAsyncEventQueueIdFromSenderId(id));
       }
-      initializeEventIdIndex();
+      if (!attrs.isHDFSQueue())
+        initializeEventIdIndex();
     }
     this.isBucketSorted = attrs.isBucketSorted();
-
+    this.isHDFSQueue = attrs.isHDFSQueue();
+   
   }
   
   public GatewaySenderAdvisor getSenderAdvisor() {
@@ -476,6 +482,10 @@ public abstract class AbstractGatewaySender implements GatewaySender,
     return this.isBucketSorted;
   }
 
+  public boolean getIsHDFSQueue() {
+    return this.isHDFSQueue;
+  }
+  
   public boolean getIsMetaQueue() {
     return this.isMetaQueue;
   }
@@ -853,6 +863,12 @@ public abstract class AbstractGatewaySender implements GatewaySender,
       return;
     }
     
+    if (getIsHDFSQueue() && event.getOperation().isEviction()) {
+      if (logger.isDebugEnabled())
+        logger.debug("Eviction event not queued: " + event);
+      stats.incEventsNotQueued();
+      return;
+    }
     // this filter is defined by Asif which exist in old wan too. new wan has
     // other GatewaEventFilter. Do we need to get rid of this filter. Cheetah is
     // not cinsidering this filter

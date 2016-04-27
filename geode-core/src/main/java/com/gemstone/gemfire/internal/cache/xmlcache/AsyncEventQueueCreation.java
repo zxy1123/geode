@@ -41,6 +41,7 @@ public class AsyncEventQueueCreation implements AsyncEventQueue {
   private int maxQueueMemory = 0;
   private boolean isParallel = false;
   private boolean isBucketSorted = false;
+  private boolean isHDFSQueue = false;
   private int dispatcherThreads = 1;
   private OrderPolicy orderPolicy = OrderPolicy.KEY;
   
@@ -61,6 +62,7 @@ public class AsyncEventQueueCreation implements AsyncEventQueue {
     this.orderPolicy = senderAttrs.policy;
     this.asyncEventListener = eventListener;
     this.isBucketSorted = senderAttrs.isBucketSorted; 
+    this.isHDFSQueue = senderAttrs.isHDFSQueue;
     this.gatewayEventSubstitutionFilter = senderAttrs.eventSubstitutionFilter;
   }
   
@@ -210,5 +212,12 @@ public class AsyncEventQueueCreation implements AsyncEventQueue {
   
   public void setBucketSorted(boolean isBucketSorted) {
     this.isBucketSorted = isBucketSorted;
+  }
+  public boolean isHDFSQueue() {
+    return this.isHDFSQueue;
+  }
+  
+  public void setIsHDFSQueue(boolean isHDFSQueue) {
+    this.isHDFSQueue = isHDFSQueue;
   }
 }

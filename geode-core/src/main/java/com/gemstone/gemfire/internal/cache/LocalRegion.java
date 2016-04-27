@@ -116,6 +116,11 @@ import com.gemstone.gemfire.cache.client.internal.ServerRegionProxy;
 import com.gemstone.gemfire.cache.control.ResourceManager;
 import com.gemstone.gemfire.cache.execute.Function;
 import com.gemstone.gemfire.cache.execute.ResultCollector;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSBucketRegionQueue;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSIntegrationUtil;
+import com.gemstone.gemfire.cache.hdfs.internal.HoplogListenerForRegion;
+import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HDFSRegionDirector;
+import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HDFSRegionDirector.HdfsRegionManager;
 import com.gemstone.gemfire.cache.partition.PartitionRegionHelper;
 import com.gemstone.gemfire.cache.query.FunctionDomainException;
 import com.gemstone.gemfire.cache.query.Index;
@@ -460,6 +465,10 @@ public class LocalRegion extends AbstractRegion
   // Lock for updating PR MetaData on client side 
   public final Lock clientMetaDataLock = new ReentrantLock();
   
+  
+  protected HdfsRegionManager hdfsManager;
+  protected HoplogListenerForRegion hoplogListener;
+
   /**
    * There seem to be cases where a region can be created and yet the
    * distributed system is not yet in place...
@@ -632,6 +641,7 @@ public class LocalRegion extends AbstractRegion
       }
     }
 
+    this.hdfsManager = initHDFSManager();
     this.dsi = findDiskStore(attrs, internalRegionArgs);
     this.diskRegion = createDiskRegion(internalRegionArgs);
     this.entries = createRegionMap(internalRegionArgs);
@@ -686,8 +696,22 @@ public class LocalRegion extends AbstractRegion
     
   }
 
+  private HdfsRegionManager initHDFSManager() {
+    HdfsRegionManager hdfsMgr = null;
+    if (this.getHDFSStoreName() != null) {
+      this.hoplogListener = new HoplogListenerForRegion();
+      HDFSRegionDirector.getInstance().setCache(cache);
+      hdfsMgr = HDFSRegionDirector.getInstance().manageRegion(this, 
+          this.getHDFSStoreName(), hoplogListener);
+    }
+    return hdfsMgr;
+  }
+
   private RegionMap createRegionMap(InternalRegionArguments internalRegionArgs) {
     RegionMap result = null;
+	if ((internalRegionArgs.isReadWriteHDFSRegion()) && this.diskRegion != null) {
+      this.diskRegion.setEntriesMapIncompatible(true);
+    }
     if (this.diskRegion != null) {
       result = this.diskRegion.useExistingRegionMap(this);
     }
@@ -953,6 +977,11 @@ public class LocalRegion extends AbstractRegion
           existing = (LocalRegion)this.subregions.get(subregionName);
 
           if (existing == null) {
+            // create the async queue for HDFS if required. 
+            HDFSIntegrationUtil.createAndAddAsyncQueue(regionPath,
+                regionAttributes, this.cache);
+            regionAttributes = cache.setEvictionAttributesForLargeRegion(
+                regionAttributes);
             if (regionAttributes.getScope().isDistributed()
                 && internalRegionArgs.isUsedForPartitionedRegionBucket()) {
               final PartitionedRegion pr = internalRegionArgs
@@ -962,8 +991,15 @@ public class LocalRegion extends AbstractRegion
               internalRegionArgs.setKeyRequiresRegionContext(pr
                   .keyRequiresRegionContext());
               if (pr.isShadowPR()) {
-                newRegion = new BucketRegionQueue(subregionName, regionAttributes,
-                  this, this.cache, internalRegionArgs);
+                if (!pr.isShadowPRForHDFS()) {
+                    newRegion = new BucketRegionQueue(subregionName, regionAttributes,
+                      this, this.cache, internalRegionArgs);
+                }
+                else {
+                   newRegion = new HDFSBucketRegionQueue(subregionName, regionAttributes,
+                      this, this.cache, internalRegionArgs);
+                }
+                
               } else {
                 newRegion = new BucketRegion(subregionName, regionAttributes,
                     this, this.cache, internalRegionArgs);  
@@ -1098,6 +1134,7 @@ public class LocalRegion extends AbstractRegion
       if (event.getEventId() == null && generateEventID()) {
         event.setNewEventId(cache.getDistributedSystem());
       }
+      assert event.isFetchFromHDFS() : "validatedPut() should have been called";
       // Fix for 42448 - Only make create with null a local invalidate for
       // normal regions. Otherwise, it will become a distributed invalidate.
       if (getDataPolicy() == DataPolicy.NORMAL) {
@@ -1224,20 +1261,18 @@ public class LocalRegion extends AbstractRegion
    * @param retainResult if true then the result may be a retained off-heap reference
    * @return the value for the given key
    */
-  public final Object getDeserializedValue(RegionEntry re,
-                                           final KeyInfo keyInfo,
-                                           final boolean updateStats,
-                                           boolean disableCopyOnRead,
-                                           boolean preferCD,
-                                           EntryEventImpl clientEvent,
-                                           boolean returnTombstones,
-                                           boolean retainResult) {
+  public final Object getDeserializedValue(RegionEntry re, final KeyInfo keyInfo, final boolean updateStats, boolean disableCopyOnRead, 
+  boolean preferCD, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS, boolean retainResult) {
     if (this.diskRegion != null) {
       this.diskRegion.setClearCountReference();
     }
     try {
       if (re == null) {
-        re = this.entries.getEntry(keyInfo.getKey());
+        if (allowReadFromHDFS) {
+          re = this.entries.getEntry(keyInfo.getKey());
+        } else {
+          re = this.entries.getOperationalEntryInVM(keyInfo.getKey());
+        }
       }
       //skip updating the stats if the value is null
       // TODO - We need to clean up the callers of the this class so that we can
@@ -1347,7 +1382,7 @@ public class LocalRegion extends AbstractRegion
   public Object get(Object key, Object aCallbackArgument,
       boolean generateCallbacks, EntryEventImpl clientEvent) throws TimeoutException, CacheLoaderException
   {
-    Object result = get(key, aCallbackArgument, generateCallbacks, false, false, null, clientEvent, false);
+    Object result = get(key, aCallbackArgument, generateCallbacks, false, false, null, clientEvent, false, true/*allowReadFromHDFS*/);
     if (Token.isInvalid(result)) {
       result = null;
     }
@@ -1357,16 +1392,11 @@ public class LocalRegion extends AbstractRegion
   /*
    * @see BucketRegion#getSerialized(KeyInfo, boolean, boolean)
    */
-  public Object get(Object key,
-                    Object aCallbackArgument,
-                    boolean generateCallbacks,
-                    boolean disableCopyOnRead,
-                    boolean preferCD,
-                    ClientProxyMembershipID requestingClient,
-                    EntryEventImpl clientEvent,
-                    boolean returnTombstones) throws TimeoutException, CacheLoaderException {
+  public Object get(Object key, Object aCallbackArgument,
+	      boolean generateCallbacks, boolean disableCopyOnRead, boolean preferCD,
+	      ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) throws TimeoutException, CacheLoaderException {
 	  return get(key, aCallbackArgument,
-		      generateCallbacks, disableCopyOnRead, preferCD,requestingClient, clientEvent, returnTombstones, false, false);
+		      generateCallbacks, disableCopyOnRead, preferCD,requestingClient, clientEvent, returnTombstones, false, allowReadFromHDFS, false);
   }
   
   /**
@@ -1388,17 +1418,16 @@ public class LocalRegion extends AbstractRegion
   public Object getRetained(Object key, Object aCallbackArgument,
       boolean generateCallbacks, boolean disableCopyOnRead,
       ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean opScopeIsLocal) throws TimeoutException, CacheLoaderException {
-    return get(key, aCallbackArgument, generateCallbacks, disableCopyOnRead, true, requestingClient, clientEvent, returnTombstones, opScopeIsLocal,
-      false /* see GEODE-1291*/);
+    return get(key, aCallbackArgument, generateCallbacks, disableCopyOnRead, true, requestingClient, clientEvent, returnTombstones, opScopeIsLocal, true, false/* see GEODE-1291*/);
   }
   /**
    * @param opScopeIsLocal if true then just check local storage for a value; if false then try to find the value if it is not local
    * @param retainResult if true then the result may be a retained off-heap reference.
    */
   public Object get(Object key, Object aCallbackArgument,
-                    boolean generateCallbacks, boolean disableCopyOnRead, boolean preferCD,
-                    ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones,
-                    boolean opScopeIsLocal, boolean retainResult) throws TimeoutException, CacheLoaderException
+      boolean generateCallbacks, boolean disableCopyOnRead, boolean preferCD,
+      ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, 
+	  boolean opScopeIsLocal, boolean allowReadFromHDFS, boolean retainResult) throws TimeoutException, CacheLoaderException
   {
     assert !retainResult || preferCD;
     validateKey(key);
@@ -1411,8 +1440,7 @@ public class LocalRegion extends AbstractRegion
     boolean isMiss = true;
     try {
       KeyInfo keyInfo = getKeyInfo(key, aCallbackArgument);
-      Object value = getDataView().getDeserializedValue(keyInfo, this, true, disableCopyOnRead, preferCD, clientEvent, returnTombstones,
-        retainResult);
+      Object value = getDataView().getDeserializedValue(keyInfo, this, true, disableCopyOnRead, preferCD, clientEvent, returnTombstones, allowReadFromHDFS, retainResult);
       final boolean isCreate = value == null;
       isMiss = value == null || Token.isInvalid(value)
           || (!returnTombstones && value == Token.TOMBSTONE);
@@ -1425,13 +1453,13 @@ public class LocalRegion extends AbstractRegion
         // if scope is local and there is no loader, then
         // don't go further to try and get value
         if (!opScopeIsLocal
-            && ((getScope().isDistributed())
+            && ((getScope().isDistributed() && !isHDFSRegion())
                 || hasServerProxy()
                 || basicGetLoader() != null)) { 
           // serialize search/load threads if not in txn
           value = getDataView().findObject(keyInfo,
               this, isCreate, generateCallbacks, value, disableCopyOnRead,
-              preferCD, requestingClient, clientEvent, returnTombstones);
+              preferCD, requestingClient, clientEvent, returnTombstones, false/*allowReadFromHDFS*/);
           if (!returnTombstones && value == Token.TOMBSTONE) {
             value = null;
           }
@@ -1457,7 +1485,7 @@ public class LocalRegion extends AbstractRegion
    */
   final public void recordMiss(final RegionEntry re, Object key) {
     final RegionEntry e;
-    if (re == null && !isTX()) {
+    if (re == null && !isTX() && !isHDFSRegion()) {
       e = basicGetEntry(key);
     } else {
       e = re;
@@ -1466,30 +1494,60 @@ public class LocalRegion extends AbstractRegion
   }
 
   /**
+   * @return true if this region has been configured for HDFS persistence
+   */
+  public boolean isHDFSRegion() {
+    return false;
+  }
+
+  /**
+   * @return true if this region is configured to read and write data from HDFS
+   */
+  public boolean isHDFSReadWriteRegion() {
+    return false;
+  }
+
+  /**
+   * @return true if this region is configured to only write to HDFS
+   */
+  protected boolean isHDFSWriteOnly() {
+    return false;
+  }
+
+  /**
+   * FOR TESTING ONLY
+   */
+  public HoplogListenerForRegion getHoplogListener() {
+    return hoplogListener;
+  }
+  
+  /**
+   * FOR TESTING ONLY
+   */
+  public HdfsRegionManager getHdfsRegionManager() {
+    return hdfsManager;
+  }
+  
+  /**
    * optimized to only allow one thread to do a search/load, other threads wait
    * on a future
-   *  @param keyInfo
+   *
+   * @param keyInfo
    * @param p_isCreate
    *                true if call found no entry; false if updating an existing
    *                entry
    * @param generateCallbacks
    * @param p_localValue
-*                the value retrieved from the region for this object.
+   *                the value retrieved from the region for this object.
    * @param disableCopyOnRead if true then do not make a copy
    * @param preferCD true if the preferred result form is CachedDeserializable
    * @param clientEvent the client event, if any
    * @param returnTombstones whether to return tombstones
    */
   @Retained
-  Object nonTxnFindObject(KeyInfo keyInfo,
-                          boolean p_isCreate,
-                          boolean generateCallbacks,
-                          Object p_localValue,
-                          boolean disableCopyOnRead,
-                          boolean preferCD,
-                          ClientProxyMembershipID requestingClient,
-                          EntryEventImpl clientEvent,
-                          boolean returnTombstones)
+  Object nonTxnFindObject(KeyInfo keyInfo, boolean p_isCreate,
+      boolean generateCallbacks, Object p_localValue, boolean disableCopyOnRead, boolean preferCD,
+      ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) 
       throws TimeoutException, CacheLoaderException
   {
     final Object key = keyInfo.getKey();
@@ -1548,8 +1606,7 @@ public class LocalRegion extends AbstractRegion
     try {
       boolean partitioned = this.getDataPolicy().withPartitioning();
       if (!partitioned) {
-        localValue = getDeserializedValue(null, keyInfo, isCreate, disableCopyOnRead, preferCD, clientEvent, false,
-          false);
+        localValue = getDeserializedValue(null, keyInfo, isCreate, disableCopyOnRead, preferCD, clientEvent, false, false/*allowReadFromHDFS*/, false);
 
         // stats have now been updated
         if (localValue != null && !Token.isInvalid(localValue)) {
@@ -1558,7 +1615,7 @@ public class LocalRegion extends AbstractRegion
         }
         isCreate = localValue == null;
         result = findObjectInSystem(keyInfo, isCreate, null, generateCallbacks,
-            localValue, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
+            localValue, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones, false/*allowReadFromHDFS*/);
 
       } else {
         
@@ -1566,7 +1623,7 @@ public class LocalRegion extends AbstractRegion
         // For PRs we don't want to deserialize the value and we can't use findObjectInSystem because
         // it can invoke code that is transactional.
         result = getSharedDataView().findObject(keyInfo, this, true/*isCreate*/, generateCallbacks,
-            localValue, disableCopyOnRead, preferCD, null, null, false);
+            localValue, disableCopyOnRead, preferCD, null, null, false, allowReadFromHDFS);
         // TODO why are we not passing the client event or returnTombstones in the above invokation?
       }
 
@@ -1749,6 +1806,7 @@ public class LocalRegion extends AbstractRegion
   public final EntryEventImpl newPutEntryEvent(Object key, Object value,
       Object aCallbackArgument) {
     EntryEventImpl ev = newUpdateEntryEvent(key, value, aCallbackArgument);
+    ev.setFetchFromHDFS(false);
     ev.setPutDML(true);
     return ev;
   }
@@ -1880,11 +1938,23 @@ public class LocalRegion extends AbstractRegion
     }
   }
 
+  protected boolean includeHDFSResults() {
+    return isUsedForPartitionedRegionBucket() 
+        && isHDFSReadWriteRegion() 
+        && getPartitionedRegion().includeHDFSResults();
+  }
+  
+
   /** a fast estimate of total number of entries locally in the region */
   public long getEstimatedLocalSize() {
     RegionMap rm;
     if (!this.isDestroyed) {
       long size;
+      if (isHDFSReadWriteRegion() && this.initialized) {
+        // this size is not used by HDFS region iterators
+        // fixes bug 49239
+        return 0;
+      }
       // if region has not been initialized yet, then get the estimate from
       // disk region's recovery map if available
       if (!this.initialized && this.diskRegion != null
@@ -2196,6 +2266,9 @@ public class LocalRegion extends AbstractRegion
       if (this.imageState.isClient() && !this.concurrencyChecksEnabled) {
         return result - this.imageState.getDestroyedEntriesCount();
       }
+	if (includeHDFSResults()) {
+      return result;
+    }
       return result - this.tombstoneCount.get();
     }
   }
@@ -2931,18 +3004,11 @@ public class LocalRegion extends AbstractRegion
    * @param clientEvent the client's event, if any.  If not null, we set the version tag
    * @param returnTombstones TODO
    * @return the deserialized value
-   * @see LocalRegion#findObjectInSystem(KeyInfo, boolean, TXStateInterface, boolean, Object, boolean, boolean, ClientProxyMembershipID, EntryEventImpl, boolean)
+   * @see DistributedRegion#findObjectInSystem(KeyInfo, boolean, TXStateInterface, boolean, Object, boolean, boolean, ClientProxyMembershipID, EntryEventImpl, boolean, boolean )
    */
-  protected Object findObjectInSystem(KeyInfo keyInfo,
-                                      boolean isCreate,
-                                      TXStateInterface tx,
-                                      boolean generateCallbacks,
-                                      Object localValue,
-                                      boolean disableCopyOnRead,
-                                      boolean preferCD,
-                                      ClientProxyMembershipID requestingClient,
-                                      EntryEventImpl clientEvent,
-                                      boolean returnTombstones)
+  protected Object findObjectInSystem(KeyInfo keyInfo, boolean isCreate,
+      TXStateInterface tx, boolean generateCallbacks, Object localValue, boolean disableCopyOnRead, boolean preferCD, ClientProxyMembershipID requestingClient,
+      EntryEventImpl clientEvent, boolean returnTombstones,  boolean allowReadFromHDFS)
       throws CacheLoaderException, TimeoutException
   {
     final Object key = keyInfo.getKey();
@@ -5317,6 +5383,9 @@ public class LocalRegion extends AbstractRegion
     // Notify bridge clients (if this is a BridgeServer)
     event.setEventType(eventType);
     notifyBridgeClients(event);
+  if (this.hdfsStoreName != null) {
+    notifyGatewaySender(eventType, event);
+    }
     if(callDispatchListenerEvent){
       dispatchListenerEvent(eventType, event);
     }
@@ -7202,8 +7271,24 @@ public class LocalRegion extends AbstractRegion
     if (generateEventID()) {
       event.setNewEventId(cache.getDistributedSystem());
     }
+    event.setFetchFromHDFS(false);
     return event;
   }
+  
+  @Retained
+  protected EntryEventImpl generateCustomEvictDestroyEvent(final Object key) {
+    @Retained EntryEventImpl event =  EntryEventImpl.create(
+        this, Operation.CUSTOM_EVICT_DESTROY, key, null/* newValue */,
+        null, false, getMyId());
+    
+    // Fix for bug#36963
+    if (generateEventID()) {
+      event.setNewEventId(cache.getDistributedSystem());
+    }
+    event.setFetchFromHDFS(false);
+    return event;
+  }
+  
   /**
    * @return true if the evict destroy was done; false if it was not needed
    */
@@ -9856,6 +9941,8 @@ public class LocalRegion extends AbstractRegion
       }
     }
     
+    clearHDFSData();
+    
     if (!isProxy()) {
       // Now we need to recreate all the indexes.
       //If the indexManager is null we don't have to worry
@@ -9892,6 +9979,11 @@ public class LocalRegion extends AbstractRegion
     if (hasListener) {
       dispatchListenerEvent(EnumListenerEvent.AFTER_REGION_CLEAR, regionEvent);
     }
+  }
+
+  /**Clear HDFS data, if present */
+  protected void clearHDFSData() {
+    //do nothing, clear is implemented for subclasses like BucketRegion.
   }
 
   @Override
@@ -10670,6 +10762,7 @@ public class LocalRegion extends AbstractRegion
   }
     public final DistributedPutAllOperation newPutAllForPUTDmlOperation(Map<?, ?> map, Object callbackArg) {
     DistributedPutAllOperation dpao = newPutAllOperation(map, callbackArg);
+    dpao.getEvent().setFetchFromHDFS(false);
     dpao.getEvent().setPutDML(true);
     return dpao;
   }
@@ -10725,6 +10818,7 @@ public class LocalRegion extends AbstractRegion
         putallOp, this, Operation.PUTALL_CREATE, key, value);
 
     try {
+	event.setFetchFromHDFS(putallOp.getEvent().isFetchFromHDFS());
     event.setPutDML(putallOp.getEvent().isPutDML());
     
     if (tagHolder != null) {
@@ -12826,6 +12920,22 @@ public class LocalRegion extends AbstractRegion
   
   public Integer getCountNotFoundInLocal() {
     return countNotFoundInLocal.get();
+  }
+  /// End of Variables and methods for test Hook for HDFS ///////
+  public void forceHDFSCompaction(boolean isMajor, Integer maxWaitTime) {
+    throw new UnsupportedOperationException(
+        LocalizedStrings.HOPLOG_DOES_NOT_USE_HDFSSTORE
+            .toLocalizedString(getName()));
+  }
+
+  public void flushHDFSQueue(int maxWaitTime) {
+    throw new UnsupportedOperationException(
+        LocalizedStrings.HOPLOG_DOES_NOT_USE_HDFSSTORE
+            .toLocalizedString(getName()));
+  }
+  
+  public long lastMajorHDFSCompaction() {
+    throw new UnsupportedOperationException();
   }
 
   public static void simulateClearForTests(boolean flag) {

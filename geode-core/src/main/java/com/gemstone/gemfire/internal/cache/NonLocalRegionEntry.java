@@ -461,6 +461,26 @@ public class NonLocalRegionEntry implements RegionEntry, VersionStamp {
   }
 
   @Override
+  public boolean isMarkedForEviction() {
+    throw new UnsupportedOperationException(LocalizedStrings
+        .PartitionedRegion_NOT_APPROPRIATE_FOR_PARTITIONEDREGIONNONLOCALREGIONENTRY
+            .toLocalizedString());
+  }
+  @Override
+  public void setMarkedForEviction() {
+    throw new UnsupportedOperationException(LocalizedStrings
+        .PartitionedRegion_NOT_APPROPRIATE_FOR_PARTITIONEDREGIONNONLOCALREGIONENTRY
+            .toLocalizedString());
+  }
+
+  @Override
+  public void clearMarkedForEviction() {
+    throw new UnsupportedOperationException(LocalizedStrings
+        .PartitionedRegion_NOT_APPROPRIATE_FOR_PARTITIONEDREGIONNONLOCALREGIONENTRY
+            .toLocalizedString());
+  }
+
+  @Override
   public boolean isValueNull() {
     return (null == getValueAsToken());
   }

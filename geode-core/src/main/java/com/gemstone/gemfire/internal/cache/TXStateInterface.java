@@ -123,14 +123,8 @@ public interface TXStateInterface extends Synchronization, InternalDataView {
    * @param localRegion
    * @param updateStats TODO
    */
-  public Object getDeserializedValue(KeyInfo keyInfo,
-                                     LocalRegion localRegion,
-                                     boolean updateStats,
-                                     boolean disableCopyOnRead,
-                                     boolean preferCD,
-                                     EntryEventImpl clientEvent,
-                                     boolean returnTombstones,
-                                     boolean retainResult);
+  public Object getDeserializedValue(KeyInfo keyInfo, LocalRegion localRegion,
+      boolean updateStats, boolean disableCopyOnRead, boolean preferCD, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadsFromHDFS, boolean retainResult);
 
   public TXEvent getEvent();
 

@@ -29,8 +29,10 @@ import com.gemstone.gemfire.GemFireIOException;
 import com.gemstone.gemfire.cache.client.ClientCache;
 import com.gemstone.gemfire.cache.client.ClientRegionShortcut;
 import com.gemstone.gemfire.cache.client.PoolManager;
+import com.gemstone.gemfire.cache.hdfs.HDFSStore;
 import com.gemstone.gemfire.compression.Compressor;
 import com.gemstone.gemfire.internal.cache.AbstractRegion;
+import com.gemstone.gemfire.internal.cache.CustomEvictionAttributesImpl;
 import com.gemstone.gemfire.internal.cache.DiskStoreFactoryImpl;
 import com.gemstone.gemfire.internal.cache.DiskWriteAttributesImpl;
 import com.gemstone.gemfire.internal.cache.EvictionAttributesImpl;
@@ -447,6 +449,8 @@ public class AttributesFactory<K,V> {
         .getPartitionAttributes();
     this.regionAttributes.evictionAttributes = (EvictionAttributesImpl)regionAttributes
         .getEvictionAttributes();
+    this.regionAttributes.customEvictionAttributes = regionAttributes
+        .getCustomEvictionAttributes();
 
     this.regionAttributes.membershipAttributes = regionAttributes.getMembershipAttributes();
     this.regionAttributes.subscriptionAttributes = regionAttributes.getSubscriptionAttributes();
@@ -460,6 +464,7 @@ public class AttributesFactory<K,V> {
     this.regionAttributes.multicastEnabled = regionAttributes.getMulticastEnabled();
     this.regionAttributes.gatewaySenderIds = new CopyOnWriteArraySet<String>(regionAttributes.getGatewaySenderIds());
     this.regionAttributes.asyncEventQueueIds = new CopyOnWriteArraySet<String>(regionAttributes.getAsyncEventQueueIds());
+    this.regionAttributes.hdfsStoreName = regionAttributes.getHDFSStoreName();
     this.regionAttributes.isLockGrantor = regionAttributes.isLockGrantor(); // fix for bug 47067
     if (regionAttributes instanceof UserSpecifiedRegionAttributes) {
       this.regionAttributes.setIndexes(((UserSpecifiedRegionAttributes<K,V>) regionAttributes).getIndexes());
@@ -486,6 +491,10 @@ public class AttributesFactory<K,V> {
     }
     
     this.regionAttributes.compressor = regionAttributes.getCompressor();
+    this.regionAttributes.hdfsWriteOnly = regionAttributes.getHDFSWriteOnly();
+    if (regionAttributes instanceof UserSpecifiedRegionAttributes) {
+      this.regionAttributes.setHasHDFSWriteOnly(((UserSpecifiedRegionAttributes<K,V>) regionAttributes).hasHDFSWriteOnly());
+    }
     this.regionAttributes.offHeap = regionAttributes.getOffHeap();
   }
 
@@ -719,6 +728,32 @@ public class AttributesFactory<K,V> {
      }
      this.regionAttributes.setHasEvictionAttributes(true);
    }
+
+  /**
+   * Set custom {@link EvictionCriteria} for the region with start time and
+   * frequency of evictor task to be run in milliseconds, or evict incoming rows
+   * in case both start and frequency are specified as zero.
+   * 
+   * @param criteria
+   *          an {@link EvictionCriteria} to be used for eviction for HDFS
+   *          persistent regions
+   * @param start
+   *          the start time at which periodic evictor task should be first
+   *          fired to apply the provided {@link EvictionCriteria}; if this is
+   *          zero then current time is used for the first invocation of evictor
+   * @param interval
+   *          the periodic frequency at which to run the evictor task after the
+   *          initial start; if this is if both start and frequency are zero
+   *          then {@link EvictionCriteria} is applied on incoming insert/update
+   *          to determine whether it is to be retained
+   */
+  public void setCustomEvictionAttributes(EvictionCriteria<K, V> criteria,
+      long start, long interval) {
+    this.regionAttributes.customEvictionAttributes =
+        new CustomEvictionAttributesImpl(criteria, start, interval,
+            start == 0 && interval == 0);
+    this.regionAttributes.setHasCustomEviction(true);
+  }
 
    /** Sets the mirror type for the next <code>RegionAttributes</code> created.
    * @param mirrorType The type of mirroring to use for the region
@@ -1261,6 +1296,31 @@ public class AttributesFactory<K,V> {
   }
   
   /**
+   * Sets the HDFSStore name attribute.
+   * This causes the region to use the {@link HDFSStore}.
+   * @param name the name of the HDFSstore
+   */
+  public void setHDFSStoreName(String name) {
+    //TODO:HDFS throw an exception if the region is already configured for a disk store and 
+    // vice versa
+    this.regionAttributes.hdfsStoreName = name;
+    this.regionAttributes.setHasHDFSStoreName(true);
+  }
+  
+  /**
+   * Sets the HDFS write only attribute. if the region
+   * is configured to be write only to HDFS, events that have 
+   * been evicted from memory cannot be read back from HDFS.
+   * Events are written to HDFS in the order in which they occurred.
+   */
+  public void setHDFSWriteOnly(boolean writeOnly) {
+    //TODO:HDFS throw an exception if the region is already configured for a disk store and 
+    // vice versa
+    this.regionAttributes.hdfsWriteOnly = writeOnly;
+    this.regionAttributes.setHasHDFSWriteOnly(true);
+  }
+  
+  /**
    * Sets this region's compressor for compressing entry values.
    * @since 8.0
    * @param compressor a compressor.
@@ -1436,6 +1496,12 @@ public class AttributesFactory<K,V> {
       }
     }
     
+    if (attrs.getHDFSStoreName() != null) {
+      if (!attrs.getDataPolicy().withHDFS() && (attrs.getPartitionAttributes() == null || attrs.getPartitionAttributes().getLocalMaxMemory() != 0)) {
+        throw new IllegalStateException(LocalizedStrings.HDFSSTORE_IS_USED_IN_NONHDFS_REGION.toLocalizedString());        
+      }
+    }
+
     if (!attrs.getStatisticsEnabled() &&
           (attrs.getRegionTimeToLive().getTimeout() != 0 ||
            attrs.getRegionIdleTimeout().getTimeout() != 0 ||
@@ -1598,8 +1664,11 @@ public class AttributesFactory<K,V> {
     SubscriptionAttributes subscriptionAttributes = new SubscriptionAttributes();
     boolean multicastEnabled = false;
     EvictionAttributesImpl evictionAttributes = new EvictionAttributesImpl();  // TODO need to determine the constructor
+    transient CustomEvictionAttributes customEvictionAttributes;
     String poolName = null;
     String diskStoreName = null;
+    String hdfsStoreName = null;
+    private boolean hdfsWriteOnly = false;
     boolean diskSynchronous = DEFAULT_DISK_SYNCHRONOUS;
     protected boolean isBucketRegion = false;
     private boolean isCloningEnabled = false;
@@ -1658,6 +1727,8 @@ public class AttributesFactory<K,V> {
       } else {
         buf.append("; diskStoreName=").append(diskStoreName);
       }
+      buf.append("; hdfsStoreName=").append(hdfsStoreName);
+      buf.append("; hdfsWriteOnly=").append(hdfsWriteOnly);
       buf.append("; GatewaySenderIds=").append(gatewaySenderIds);
       buf.append("; AsyncEventQueueIds=").append(asyncEventQueueIds);
       buf.append("; compressor=").append(compressor == null ? null : compressor.getClass().getName());
@@ -1932,6 +2003,14 @@ public class AttributesFactory<K,V> {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CustomEvictionAttributes getCustomEvictionAttributes() {
+      return this.customEvictionAttributes;
+    }
+
+    /**
      * @deprecated this API is scheduled to be removed
      */
     public MembershipAttributes getMembershipAttributes() {
@@ -1986,6 +2065,16 @@ public class AttributesFactory<K,V> {
         this.asyncEventQueueIds = new CopyOnWriteArraySet<String>();
       }
       return this.asyncEventQueueIds;
+    }
+
+    @Override
+    public String getHDFSStoreName() {
+      return hdfsStoreName;
+    }
+    
+    @Override
+    public boolean getHDFSWriteOnly() {
+      return hdfsWriteOnly;
     }
 
     @Override

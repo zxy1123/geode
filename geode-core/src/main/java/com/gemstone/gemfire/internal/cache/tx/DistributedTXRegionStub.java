@@ -17,10 +17,12 @@
 package com.gemstone.gemfire.internal.cache.tx;
 
 import java.util.Collections;
+import java.util.Map;
 
 import com.gemstone.gemfire.cache.CacheException;
 import com.gemstone.gemfire.cache.EntryNotFoundException;
 import com.gemstone.gemfire.cache.RegionDestroyedException;
+import com.gemstone.gemfire.cache.RemoteTransactionException;
 import com.gemstone.gemfire.cache.TransactionDataNodeHasDepartedException;
 import com.gemstone.gemfire.cache.TransactionDataNotColocatedException;
 import com.gemstone.gemfire.cache.TransactionException;
@@ -30,6 +32,7 @@ import com.gemstone.gemfire.distributed.internal.membership.InternalDistributedM
 import com.gemstone.gemfire.internal.cache.DistributedPutAllOperation;
 import com.gemstone.gemfire.internal.cache.DistributedRemoveAllOperation;
 import com.gemstone.gemfire.internal.cache.EntryEventImpl;
+import com.gemstone.gemfire.internal.cache.GemFireCacheImpl;
 import com.gemstone.gemfire.internal.cache.KeyInfo;
 import com.gemstone.gemfire.internal.cache.LocalRegion;
 import com.gemstone.gemfire.internal.cache.PartitionedRegionException;
@@ -51,6 +54,7 @@ import com.gemstone.gemfire.internal.cache.partitioned.RemoteSizeMessage;
 import com.gemstone.gemfire.internal.cache.tier.sockets.ClientProxyMembershipID;
 import com.gemstone.gemfire.internal.cache.tier.sockets.VersionedObjectList;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
+import com.gemstone.gemfire.internal.util.concurrent.StoppableReentrantReadWriteLock;
 
 public class DistributedTXRegionStub extends AbstractPeerTXRegionStub {
   
@@ -155,13 +159,9 @@ public class DistributedTXRegionStub extends AbstractPeerTXRegionStub {
   }
 
   
-  public Object findObject(KeyInfo keyInfo,
-                           boolean isCreate,
-                           boolean generateCallbacks,
-                           Object value,
-                           boolean preferCD,
-                           ClientProxyMembershipID requestingClient,
-                           EntryEventImpl clientEvent) {
+  public Object findObject(KeyInfo keyInfo, boolean isCreate,
+      boolean generateCallbacks, Object value, boolean preferCD,
+      ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean allowReadFromHDFS) {
     Object retVal = null;
     final Object key = keyInfo.getKey();
     final Object callbackArgument = keyInfo.getCallbackArg();

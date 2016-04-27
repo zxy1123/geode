@@ -83,7 +83,11 @@ public class RegionAttributesInfo implements Serializable{
 	private String regionIdleTimeoutAction = ExpirationAction.INVALIDATE.toString();
 	
 	private boolean offHeap;
-
+	private String hdfsStoreName;
+	private Boolean hdfsWriteOnly;
+	
+	
+	
 	/***
 	 * Non-default-attribute map in the constructor
 	 */
@@ -179,6 +183,8 @@ public class RegionAttributesInfo implements Serializable{
 		
 		}
 		this.offHeap = ra.getOffHeap();
+		this.hdfsStoreName = ra.getHDFSStoreName();
+		this.hdfsWriteOnly = ra.getHDFSWriteOnly();
 	}
 	
 	
@@ -306,6 +312,15 @@ public class RegionAttributesInfo implements Serializable{
 	
 	public boolean getOffHeap() {
 	  return this.offHeap;
+	}
+	
+	public String getHdfsStoreName() {
+		return hdfsStoreName;
+	}
+
+
+	public Boolean getHdfsWriteOnly() {
+		return hdfsWriteOnly;
 	}
 	
 	@Override
@@ -467,6 +482,10 @@ public class RegionAttributesInfo implements Serializable{
             if (this.offHeap != RegionAttributesDefault.OFF_HEAP) {
                 nonDefaultAttributes.put(RegionAttributesNames.OFF_HEAP, Boolean.toString(this.offHeap));
              }            
+            if (this.hdfsStoreName != null ) {
+                nonDefaultAttributes.put(RegionAttributesNames.HDFSSTORE, this.hdfsStoreName);
+                nonDefaultAttributes.put(RegionAttributesNames.HDFS_WRITEONLY, Boolean.toString(this.hdfsWriteOnly));
+             }
 		}
 		return this.nonDefaultAttributes;
 	}

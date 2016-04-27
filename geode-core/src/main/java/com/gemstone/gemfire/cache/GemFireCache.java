@@ -27,6 +27,8 @@ import com.gemstone.gemfire.LogWriter;
 import com.gemstone.gemfire.cache.client.ClientCache;
 import com.gemstone.gemfire.cache.client.ClientCacheFactory;
 import com.gemstone.gemfire.cache.control.ResourceManager;
+import com.gemstone.gemfire.cache.hdfs.HDFSStore;
+import com.gemstone.gemfire.cache.hdfs.HDFSStoreFactory;
 import com.gemstone.gemfire.cache.wan.GatewaySenderFactory;
 import com.gemstone.gemfire.distributed.DistributedSystem;
 import com.gemstone.gemfire.pdx.PdxSerializer;
@@ -258,4 +260,20 @@ public interface GemFireCache extends RegionService {
    * @since 6.6
    */
   public Properties getInitializerProps();
+	
+  /**
+   * Returns the HDFSStore by name or <code>null</code> if no HDFSStore is
+   * found.
+   * 
+   * @param name the name of the HDFSStore to find.
+   */
+  public HDFSStore findHDFSStore(String name);
+
+   /**
+	* Creates a {@link HDFSStoreFactory} for creating a {@link HDFSStore}
+	* 
+	* @return the HDFS store factory
+	*/
+  public HDFSStoreFactory createHDFSStoreFactory();
+  
 }

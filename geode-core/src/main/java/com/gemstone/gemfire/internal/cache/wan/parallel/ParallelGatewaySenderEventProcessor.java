@@ -28,6 +28,9 @@ import org.apache.logging.log4j.Logger;
 import com.gemstone.gemfire.cache.CacheException;
 import com.gemstone.gemfire.cache.EntryEvent;
 import com.gemstone.gemfire.cache.Region;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSBucketRegionQueue;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSGatewayEventImpl;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSParallelGatewaySenderQueue;
 import com.gemstone.gemfire.cache.wan.GatewayQueueEvent;
 import com.gemstone.gemfire.internal.cache.Conflatable;
 import com.gemstone.gemfire.internal.cache.DistributedRegion;
@@ -101,7 +104,10 @@ public class ParallelGatewaySenderEventProcessor extends
     }
     
     ParallelGatewaySenderQueue queue;
-    queue = new ParallelGatewaySenderQueue(this.sender, targetRs, this.index, this.nDispatcher);
+    if (sender.getIsHDFSQueue())
+      queue = new HDFSParallelGatewaySenderQueue(this.sender, targetRs, this.index, this.nDispatcher);
+    else
+      queue = new ParallelGatewaySenderQueue(this.sender, targetRs, this.index, this.nDispatcher);
     
     queue.start();
     this.queue = queue;
@@ -139,8 +145,12 @@ public class ParallelGatewaySenderEventProcessor extends
 
       // while merging 42004, kept substituteValue as it is(it is barry's
       // change 42466). bucketID is merged with eventID.getBucketID
+	 if (!sender.getIsHDFSQueue())
       gatewayQueueEvent = new GatewaySenderEventImpl(operation, event,
           substituteValue, true, eventID.getBucketID());
+    else
+      gatewayQueueEvent = new HDFSGatewayEventImpl(operation,
+          event, substituteValue, true, eventID.getBucketID());
 
       if (getSender().beforeEnqueue(gatewayQueueEvent)) {
         long start = getSender().getStatistics().startTime();
@@ -196,6 +206,16 @@ public class ParallelGatewaySenderEventProcessor extends
   public void conflateEvent(Conflatable conflatableObject, int bucketId,
       Long tailKey) {
   	((ParallelGatewaySenderQueue)this.queue).conflateEvent(conflatableObject, bucketId, tailKey);
+  }
+  
+  public HDFSGatewayEventImpl get(PartitionedRegion region, byte[] regionKey,
+    int bucketId) throws ForceReattemptException {
+    return ((HDFSParallelGatewaySenderQueue)this.queue).get(region, regionKey, bucketId);
+  }
+  
+  public HDFSBucketRegionQueue getBucketRegionQueue(PartitionedRegion region,
+    int bucketId) throws ForceReattemptException {
+  	return ((HDFSParallelGatewaySenderQueue)this.queue).getBucketRegionQueue(region, bucketId);
   }
   
   public void addShadowPartitionedRegionForUserPR(PartitionedRegion pr) {

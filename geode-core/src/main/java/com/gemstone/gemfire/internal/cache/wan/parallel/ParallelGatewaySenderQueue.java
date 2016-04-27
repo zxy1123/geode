@@ -492,7 +492,7 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
       if (this.userRegionNameToshadowPRMap.containsKey(regionName))
         return;
       
-      if(userPR.getDataPolicy().withPersistence() && !sender.isPersistenceEnabled()){
+      if(!isUsedForHDFS() && userPR.getDataPolicy().withPersistence() && !sender.isPersistenceEnabled()){
         throw new GatewaySenderException(
             LocalizedStrings.ParallelGatewaySenderQueue_NON_PERSISTENT_GATEWAY_SENDER_0_CAN_NOT_BE_ATTACHED_TO_PERSISTENT_REGION_1
                 .toLocalizedString(new Object[] { this.sender.getId(),
@@ -552,7 +552,7 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
         }
 
         ParallelGatewaySenderQueueMetaRegion meta = metaRegionFactory.newMetataRegion(cache,
-            prQName, ra, sender);
+            prQName, ra, sender, isUsedForHDFS());
 
         try {
           prQ = (PartitionedRegion)cache
@@ -629,6 +629,10 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
     for (BucketRegion bucketRegion : localBucketRegions) {
       bucketRegion.clear();
     }
+  }
+  protected boolean isUsedForHDFS()
+  {
+    return false;
   }
   protected void afterRegionAdd (PartitionedRegion userPR) {
 
@@ -1853,12 +1857,18 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
     public ParallelGatewaySenderQueueMetaRegion(String regionName,
         RegionAttributes attrs, LocalRegion parentRegion,
         GemFireCacheImpl cache, AbstractGatewaySender pgSender) {
+      this( regionName, attrs, parentRegion, cache, pgSender, false);
+    }
+    public ParallelGatewaySenderQueueMetaRegion(String regionName,
+        RegionAttributes attrs, LocalRegion parentRegion,
+        GemFireCacheImpl cache, AbstractGatewaySender pgSender, boolean isUsedForHDFS) {
       super(regionName, attrs, parentRegion, cache,
           new InternalRegionArguments().setDestroyLockFlag(true)
               .setRecreateFlag(false).setSnapshotInputStream(null)
               .setImageTarget(null)
               .setIsUsedForParallelGatewaySenderQueue(true)
-              .setParallelGatewaySender((AbstractGatewaySender)pgSender));
+              .setParallelGatewaySender((AbstractGatewaySender)pgSender)
+              .setIsUsedForHDFSParallelGatewaySenderQueue(isUsedForHDFS));
       this.sender = (AbstractGatewaySender)pgSender;
       
     }
@@ -1915,9 +1925,9 @@ public class ParallelGatewaySenderQueue implements RegionQueue {
   
   static class MetaRegionFactory {
     ParallelGatewaySenderQueueMetaRegion newMetataRegion(
-        GemFireCacheImpl cache, final String prQName, final RegionAttributes ra, AbstractGatewaySender sender) {
+        GemFireCacheImpl cache, final String prQName, final RegionAttributes ra, AbstractGatewaySender sender, boolean isUsedForHDFS) {
       ParallelGatewaySenderQueueMetaRegion meta = new ParallelGatewaySenderQueueMetaRegion(
-          prQName, ra, null, cache, sender);
+          prQName, ra, null, cache, sender, isUsedForHDFS);
       return meta;
     }
   }

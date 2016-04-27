@@ -590,4 +590,9 @@ public class RegionMBeanBridge<K, V> {
   public int getLocalMaxMemory() {
     return -1;
   }
+
+  
+  public long getEstimatedSizeForHDFSRegion() {
+    return -1;
+  }
 }

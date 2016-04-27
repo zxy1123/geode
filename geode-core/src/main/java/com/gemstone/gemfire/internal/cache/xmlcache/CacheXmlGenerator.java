@@ -1938,6 +1938,10 @@ public class CacheXmlGenerator extends CacheXml implements XMLReader {
           dpString = PERSISTENT_REPLICATE_DP;
         } else if (dp == DataPolicy.PERSISTENT_PARTITION) {
           dpString = PERSISTENT_PARTITION_DP;
+        } else if (dp == DataPolicy.HDFS_PARTITION) {
+          dpString = HDFS_PARTITION_DP;
+        } else if (dp == DataPolicy.HDFS_PERSISTENT_PARTITION) {
+          dpString = HDFS_PERSISTENT_PARTITION_DP;
         } else if (dp.isPartition()) {
           if (this.version.compareTo(CacheXmlVersion.GEMFIRE_5_1) >= 0) {
             dpString = PARTITION_DP;

@@ -1145,7 +1145,7 @@ public abstract class BaseCommand implements Command {
         VersionTagHolder versionHolder = new VersionTagHolder();
         ClientProxyMembershipID id = servConn == null ? null : servConn.getProxyID();
         // From Get70.getValueAndIsObject()
-        Object data = region.get(entryKey, null, true, true, true, id, versionHolder, true);
+        Object data = region.get(entryKey, null, true, true, true, id, versionHolder, true, false);
         VersionTag vt = versionHolder.getVersionTag();
 
         updateValues(values, entryKey, data, vt);
@@ -1252,7 +1252,7 @@ public abstract class BaseCommand implements Command {
         }
 
         ClientProxyMembershipID id = servConn == null ? null : servConn.getProxyID();
-        data = region.get(key, null, true, true, true, id, versionHolder, true);
+        data = region.get(key, null, true, true, true, id, versionHolder, true, false);
         versionTag = versionHolder.getVersionTag();
         updateValues(values, key, data, versionTag);
 
@@ -1345,7 +1345,7 @@ public abstract class BaseCommand implements Command {
       key = it.next();
       versionHolder = new VersionTagHolder();
 
-      Object value = region.get(key, null, true, true, true, requestingClient, versionHolder, true);
+      Object value = region.get(key, null, true, true, true, requestingClient, versionHolder, true, false);
       
       updateValues(values, key, value, versionHolder.getVersionTag());
 
@@ -1548,7 +1548,7 @@ public abstract class BaseCommand implements Command {
           ClientProxyMembershipID id = servConn == null ? null : servConn
               .getProxyID();
           data = region.get(key, null, true, true, true, id, versionHolder,
-              true);
+              true, false);
           versionTag = versionHolder.getVersionTag();
           updateValues(values, key, data, versionTag);
 

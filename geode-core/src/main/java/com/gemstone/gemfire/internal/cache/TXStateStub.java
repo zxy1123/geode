@@ -184,14 +184,8 @@ public abstract class TXStateStub implements TXStateInterface {
   /* (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.TXStateInterface#getDeserializedValue(java.lang.Object, com.gemstone.gemfire.internal.cache.LocalRegion, boolean)
    */
-  public Object getDeserializedValue(KeyInfo keyInfo,
-                                     LocalRegion localRegion,
-                                     boolean updateStats,
-                                     boolean disableCopyOnRead,
-                                     boolean preferCD,
-                                     EntryEventImpl clientEvent,
-                                     boolean returnTombstones,
-                                     boolean retainResult) {
+  public Object getDeserializedValue(KeyInfo keyInfo, LocalRegion localRegion,
+      boolean updateStats, boolean disableCopyOnRead, boolean preferCD, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS,  boolean retainResult) {
     // We never have a local value if we are a stub...
     return null;
   }
@@ -379,17 +373,10 @@ public abstract class TXStateStub implements TXStateInterface {
   /* (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.InternalDataView#findObject(com.gemstone.gemfire.internal.cache.LocalRegion, java.lang.Object, java.lang.Object, boolean, boolean, java.lang.Object)
    */
-  public Object findObject(KeyInfo keyInfo,
-                           LocalRegion r,
-                           boolean isCreate,
-                           boolean generateCallbacks,
-                           Object value,
-                           boolean disableCopyOnRead,
-                           boolean preferCD,
-                           ClientProxyMembershipID requestingClient,
-                           EntryEventImpl clientEvent,
-                           boolean returnTombstones) {
-    return getTXRegionStub(r).findObject(keyInfo,isCreate,generateCallbacks,value, preferCD, requestingClient, clientEvent);
+  public Object findObject(KeyInfo keyInfo, LocalRegion r, boolean isCreate,
+      boolean generateCallbacks, Object value, boolean disableCopyOnRead, boolean preferCD, ClientProxyMembershipID requestingClient,
+      EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) {
+    return getTXRegionStub(r).findObject(keyInfo,isCreate,generateCallbacks,value, preferCD, requestingClient, clientEvent, allowReadFromHDFS);
   }
 
   /* (non-Javadoc)
@@ -445,12 +432,7 @@ public abstract class TXStateStub implements TXStateInterface {
    * (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.InternalDataView#getSerializedValue(com.gemstone.gemfire.internal.cache.LocalRegion, java.lang.Object, java.lang.Object)
    */
-  public Object getSerializedValue(LocalRegion localRegion,
-                                   KeyInfo key,
-                                   boolean doNotLockEntry,
-                                   ClientProxyMembershipID requestingClient,
-                                   EntryEventImpl clientEvent,
-                                   boolean returnTombstones) {
+  public Object getSerializedValue(LocalRegion localRegion, KeyInfo key, boolean doNotLockEntry, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) {
     throw new UnsupportedOperationException();
   }
 

@@ -314,4 +314,9 @@ public class RegionMBean<K, V> extends NotificationBroadcasterSupport implements
     return bridge.getLocalMaxMemory(); 
   }
 
+  @Override
+  public long getEstimatedSizeForHDFSRegion() {
+    return bridge.getEstimatedSizeForHDFSRegion();
+  }
+
 }

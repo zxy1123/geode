@@ -17,6 +17,7 @@
 package com.gemstone.gemfire.internal.cache;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Set;
 
 import com.gemstone.gemfire.cache.EntryNotFoundException;
@@ -35,16 +36,9 @@ public class LocalRegionDataView implements InternalDataView {
   /* (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.InternalDataView#getDeserializedValue(java.lang.Object, com.gemstone.gemfire.internal.cache.LocalRegion, boolean)
    */
-  public Object getDeserializedValue(KeyInfo keyInfo,
-                                     LocalRegion localRegion,
-                                     boolean updateStats,
-                                     boolean disableCopyOnRead,
-                                     boolean preferCD,
-                                     EntryEventImpl clientEvent,
-                                     boolean returnTombstones,
-                                     boolean retainResult) {
-    return localRegion.getDeserializedValue(null, keyInfo, updateStats, disableCopyOnRead, preferCD, clientEvent, returnTombstones,
-      retainResult);
+  public Object getDeserializedValue(KeyInfo keyInfo, LocalRegion localRegion,
+      boolean updateStats, boolean disableCopyOnRead, boolean preferCD, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadsFromHDFS, boolean retainResult) {
+    return localRegion.getDeserializedValue(null, keyInfo, updateStats, disableCopyOnRead, preferCD, clientEvent, returnTombstones, allowReadsFromHDFS, retainResult);
   }
 
   /* (non-Javadoc)
@@ -142,17 +136,9 @@ public class LocalRegionDataView implements InternalDataView {
   /* (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.InternalDataView#findObject(com.gemstone.gemfire.internal.cache.LocalRegion, java.lang.Object, java.lang.Object, boolean, boolean, java.lang.Object)
    */
-  public Object findObject(KeyInfo keyInfo,
-                           LocalRegion r,
-                           boolean isCreate,
-                           boolean generateCallbacks,
-                           Object value,
-                           boolean disableCopyOnRead,
-                           boolean preferCD,
-                           ClientProxyMembershipID requestingClient,
-                           EntryEventImpl clientEvent,
-                           boolean returnTombstones) {
-   return r.nonTxnFindObject(keyInfo, isCreate, generateCallbacks, value, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
+  public Object findObject(KeyInfo keyInfo, LocalRegion r, boolean isCreate,
+      boolean generateCallbacks, Object value, boolean disableCopyOnRead, boolean preferCD, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) {
+   return r.nonTxnFindObject(keyInfo, isCreate, generateCallbacks, value, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones, allowReadFromHDFS);
   }
 
   /* (non-Javadoc)
@@ -194,12 +180,7 @@ public class LocalRegionDataView implements InternalDataView {
    * (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.InternalDataView#getSerializedValue(com.gemstone.gemfire.internal.cache.BucketRegion, java.lang.Object, java.lang.Object)
    */
-  public Object getSerializedValue(LocalRegion localRegion,
-                                   KeyInfo key,
-                                   boolean doNotLockEntry,
-                                   ClientProxyMembershipID requestingClient,
-                                   EntryEventImpl clientEvent,
-                                   boolean returnTombstones) throws DataLocationException {
+  public Object getSerializedValue(LocalRegion localRegion, KeyInfo key, boolean doNotLockEntry, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) throws DataLocationException {
     throw new IllegalStateException();
   }
 

@@ -91,6 +91,12 @@ import com.gemstone.gemfire.distributed.DistributedMember;
 import com.gemstone.gemfire.distributed.DistributedSystem;
 import com.gemstone.gemfire.i18n.LogWriterI18n;
 import com.gemstone.gemfire.internal.Assert;
+import com.gemstone.gemfire.cache.hdfs.HDFSStore;
+import com.gemstone.gemfire.cache.hdfs.HDFSStoreFactory;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSIntegrationUtil;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSStoreCreation;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSStoreFactoryImpl;
+import com.gemstone.gemfire.cache.hdfs.internal.HDFSStoreImpl;
 import com.gemstone.gemfire.internal.cache.CacheServerImpl;
 import com.gemstone.gemfire.internal.cache.CacheConfig;
 import com.gemstone.gemfire.internal.cache.CacheServerLauncher;
@@ -193,7 +199,8 @@ public class CacheCreation implements InternalCache {
    * This is important for unit testing 44914.
    */
   protected final Map diskStores = new LinkedHashMap();
-
+  protected final Map hdfsStores = new LinkedHashMap();
+  
   private final List<File> backups = new ArrayList<File>();
 
   private CacheConfig cacheConfig = new CacheConfig();
@@ -507,6 +514,13 @@ public class CacheCreation implements InternalCache {
       }
     }
 
+    for(Iterator iter = this.hdfsStores.entrySet().iterator(); iter.hasNext(); ) {
+      Entry entry = (Entry) iter.next();
+      HDFSStoreCreation hdfsStoreCreation = (HDFSStoreCreation) entry.getValue();
+      HDFSStoreFactory storefactory = cache.createHDFSStoreFactory(hdfsStoreCreation);
+      storefactory.create((String) entry.getKey());
+    }
+
     cache.initializePdxRegistry();
 
     
@@ -517,6 +531,19 @@ public class CacheCreation implements InternalCache {
         (RegionAttributesCreation) getRegionAttributes(id);
       creation.inheritAttributes(cache, false);
 
+      // TODO: HDFS: HDFS store/queue will be mapped against region path and not
+      // the attribute id; don't really understand what this is trying to do
+      if (creation.getHDFSStoreName() != null)
+      {
+        HDFSStoreImpl store = cache.findHDFSStore(creation.getHDFSStoreName());
+        if(store == null) {
+          HDFSIntegrationUtil.createDefaultAsyncQueueForHDFS((Cache)cache, creation.getHDFSWriteOnly(), id);
+        }
+      }
+      if (creation.getHDFSStoreName() != null && creation.getPartitionAttributes().getColocatedWith() == null) {
+        creation.addAsyncEventQueueId(HDFSStoreFactoryImpl.getEventQueueName(id));
+      }
+      
       RegionAttributes attrs;
       // Don't let the RegionAttributesCreation escape to the user
       AttributesFactory factory = new AttributesFactory(creation);
@@ -1394,6 +1421,27 @@ public class CacheCreation implements InternalCache {
     return extensionPoint;
   }
   
+  @Override
+  public HDFSStoreFactory createHDFSStoreFactory() {
+    // TODO Auto-generated method stub
+    return new HDFSStoreFactoryImpl(this);
+  }
+  @Override
+  public HDFSStore findHDFSStore(String storeName) {
+    return (HDFSStore)this.hdfsStores.get(storeName);
+  }
+
+  @Override
+  public Collection<HDFSStoreImpl> getHDFSStores() {
+    return this.hdfsStores.values();
+  }
+
+  public void addHDFSStore(String name, HDFSStoreCreation hs) {
+    this.hdfsStores.put(name, hs);
+  }
+
+  
+
   @Override
   public DistributedMember getMyId() {
     return null;

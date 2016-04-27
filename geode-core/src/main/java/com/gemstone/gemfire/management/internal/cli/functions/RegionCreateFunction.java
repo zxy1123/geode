@@ -321,6 +321,14 @@ public class RegionCreateFunction extends FunctionAdapter implements InternalEnt
     
     String regionName = regionPathData.getName();
     
+    final String hdfsStoreName = regionCreateArgs.getHDFSStoreName();
+	if (hdfsStoreName != null && !hdfsStoreName.isEmpty()) {
+		factory.setHDFSStoreName(hdfsStoreName);		
+	}
+	if (regionCreateArgs.isSetHDFSWriteOnly()) {
+		factory.setHDFSWriteOnly(regionCreateArgs.getHDFSWriteOnly());
+	}
+	  
     if (parentRegion != null) {
       createdRegion = factory.createSubregion(parentRegion, regionName);
     } else {

@@ -626,6 +626,27 @@ final class ProxyRegionMap implements RegionMap {
     }
 
     @Override
+    public boolean isMarkedForEviction() {
+      throw new UnsupportedOperationException(LocalizedStrings
+          .ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0
+              .toLocalizedString(DataPolicy.EMPTY));
+    }
+
+    @Override
+    public void setMarkedForEviction() {
+      throw new UnsupportedOperationException(LocalizedStrings
+          .ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0
+              .toLocalizedString(DataPolicy.EMPTY));
+    }
+
+    @Override
+    public void clearMarkedForEviction() {
+      throw new UnsupportedOperationException(LocalizedStrings
+          .ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0
+              .toLocalizedString(DataPolicy.EMPTY));
+    }
+
+    @Override
     public boolean isValueNull() {
       throw new UnsupportedOperationException(LocalizedStrings.ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0.toLocalizedString(DataPolicy.EMPTY));
     }

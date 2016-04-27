@@ -113,8 +113,7 @@ public class TXEntry implements Region.Entry
   {
     checkTX();
 //    Object value = this.localRegion.getDeserialized(this.key, false, this.myTX, this.rememberReads);
-    @Unretained Object value = this.myTX.getDeserializedValue(keyInfo, this.localRegion, false, false, false, null, false,
-      false);
+    @Unretained Object value = this.myTX.getDeserializedValue(keyInfo, this.localRegion, false, false, false, null, false, false, false);
     if (value == null) {
       throw new EntryDestroyedException(this.keyInfo.getKey().toString());
     }

@@ -120,6 +120,7 @@ public class CacheElementJUnitTest {
     assertEntry("cache-server", order++, entries.next());
     assertEntry("pool", order++, entries.next());
     assertEntry("disk-store", order++, entries.next());
+    assertEntry("hdfs-store", order++, entries.next());
     assertEntry("pdx", order++, entries.next());
     assertEntry("region-attributes", order++, entries.next());
     assertEntry("jndi-bindings", order++, entries.next());

@@ -674,4 +674,9 @@ public class DistributedRegionBridge {
       return false;
     }
   }
+  
+  public long getEstimatedSizeForHDFSRegion() {
+    return monitor.getEstimatedSizeForHDFSRegion();
+  }
+
 }

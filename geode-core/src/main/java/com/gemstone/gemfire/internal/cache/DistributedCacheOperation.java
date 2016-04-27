@@ -863,6 +863,8 @@ public abstract class DistributedCacheOperation {
 
     private final static int INHIBIT_NOTIFICATIONS_MASK = 0x400;
 
+	protected final static short FETCH_FROM_HDFS = 0x200;
+    
     protected final static short IS_PUT_DML = 0x100;
 
     public boolean needsRouting;
@@ -1365,6 +1367,7 @@ public abstract class DistributedCacheOperation {
       if ((extBits & INHIBIT_NOTIFICATIONS_MASK) != 0) {
         this.inhibitAllNotifications = true;
 	  if (this instanceof PutAllMessage) {
+        ((PutAllMessage) this).setFetchFromHDFS((extBits & FETCH_FROM_HDFS) != 0);
         ((PutAllMessage) this).setPutDML((extBits & IS_PUT_DML) != 0);
       }
       }

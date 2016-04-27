@@ -31,6 +31,7 @@ import java.io.*;
  * <li><code>PERSISTENT_PARTITION</code> in addition to <code>PARTITION</code> also causes data to be stored to disk. The region initialization uses the data stored on disk.
  * <li><code>REPLICATE</code> causes data that this region is interested in to be stored in local memory. A distributed region will be initialized with the data from other caches. On distributed region operations that would cause the contents to differ with other caches are not allowed. This policy is allowed on local scope region but it behaves the same as <code>NORMAL</code>.
  * <li><code>PERSISTENT_REPLICATE</code> in addition to <code>REPLICATE</code> also causes data to be stored to disk. The region initialization uses the data stored on disk. Note that the persistence applies to both local scope and distributed scope.
+ * <li><code>HDFS_PARTITION</code> in addition to <code>PARTITION</code> also causes data to be stored to HDFS. The region initialization may use the data stored on HDFS. 
  * </ol>
  *
  *
@@ -95,6 +96,18 @@ public class DataPolicy implements java.io.Serializable {
    */
   public static final DataPolicy PERSISTENT_PARTITION = new DataPolicy(6, "PERSISTENT_PARTITION");
   
+  /**
+   * In addition to <code>PARTITION</code> also causes data to be stored to
+   * HDFS. The region initialization may use the data stored on HDFS.
+   */
+  public static final DataPolicy HDFS_PARTITION = new DataPolicy(7, "HDFS_PARTITION");
+  
+  /**
+   * In addition to <code>HDFS_PARTITION</code> also causes data to be stored on local
+   * disk. The data can be evicted from the local disk and still be read
+   * from HDFS.
+   */
+  public static final DataPolicy HDFS_PERSISTENT_PARTITION = new DataPolicy(10, "HDFS_PERSISTENT_PARTITION");
    /**
    * The data policy used by default; it is {@link #NORMAL}.
    */
@@ -164,7 +177,7 @@ public class DataPolicy implements java.io.Serializable {
    * @since 6.5
    */
   public boolean withPersistence() {
-    return this == PERSISTENT_PARTITION || this == PERSISTENT_REPLICATE;
+    return this == PERSISTENT_PARTITION || this == PERSISTENT_REPLICATE || this == HDFS_PERSISTENT_PARTITION;
   }
 
   /** Return whether this policy does partitioning.
@@ -174,7 +187,7 @@ public class DataPolicy implements java.io.Serializable {
    * @since 6.5
    */
   public boolean withPartitioning() {
-    return this == PARTITION || this == PERSISTENT_PARTITION;
+    return this == PARTITION || this == PERSISTENT_PARTITION || this == HDFS_PARTITION || this==HDFS_PERSISTENT_PARTITION;
   }
 
   /** Return whether this policy does preloaded.
@@ -243,6 +256,15 @@ public class DataPolicy implements java.io.Serializable {
   public boolean isPartition() {
     return this == PARTITION;
   }
+  
+  /** Return whether this policy does persistence on HDFS.
+   * @return true if this policy does persistence on HDFS.
+   */
+  public boolean withHDFS() {
+	  return this == HDFS_PARTITION || this == HDFS_PERSISTENT_PARTITION;
+  }
+  
+  
   
   /** Returns a string representation for this data policy.
      * @return the name of this data policy.

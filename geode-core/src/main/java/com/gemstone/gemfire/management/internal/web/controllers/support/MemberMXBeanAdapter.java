@@ -243,6 +243,11 @@ public class MemberMXBeanAdapter implements MemberMXBean {
   }
 
   @Override
+  public String[] getHDFSStores() {
+    throw new UnsupportedOperationException("Not Implemented!");
+  }  
+  
+  @Override
   public String[] getRootRegionNames() {
     throw new UnsupportedOperationException("Not Implemented!");
   }

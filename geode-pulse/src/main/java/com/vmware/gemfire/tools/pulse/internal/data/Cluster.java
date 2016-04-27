@@ -1516,6 +1516,7 @@ public class Cluster extends Thread {
     private boolean diskSynchronous;
     private boolean enableOffHeapMemory;
     private String compressionCodec = "";
+    private boolean hdfsWriteOnly;
 
     private List<String> memberName = new ArrayList<String>();
     private List<RegionOnMember> regionOnMembers  = new ArrayList<RegionOnMember>();
@@ -1766,6 +1767,14 @@ public class Cluster extends Thread {
 
     public void setCompressionCodec(String compressionCodec) {
       this.compressionCodec = compressionCodec;
+    }
+
+    public boolean isHdfsWriteOnly() {
+      return hdfsWriteOnly;
+    }
+
+    public void setHdfsWriteOnly(boolean hdfsWriteOnly) {
+      this.hdfsWriteOnly = hdfsWriteOnly;
     }
 
     public Cluster.RegionOnMember[] getRegionOnMembers() {

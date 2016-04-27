@@ -18,21 +18,10 @@ package com.gemstone.gemfire.management.internal.web.controllers;
 
 import java.io.IOException;
 import java.util.Set;
-
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.gemstone.gemfire.internal.GemFireVersion;
 import com.gemstone.gemfire.internal.lang.ObjectUtils;
@@ -43,6 +32,16 @@ import com.gemstone.gemfire.management.internal.web.domain.Link;
 import com.gemstone.gemfire.management.internal.web.domain.LinkIndex;
 import com.gemstone.gemfire.management.internal.web.domain.QueryParameterSource;
 import com.gemstone.gemfire.management.internal.web.http.HttpMethod;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * The ShellCommandsController class implements GemFire REST API calls for Gfsh Shell Commands.
@@ -250,19 +249,11 @@ public class ShellCommandsController extends AbstractCommandsController {
       .add(new Link(PING_LINK_RELATION, toUri("/ping", scheme), HttpMethod.GET))
       .add(new Link(CliStrings.VERSION, toUri("/version", scheme)))
       // WAN Gateway Commands
-      .add(new Link(CliStrings.LIST_GATEWAY, toUri("/gateways", scheme)))
-      .add(new Link(CliStrings.CREATE_GATEWAYRECEIVER, toUri("/gateways/receivers", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.CREATE_GATEWAYSENDER, toUri("/gateways/senders", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.LOAD_BALANCE_GATEWAYSENDER, toUri("/gateways/senders/{id}?op=load-balance", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.PAUSE_GATEWAYSENDER, toUri("/gateways/senders/{id}?op=pause", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.RESUME_GATEWAYSENDER, toUri("/gateways/senders/{id}?op=resume", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.START_GATEWAYRECEIVER, toUri("/gateways/receivers?op=start", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.START_GATEWAYSENDER, toUri("/gateways/senders?op=start", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.STATUS_GATEWAYRECEIVER, toUri("/gateways/receivers", scheme)))
-      .add(new Link(CliStrings.STATUS_GATEWAYSENDER, toUri("/gateways/senders/{id}", scheme)))
-      .add(new Link(CliStrings.STOP_GATEWAYRECEIVER, toUri("/gateways/receivers?op=stop", scheme), HttpMethod.POST))
-      .add(new Link(CliStrings.STOP_GATEWAYSENDER, toUri("/gateways/senders/{id}?op=stop", scheme), HttpMethod.POST))
-        ;
+       .add(new Link(CliStrings.LIST_HDFS_STORE, toUri("/hdfsstores",scheme), HttpMethod.GET))
+       .add(new Link(CliStrings.DESCRIBE_HDFS_STORE, toUri("/hdfsstores/{name}",scheme), HttpMethod.GET))
+       .add(new Link(CliStrings.CREATE_HDFS_STORE, toUri("/hdfsstores",scheme), HttpMethod.POST))
+       .add(new Link(CliStrings.DESTROY_HDFS_STORE, toUri("/hdfsstores/{name}",scheme), HttpMethod.DELETE))
+       .add(new Link(CliStrings.ALTER_HDFS_STORE,   toUri("/hdfsstores/{name}",scheme), HttpMethod.PUT));
   }
 
   @RequestMapping(method = { RequestMethod.GET, RequestMethod.HEAD }, value = "/ping")

@@ -24,6 +24,7 @@ import com.gemstone.gemfire.cache.client.internal.GetOp;
 import com.gemstone.gemfire.cache.operations.GetOperationContext;
 import com.gemstone.gemfire.cache.operations.internal.GetOperationContextImpl;
 import com.gemstone.gemfire.distributed.internal.DistributionStats;
+import com.gemstone.gemfire.internal.Assert;
 import com.gemstone.gemfire.internal.cache.CachedDeserializable;
 import com.gemstone.gemfire.internal.cache.EntryEventImpl;
 import com.gemstone.gemfire.internal.cache.LocalRegion;
@@ -304,7 +305,7 @@ public class Get70 extends BaseCommand {
 //    } else {
       ClientProxyMembershipID id = servConn == null ? null : servConn.getProxyID();
       VersionTagHolder versionHolder = new VersionTagHolder();
-      data  = ((LocalRegion) region).get(key, callbackArg, true, true, true, id, versionHolder, true);
+      data  = ((LocalRegion) region).get(key, callbackArg, true, true, true, id, versionHolder, true, true /*allowReadFromHDFS*/);
 //    }
     versionTag = versionHolder.getVersionTag();
     

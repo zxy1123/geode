@@ -450,4 +450,11 @@ public class DistributedSystemMBean extends NotificationBroadcasterSupport
   public void setQueryCollectionsDepth(int queryCollectionsDepth) {
     bridge.setQueryCollectionsDepth(queryCollectionsDepth);;
   }
+
+  @Override
+  public Map<String, String[]> listMemberHDFSStore() {
+    return bridge.getMemberHDFSStoreMap();
+  }
+
+
 }
