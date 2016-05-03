@@ -1147,9 +1147,7 @@ public class LocalRegion extends AbstractRegion
   @Override
   public boolean generateEventID()
   {     
-    return !(isUsedForPartitionedRegionAdmin()
-        || (isUsedForPartitionedRegionBucket() && !(((BucketRegion)this)
-            .getPartitionedRegion().getAsyncEventQueueIds().size() > 0)));
+    return !isUsedForPartitionedRegionAdmin();
   }
 
   public final Object destroy(Object key, Object aCallbackArgument)
@@ -6642,13 +6640,9 @@ public class LocalRegion extends AbstractRegion
   protected void notifyGatewaySender(EnumListenerEvent operation,
       EntryEventImpl event) {
     
-    if (this.isInternalRegion() || isPdxTypesRegion() || 
-        event.isConcurrencyConflict() /* usually concurrent cache modification problem */) { 
+    if (isPdxTypesRegion() || event.isConcurrencyConflict() /* usually concurrent cache modification problem */) { 
       return;
     }
-
-    logger.info("### notifying GW senders :" + event);
-    
 
     // Return if the inhibit all notifications flag is set
     if (event.inhibitAllNotifications()){

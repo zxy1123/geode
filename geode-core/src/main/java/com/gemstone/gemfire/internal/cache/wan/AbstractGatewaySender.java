@@ -805,7 +805,6 @@ public abstract class AbstractGatewaySender implements GatewaySender,
    * @return boolean True if the event is allowed.
    */
   private boolean checkForDistribution(EntryEventImpl event, GatewaySenderStats stats) {
-    logger.info("### isIgnoreEvictionAndExpiration :" + isIgnoreEvictionAndExpiration());
     if (event.getRegion().getDataPolicy().equals(DataPolicy.NORMAL))
     {
       return false;
@@ -846,16 +845,6 @@ public abstract class AbstractGatewaySender implements GatewaySender,
       return;
     }
     
-<<<<<<< HEAD
-=======
-    if (getIsHDFSQueue() && event.getOperation().isEviction()) {
-      if (logger.isDebugEnabled())
-        logger.debug("Eviction event not queued: " + event);
-      stats.incEventsNotQueued();
-      return;
-    }
-    
->>>>>>> GEODE-1209: Added new attribute to forward eviction/expiration to AEQ.
     // this filter is defined by Asif which exist in old wan too. new wan has
     // other GatewaEventFilter. Do we need to get rid of this filter. Cheetah is
     // not cinsidering this filter
