@@ -170,7 +170,15 @@ public interface AsyncEventQueueFactory {
   public AsyncEventQueueFactory setGatewayEventSubstitutionListener(
       GatewayEventSubstitutionFilter filter);
 
+  /**
+   * Ignores the eviction and expiration events.
+   *
+   * @param ignore 
+   *        boolean to indicate whether to ignore eviction and expiration events. 
+   */
+  public AsyncEventQueueFactory setIgnoreEvictionAndExpiration(boolean ignore);
 
+  
   /**
    * Creates the <code>AsyncEventQueue</code>. It accepts Id of AsyncEventQueue
    * and instance of AsyncEventListener. Multiple queues can be created using
