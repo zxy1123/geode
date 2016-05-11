@@ -16,11 +16,15 @@
  */
 package com.gemstone.gemfire.cache.query.dunit;
 
+import static com.gemstone.gemfire.cache.query.Utils.createPortfoliosAndPositions;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+
+import org.junit.experimental.categories.Category;
 
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.CacheException;
@@ -63,13 +67,12 @@ import com.gemstone.gemfire.test.dunit.LogWriterUtils;
 import com.gemstone.gemfire.test.dunit.NetworkUtils;
 import com.gemstone.gemfire.test.dunit.SerializableRunnable;
 import com.gemstone.gemfire.test.dunit.VM;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
 /**
  * This tests the querying using a RegionFunctionContext which provides a filter
  * (routing keys) to run the query on subset of buckets "locally". If query
  * includes buckets
- *
- *
  */
 public class QueryUsingFunctionContextDUnitTest extends CacheTestCase {
 
@@ -124,13 +127,11 @@ public class QueryUsingFunctionContextDUnitTest extends CacheTestCase {
   
   public static String[] queriesForRR = new String[]{"<trace> select * from /"+repRegionName+" where ID>=0"};
 
-  private static PRQueryDUnitHelper PRQHelp = new PRQueryDUnitHelper("");
   /**
    * @param name
    */
   public QueryUsingFunctionContextDUnitTest(String name) {
     super(name);
-
   }
 
   @Override
@@ -434,10 +435,8 @@ public class QueryUsingFunctionContextDUnitTest extends CacheTestCase {
 
   }
 
-  /**
-  *
-  */
- public void testQueriesWithFilterKeysOnPRWithRebalancing() {
+  @Category(FlakyTest.class) // GEODE-575: ignores lots of exceptions, non-thread-safe test hooks
+  public void testQueriesWithFilterKeysOnPRWithRebalancing() {
    IgnoredException.addIgnoredException("QueryInvocationTargetException");
    IgnoredException.addIgnoredException("java.net.SocketException");
    IgnoredException.addIgnoredException("ServerConnectivityException");
@@ -672,7 +671,7 @@ public class QueryUsingFunctionContextDUnitTest extends CacheTestCase {
 
   public void fillValuesInRegions() {
     //Create common Portflios and NewPortfolios
-    final Portfolio[] portfolio = PRQHelp.createPortfoliosAndPositions(cntDest);
+    final Portfolio[] portfolio = createPortfoliosAndPositions(cntDest);
 
     //Fill local region
     server1.invoke(getCacheSerializableRunnableForPRPuts(localRegionName,
@@ -1016,7 +1015,7 @@ public class QueryUsingFunctionContextDUnitTest extends CacheTestCase {
           region.put(new Integer(j), portfolio[j]);
         LogWriterUtils.getLogWriter()
             .info(
-                "PRQueryDUnitHelper#getCacheSerializableRunnableForPRPuts: Inserted Portfolio data on Region "
+                "getCacheSerializableRunnableForPRPuts: Inserted Portfolio data on Region "
                     + regionName);
       }
     };

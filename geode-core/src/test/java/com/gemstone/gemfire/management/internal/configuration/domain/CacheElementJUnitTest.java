@@ -16,16 +16,13 @@
  */
 package com.gemstone.gemfire.management.internal.configuration.domain;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
-
 import javax.xml.XMLConstants;
 
 import org.junit.Test;
@@ -44,16 +41,14 @@ import com.gemstone.gemfire.test.junit.categories.UnitTest;
 
 /**
  * Test cases for {@link CacheElement}.
- * 
- * 
- * @see CacheElement
  *
+ * @see CacheElement
  * @since 8.1
  */
 @Category(UnitTest.class)
 public class CacheElementJUnitTest {
 
-  private static final Document loadSchema(final String schemaLocation) throws Exception {
+  private Document loadSchema(final String schemaLocation) throws Exception {
     final CacheXmlParser entityResolver = new CacheXmlParser();
     final XMLReader xmlReader = XMLReaderFactory.createXMLReader();
     xmlReader.setEntityResolver(entityResolver);
@@ -69,7 +64,7 @@ public class CacheElementJUnitTest {
    */
   @Test
   public void testCacheDefinedAsNestedComplexType8_1() throws Exception {
-    Document doc = loadSchema(CacheXmlVersion.VERSION_8_1.getSchemaLocation());
+    Document doc = loadSchema(CacheXmlVersion.GEMFIRE_8_1.getSchemaLocation());
     final XPathContext xPathContext = new XPathContext(CacheElement.XSD_PREFIX, XMLConstants.W3C_XML_SCHEMA_NS_URI);
     final Node cacheType = XmlUtils.querySingleElement(doc.getFirstChild(), CacheElement.CACHE_TYPE_EMBEDDED, xPathContext);
     assertNotNull("Cache type is not embedded complexType.", cacheType);
@@ -98,7 +93,6 @@ public class CacheElementJUnitTest {
    * correct order. If we change to use choice for all elements then we can
    * abandon this mapping.
    * 
-   * @throws IOException
    * @since 8.1
    */
   @Test
@@ -118,7 +112,6 @@ public class CacheElementJUnitTest {
     assertEntry("gateway-conflict-resolver", order++, entries.next());
     assertEntry("async-event-queue", order++, entries.next());
     assertEntry("cache-server", order++, entries.next());
-    assertEntry("bridge-server", order++, entries.next());
     assertEntry("pool", order++, entries.next());
     assertEntry("disk-store", order++, entries.next());
     assertEntry("pdx", order++, entries.next());
@@ -135,7 +128,7 @@ public class CacheElementJUnitTest {
     assertTrue("Extra entries in map.", !entries.hasNext());
   }
 
-  protected void assertEntry(final String expectedName, final int expectedOrder, final Entry<String, CacheElement> entry) {
+  private void assertEntry(final String expectedName, final int expectedOrder, final Entry<String, CacheElement> entry) {
     assertEquals("Entry key out of order.", expectedName, entry.getKey());
     assertEquals("Entry value name out of order.", expectedName, entry.getValue().getName());
     assertEquals("Entry value order out of order.", expectedOrder, entry.getValue().getOrder());

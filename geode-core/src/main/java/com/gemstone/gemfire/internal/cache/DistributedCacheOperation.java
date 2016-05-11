@@ -74,6 +74,7 @@ import com.gemstone.gemfire.internal.logging.LogService;
 import com.gemstone.gemfire.internal.logging.log4j.LocalizedMessage;
 import com.gemstone.gemfire.internal.logging.log4j.LogMarker;
 import com.gemstone.gemfire.internal.offheap.StoredObject;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 import com.gemstone.gemfire.internal.offheap.annotations.Unretained;
 import com.gemstone.gemfire.internal.sequencelog.EntryLogger;
 
@@ -127,8 +128,6 @@ public abstract class DistributedCacheOperation {
         assert !so.isSerialized();
         so.sendAsByteArray(out);
       } else { // LAZY
-        // TODO OFFHEAP MERGE: cache the oldValue that is serialized here
-        // into the event
         DataSerializer.writeObjectAsByteArray(vObj, out);
       }
     } else {
@@ -528,7 +527,7 @@ public abstract class DistributedCacheOperation {
 
         // distribute to members needing the old value now
         if (needsOldValueInCacheOp.size() > 0) {
-          msg.appendOldValueToMessage((EntryEventImpl)this.event); // TODO OFFHEAP optimize
+          msg.appendOldValueToMessage((EntryEventImpl)this.event);
           msg.resetRecipients();
           msg.setRecipients(needsOldValueInCacheOp);
           Set newFailures = mgr.putOutgoing(msg);
@@ -864,8 +863,6 @@ public abstract class DistributedCacheOperation {
 
     private final static int INHIBIT_NOTIFICATIONS_MASK = 0x400;
 
-	protected final static short FETCH_FROM_HDFS = 0x200;
-    
     protected final static short IS_PUT_DML = 0x100;
 
     public boolean needsRouting;
@@ -1104,7 +1101,6 @@ public abstract class DistributedCacheOperation {
     protected void basicProcess(DistributionManager dm, LocalRegion lclRgn) {
       Throwable thr = null;
       boolean sendReply = true;
-      InternalCacheEvent event = null;
 
       if (logger.isTraceEnabled()) {
         logger.trace("DistributedCacheOperation.basicProcess: {}", this);
@@ -1140,7 +1136,7 @@ public abstract class DistributedCacheOperation {
           return;
         }
 
-        event = createEvent(rgn);
+        @Released InternalCacheEvent event = createEvent(rgn);
         try {
         boolean isEntry = event.getOperation().isEntry();
 
@@ -1369,7 +1365,6 @@ public abstract class DistributedCacheOperation {
       if ((extBits & INHIBIT_NOTIFICATIONS_MASK) != 0) {
         this.inhibitAllNotifications = true;
 	  if (this instanceof PutAllMessage) {
-        ((PutAllMessage) this).setFetchFromHDFS((extBits & FETCH_FROM_HDFS) != 0);
         ((PutAllMessage) this).setPutDML((extBits & IS_PUT_DML) != 0);
       }
       }

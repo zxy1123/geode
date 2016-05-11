@@ -17,8 +17,6 @@
 
 package com.gemstone.gemfire.internal.cache;
 
-import static com.gemstone.gemfire.internal.offheap.annotations.OffHeapIdentifier.ABSTRACT_REGION_ENTRY_FILL_IN_VALUE;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -113,14 +111,13 @@ import com.gemstone.gemfire.internal.cache.versions.ConcurrentCacheModificationE
 import com.gemstone.gemfire.internal.cache.versions.RegionVersionVector;
 import com.gemstone.gemfire.internal.cache.versions.VersionSource;
 import com.gemstone.gemfire.internal.cache.versions.VersionTag;
-import com.gemstone.gemfire.internal.cache.wan.AbstractGatewaySender;
-import com.gemstone.gemfire.internal.cache.wan.AbstractGatewaySenderEventProcessor;
 import com.gemstone.gemfire.internal.cache.wan.AsyncEventQueueConfigurationException;
 import com.gemstone.gemfire.internal.cache.wan.GatewaySenderConfigurationException;
 import com.gemstone.gemfire.internal.cache.wan.parallel.ConcurrentParallelGatewaySenderQueue;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 import com.gemstone.gemfire.internal.logging.LogService;
 import com.gemstone.gemfire.internal.logging.log4j.LocalizedMessage;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 import com.gemstone.gemfire.internal.offheap.annotations.Retained;
 import com.gemstone.gemfire.internal.sequencelog.RegionLogger;
 import com.gemstone.gemfire.internal.util.concurrent.StoppableCountDownLatch;
@@ -947,8 +944,10 @@ public class DistributedRegion extends LocalRegion implements
   protected boolean lostReliability(final InternalDistributedMember id,
       final Set newlyMissingRoles)
   {
-    if (DistributedRegion.ignoreReconnect)
+    if (DistributedRegion.ignoreReconnect) { // test hook
       return false;
+    }
+
     boolean async = false;
     try {
       if (getMembershipAttributes().getLossAction().isReconnect()) {
@@ -1001,12 +1000,11 @@ public class DistributedRegion extends LocalRegion implements
           public void run()
           {
             try {
-              // TODO: may need to check isReconnecting and checkReadiness...
-              if (logger.isDebugEnabled()) {
-                logger.debug("Reliability loss with policy of reconnect and membership thread doing reconnect");
-              }
+              logger.debug("Reliability loss with policy of reconnect and membership thread doing reconnect");
+
               initializationLatchAfterMemberTimeout.await();
               getSystem().tryReconnect(false, "Role Loss", getCache());
+
               synchronized (missingRequiredRoles) {
                 // any number of threads may be waiting on missingRequiredRoles
                 missingRequiredRoles.notifyAll();
@@ -1262,8 +1260,6 @@ public class DistributedRegion extends LocalRegion implements
    */
   private final Set<DistributedMember> memoryThresholdReachedMembers =
     new CopyOnWriteArraySet<DistributedMember>();
-
-  private ConcurrentParallelGatewaySenderQueue hdfsQueue;
 
   /** Sets and returns giiMissingRequiredRoles */
   private boolean checkInitialImageForReliability(
@@ -2423,9 +2419,16 @@ public class DistributedRegion extends LocalRegion implements
   /** @return the deserialized value */
   @Override
   @Retained
-  protected Object findObjectInSystem(KeyInfo keyInfo, boolean isCreate,
-      TXStateInterface txState, boolean generateCallbacks, Object localValue, boolean disableCopyOnRead,
-        boolean preferCD, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS)
+  protected Object findObjectInSystem(KeyInfo keyInfo,
+                                      boolean isCreate,
+                                      TXStateInterface txState,
+                                      boolean generateCallbacks,
+                                      Object localValue,
+                                      boolean disableCopyOnRead,
+                                      boolean preferCD,
+                                      ClientProxyMembershipID requestingClient,
+                                      EntryEventImpl clientEvent,
+                                      boolean returnTombstones)
       throws CacheLoaderException, TimeoutException
   {
     checkForLimitedOrNoAccess();
@@ -2442,13 +2445,12 @@ public class DistributedRegion extends LocalRegion implements
     }
     long lastModified = 0L;
     boolean fromServer = false;
-    EntryEventImpl event = null;
+    @Released EntryEventImpl event = null;
     @Retained Object result = null;
     try {
     {
       if (this.srp != null) {
-        EntryEventImpl holder = EntryEventImpl.createVersionTagHolder();
-        try {
+        VersionTagHolder holder = new VersionTagHolder();
         Object value = this.srp.get(key, aCallbackArgument, holder);
         fromServer = value != null;
         if (fromServer) {
@@ -2460,9 +2462,6 @@ public class DistributedRegion extends LocalRegion implements
           if (clientEvent != null && clientEvent.getVersionTag() == null) {
             clientEvent.setVersionTag(holder.getVersionTag());
           }
-        }
-        } finally {
-          holder.release();
         }
       }
     }
@@ -2548,18 +2547,6 @@ public class DistributedRegion extends LocalRegion implements
     }
   }
   
-  protected ConcurrentParallelGatewaySenderQueue getHDFSQueue() {
-    if (this.hdfsQueue == null) {
-      String asyncQId = this.getPartitionedRegion().getHDFSEventQueueName();
-      final AsyncEventQueueImpl asyncQ =  (AsyncEventQueueImpl)this.getCache().getAsyncEventQueue(asyncQId);
-      final AbstractGatewaySender gatewaySender = (AbstractGatewaySender)asyncQ.getSender();
-      AbstractGatewaySenderEventProcessor ep = gatewaySender.getEventProcessor();
-      if (ep == null) return null;
-      hdfsQueue = (ConcurrentParallelGatewaySenderQueue)ep.getQueue();
-    }
-    return hdfsQueue;
-  }
-
   /** hook for subclasses to note that a cache load was performed
    * @see BucketRegion#performedLoad
    */

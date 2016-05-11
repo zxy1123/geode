@@ -40,7 +40,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.net.InetAddress;
 import java.util.List;
 
-import static com.vmware.gemfire.tools.pulse.tests.PulseTest.getPulseWarPath;
+import static com.vmware.gemfire.tools.pulse.tests.PulseAbstractTest.getPulseWarPath;
 
 /**
  *
@@ -261,7 +261,7 @@ public class PulseUITest {
       List<Region> locatorRegionscount = testBed.getRootDs().getRegions(locator);
       int locatorRegions = Integer.parseInt(driver.findElement(
           By.id("memberRegionsCount")).getText());
-      Assert.assertEquals(locatorRegionscount.size(), locatorRegions);
+      Assert.assertIndexDetailsEquals(locatorRegionscount.size(), locatorRegions);
       prevSelectedMember = peername;
     }*/
   }

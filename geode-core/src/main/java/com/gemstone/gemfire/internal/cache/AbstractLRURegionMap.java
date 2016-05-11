@@ -177,6 +177,10 @@ public abstract class AbstractLRURegionMap extends AbstractRegionMap {
     // make sure this cached deserializable is still in the entry
     // @todo what if a clear is done and this entry is no longer in the region?
     {
+      if (_getCCHelper().getEvictionAlgorithm().isLRUEntry()) {
+        // no need to worry about the value changing form with entry LRU.
+        return false;
+      }
       Object curVal = le._getValue(); // OFFHEAP: _getValue ok
       if (curVal != cd) {
         if (cd instanceof StoredObject) {
@@ -193,17 +197,14 @@ public abstract class AbstractLRURegionMap extends AbstractRegionMap {
     int delta = le.updateEntrySize(_getCCHelper(), new CDValueWrapper(v));
     if (delta != 0) {
       result = true;
-      boolean needToDisableCallbacks = !getCallbackDisabled();
-      if (needToDisableCallbacks) {
-        setCallbackDisabled(true);
-      }
+      boolean disabledLURCallbacks = disableLruUpdateCallback();
       // by making sure that callbacks are disabled when we call
       // setDelta; it ensures that the setDelta will just inc the delta
       // value and not call lruUpdateCallback which we call in
       // finishChangeValueForm
       setDelta(delta);
-      if (needToDisableCallbacks) {
-        setCallbackDisabled(false);
+      if (disabledLURCallbacks) {
+        enableLruUpdateCallback();
       }
     }
     // fix for bug 42090

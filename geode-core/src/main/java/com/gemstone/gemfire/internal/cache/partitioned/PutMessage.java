@@ -67,6 +67,8 @@ import com.gemstone.gemfire.internal.cache.versions.VersionTag;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 import com.gemstone.gemfire.internal.logging.LogService;
 import com.gemstone.gemfire.internal.logging.log4j.LogMarker;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
+import com.gemstone.gemfire.internal.offheap.annotations.Retained;
 import com.gemstone.gemfire.internal.offheap.annotations.Unretained;
 import com.gemstone.gemfire.internal.util.BlobHelper;
 
@@ -150,7 +152,7 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
    * expectedOldValue.
    * @see PartitionedRegion#replace(Object, Object, Object)
    */
-  private Object expectedOldValue; // TODO OFFHEAP make it a cd
+  private Object expectedOldValue;
 
   private transient InternalDistributedSystem internalDs;
 
@@ -180,9 +182,6 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
 
   private VersionTag versionTag;
 
-  /** whether this operation should fetch oldValue from HDFS*/
-  private transient boolean fetchFromHDFS;
-
   private transient boolean isPutDML;
   
   // additional bitmask flags used for serialization/deserialization
@@ -206,7 +205,6 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
   // masks there are taken
   // also switching the masks will impact backwards compatibility. Need to
   // verify if it is ok to break backwards compatibility
-  protected static final int FETCH_FROM_HDFS = getNextByteMask(HAS_CALLBACKARG);  
 
   /*
   private byte[] oldValBytes;
@@ -450,7 +448,10 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
 //  }
 
 
-  /** create a new EntryEvent to be used in notifying listeners, bridge servers, etc. */
+  /** create a new EntryEvent to be used in notifying listeners, bridge servers, etc.
+   * Caller must release result if it is != to sourceEvent
+   */
+  @Retained
   EntryEventImpl createListenerEvent(EntryEventImpl sourceEvent, PartitionedRegion r,
       InternalDistributedMember member) {
     final EntryEventImpl e2;
@@ -603,9 +604,6 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
       this.originalSender = (InternalDistributedMember)DataSerializer
         .readObject(in);
     }
-    if ((extraFlags & FETCH_FROM_HDFS) != 0) {
-      this.fetchFromHDFS = true;
-    }
     this.eventId = new EventID();
     InternalDataSerializer.invokeFromData(this.eventId, in);
     
@@ -692,7 +690,6 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
       extraFlags |= HAS_DELTA_WITH_FULL_VALUE;
     }
     if (this.originalSender != null) extraFlags |= HAS_ORIGINAL_SENDER;
-    if (this.event.isFetchFromHDFS()) extraFlags |= FETCH_FROM_HDFS;
     out.writeByte(extraFlags);
 
     DataSerializer.writeObject(getKey(), out);
@@ -724,7 +721,6 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
       region.getCachePerfStats().incDeltasSent();
     }
     else {
-      // TODO OFFHEAP MERGE: cache serialized blob in event
       DistributedCacheOperation.writeValue(this.deserializationPolicy, this.valObj, getValBytes(), out);
       if ((extraFlags & HAS_DELTA_WITH_FULL_VALUE) != 0) {
         DataSerializer.writeByteArray(this.event.getDeltaBytes(), out);
@@ -795,7 +791,7 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
     if (r.keyRequiresRegionContext()) {
       ((KeyWithRegionContext)this.key).setRegionContext(r);
     }
-    final EntryEventImpl ev = EntryEventImpl.create(
+    @Released final EntryEventImpl ev = EntryEventImpl.create(
         r,
         getOperation(),
         getKey(),
@@ -818,7 +814,6 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
     ev.setCausedByMessage(this);
     ev.setInvokePRCallbacks(!notificationOnly);
     ev.setPossibleDuplicate(this.posDup);
-	ev.setFetchFromHDFS(this.fetchFromHDFS);
     ev.setPutDML(this.isPutDML);
     /*if (this.hasOldValue) {
       if (this.oldValueIsSerialized) {
@@ -906,7 +901,7 @@ public final class PutMessage extends PartitionMessageWithDirectReply implements
       }
     }
     else { // notificationOnly
-      EntryEventImpl e2 = createListenerEvent(ev, r, dm.getDistributionManagerId());
+      @Released EntryEventImpl e2 = createListenerEvent(ev, r, dm.getDistributionManagerId());
       final EnumListenerEvent le;
       try {
       if (e2.getOperation().isCreate()) {

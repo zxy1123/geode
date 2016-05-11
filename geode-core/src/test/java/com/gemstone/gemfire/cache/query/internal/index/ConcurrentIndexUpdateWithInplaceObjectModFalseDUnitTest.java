@@ -21,8 +21,12 @@ package com.gemstone.gemfire.cache.query.internal.index;
 
 import java.util.Collection;
 
+import org.junit.experimental.categories.Category;
+
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.CacheException;
+import com.gemstone.gemfire.cache.CacheExistsException;
+import com.gemstone.gemfire.cache.CacheFactory;
 import com.gemstone.gemfire.cache.Region;
 import com.gemstone.gemfire.cache.query.Index;
 import com.gemstone.gemfire.cache.query.IndexStatistics;
@@ -50,6 +54,7 @@ import com.gemstone.gemfire.test.dunit.LogWriterUtils;
 import com.gemstone.gemfire.test.dunit.VM;
 import com.gemstone.gemfire.test.dunit.SerializableRunnableIF;
 import com.gemstone.gemfire.test.dunit.ThreadUtils;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
 /**
  * This test is similar to {@link ConcurrentIndexUpdateWithoutWLDUnitTest} except
@@ -58,16 +63,13 @@ import com.gemstone.gemfire.test.dunit.ThreadUtils;
  * 
  * During validation all region operations are paused for a while. Validation
  * happens multiple time during one test run on a fixed time interval.
- * 
- * 
  */
-public class ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest extends
-    DistributedTestCase {
+public class ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest extends DistributedTestCase {
   
-  PRQueryDUnitHelper helper = new PRQueryDUnitHelper("ConcurrentIndexUpdateWithoutWLDUnitTest");
+  PRQueryDUnitHelper helper = new PRQueryDUnitHelper();
   private static String regionName = "Portfolios";
   private int redundancy = 1;
-  
+
   // CompactRangeIndex
   private String indexName = "idIndex";
   private String indexedExpression = "ID";
@@ -81,6 +83,31 @@ public class ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest extends
 
   int stepSize = 10;
   private int totalDataSize = 50;
+  public void setCacheInVMs(VM... vms) {
+    for (VM vm : vms) {
+      vm.invoke(() -> getAvailableCacheElseCreateCache());
+    }
+  }
+  private final void getAvailableCacheElseCreateCache() {
+    synchronized(ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest.class) {
+      try {
+        Cache newCache = GemFireCacheImpl.getInstance();
+        if(null == newCache) {
+          System.setProperty("gemfire.DISABLE_DISCONNECT_DS_ON_CACHE_CLOSE", "true");
+          newCache = CacheFactory.create(getSystem());
+        }
+        PRQueryDUnitHelper.setCache(newCache);
+      } catch (CacheExistsException e) {
+        Assert.fail("the cache already exists", e); // TODO: remove error handling
+      } catch (RuntimeException ex) {
+        throw ex;
+      } catch (Exception ex) {
+        Assert.fail("Checked exception while initializing cache??", ex);
+      } finally {
+        System.clearProperty("gemfire.DISABLE_DISCONNECT_DS_ON_CACHE_CLOSE");
+      }
+    }
+  }
 
   /**
    * @param name
@@ -132,8 +159,8 @@ public class ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest extends
     // Create a Local Region.
     Host host = Host.getHost(0);
     VM vm0 = host.getVM(0);
-    
-    vm0.invoke(helper.getCacheSerializableRunnableForReplicatedRegionCreation(regionName, Portfolio.class));
+    setCacheInVMs(vm0);
+    vm0.invoke(helper.getCacheSerializableRunnableForReplicatedRegionCreation(regionName));
     
     vm0.invoke(helper.getCacheSerializableRunnableForPRIndexCreate(regionName, indexName, indexedExpression, fromClause, alias));
     
@@ -173,13 +200,13 @@ public class ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest extends
     };
   }
 
+  @Category(FlakyTest.class) // GEODE-431: time sensitive, uses PRQueryDUnitHelper whcih eats exceptions, async actions, uses Random
   public void testRangeIndex() {
     Host host = Host.getHost(0);
     VM vm0 = host.getVM(0);
-    VM vm1 = host.getVM(1);
-    
-    vm0.invoke(helper.getCacheSerializableRunnableForReplicatedRegionCreation(regionName, Portfolio.class));
-    
+    setCacheInVMs(vm0);
+    vm0.invoke(helper.getCacheSerializableRunnableForReplicatedRegionCreation(regionName));
+
     vm0.invoke(helper.getCacheSerializableRunnableForPRIndexCreate(regionName, rindexName, rindexedExpression, rfromClause, ralias));
     
     AsyncInvocation[] asyncInvs = new AsyncInvocation[2];
@@ -208,7 +235,7 @@ public class ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest extends
     VM vm1 = host.getVM(1);
     VM vm2 = host.getVM(2);
     VM vm3 = host.getVM(3);    
-
+    setCacheInVMs(vm0,vm1, vm2, vm3);
     vm0.invoke(helper.getCacheSerializableRunnableForPRAccessorCreate(regionName, redundancy, Portfolio.class));
     
     vm1.invoke(helper.getCacheSerializableRunnableForPRCreate(regionName, redundancy, Portfolio.class));
@@ -271,7 +298,7 @@ public class ConcurrentIndexUpdateWithInplaceObjectModFalseDUnitTest extends
     VM vm1 = host.getVM(1);
     VM vm2 = host.getVM(2);
     VM vm3 = host.getVM(3);    
-
+    setCacheInVMs(vm0, vm1, vm2, vm3);
     vm0.invoke(helper.getCacheSerializableRunnableForPRAccessorCreate(regionName, redundancy, Portfolio.class));
     
     vm1.invoke(helper.getCacheSerializableRunnableForPRCreate(regionName, redundancy, Portfolio.class));

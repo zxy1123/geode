@@ -47,6 +47,7 @@ import com.gemstone.gemfire.internal.cache.tier.sockets.ClientProxyMembershipID;
 import com.gemstone.gemfire.internal.cache.tier.sockets.HAEventWrapper;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 import com.gemstone.gemfire.internal.logging.LogService;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 
 /**
  * This region is being implemented to suppress distribution of puts and to
@@ -229,7 +230,7 @@ public final class HARegion extends DistributedRegion
       throws TimeoutException, CacheWriterException {
     checkReadiness();
 
-    EntryEventImpl event = EntryEventImpl.create(this, Operation.UPDATE, key,
+    @Released EntryEventImpl event = EntryEventImpl.create(this, Operation.UPDATE, key,
         value, aCallbackArgument, false, getMyId());
     try {
 
@@ -372,13 +373,20 @@ public final class HARegion extends DistributedRegion
   
   /**
    * @return the deserialized value
-   * @see DistributedRegion#findObjectInSystem(KeyInfo, boolean, TXStateInterface, boolean, Object, boolean, boolean, ClientProxyMembershipID, EntryEventImpl, boolean, boolean)
+   * @see LocalRegion#findObjectInSystem(KeyInfo, boolean, TXStateInterface, boolean, Object, boolean, boolean, ClientProxyMembershipID, EntryEventImpl, boolean)
    *      
    */
   @Override
-  protected Object findObjectInSystem(KeyInfo keyInfo, boolean isCreate,
-      TXStateInterface txState, boolean generateCallbacks, Object localValue, boolean disableCopyOnRead,
-      boolean preferCD, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS)
+  protected Object findObjectInSystem(KeyInfo keyInfo,
+                                      boolean isCreate,
+                                      TXStateInterface txState,
+                                      boolean generateCallbacks,
+                                      Object localValue,
+                                      boolean disableCopyOnRead,
+                                      boolean preferCD,
+                                      ClientProxyMembershipID requestingClient,
+                                      EntryEventImpl clientEvent,
+                                      boolean returnTombstones)
     throws CacheLoaderException, TimeoutException  {
 
     Object value = null;
@@ -409,7 +417,7 @@ public final class HARegion extends DistributedRegion
             op = Operation.LOCAL_LOAD_UPDATE;
           }
 
-          EntryEventImpl event = EntryEventImpl.create(
+          @Released EntryEventImpl event = EntryEventImpl.create(
               this, op, key, value,
               aCallbackArgument, false, getMyId(), generateCallbacks);
           try {

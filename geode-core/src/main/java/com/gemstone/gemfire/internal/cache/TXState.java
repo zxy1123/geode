@@ -62,6 +62,7 @@ import com.gemstone.gemfire.internal.cache.tier.sockets.VersionedObjectList;
 import com.gemstone.gemfire.internal.cache.tx.TransactionalOperation.ServerRegionOperation;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 import com.gemstone.gemfire.internal.logging.LogService;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 import com.gemstone.gemfire.internal.offheap.annotations.Retained;
 
 /** TXState is the entity that tracks the transaction state on a per
@@ -388,7 +389,10 @@ public class TXState implements TXStateInterface {
       if(!firedWriter && writer!=null) {
         try {
           firedWriter = true;
-          writer.beforeCommit(getEvent());
+          TXEvent event = getEvent();
+          if (!event.hasOnlyInternalEvents()) {
+            writer.beforeCommit(event);
+          }
         } catch(TransactionWriterException twe) {
           cleanup();
           throw new CommitConflictException(twe);
@@ -484,7 +488,7 @@ public class TXState implements TXStateInterface {
             /*
              * The event must contain the bucket region
              */
-            EntryEventImpl ev = (EntryEventImpl)o.es.getEvent(o.r, o.key, o.es.getTXRegionState().getTXState());
+            @Released EntryEventImpl ev = (EntryEventImpl)o.es.getEvent(o.r, o.key, o.es.getTXRegionState().getTXState());
             try {
             /*
              * The routing information is derived from the PR advisor, not the bucket advisor.
@@ -917,7 +921,10 @@ public class TXState implements TXStateInterface {
         try {
           // need to mark this so we don't fire again in commit
           firedWriter  = true;
-          writer.beforeCommit(getEvent());
+          TXEvent event = getEvent();
+          if (!event.hasOnlyInternalEvents()) {
+            writer.beforeCommit(event);
+          }
         } catch(TransactionWriterException twe) {
           cleanup();
           throw new CommitConflictException(twe);
@@ -1400,7 +1407,14 @@ public class TXState implements TXStateInterface {
   /* (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.TXStateInterface#getDeserializedValue(java.lang.Object, com.gemstone.gemfire.internal.cache.LocalRegion, boolean)
    */
-  public Object getDeserializedValue(KeyInfo keyInfo, LocalRegion localRegion, boolean updateStats, boolean disableCopyOnRead, boolean preferCD, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS, boolean retainResult) {
+  public Object getDeserializedValue(KeyInfo keyInfo,
+                                     LocalRegion localRegion,
+                                     boolean updateStats,
+                                     boolean disableCopyOnRead,
+                                     boolean preferCD,
+                                     EntryEventImpl clientEvent,
+                                     boolean returnTombstones,
+                                     boolean retainResult) {
     TXEntryState tx = txReadEntry(keyInfo, localRegion, true, true/*create txEntry is absent*/);
     if (tx != null) {
       Object v = tx.getValue(keyInfo, localRegion, preferCD);
@@ -1409,7 +1423,8 @@ public class TXState implements TXStateInterface {
       }
       return v;
     } else {
-      return localRegion.getDeserializedValue(null, keyInfo, updateStats, disableCopyOnRead, preferCD, clientEvent, returnTombstones, allowReadFromHDFS, retainResult);
+      return localRegion.getDeserializedValue(null, keyInfo, updateStats, disableCopyOnRead, preferCD, clientEvent, returnTombstones,
+        retainResult);
     }
   }
 
@@ -1418,15 +1433,19 @@ public class TXState implements TXStateInterface {
    * @see com.gemstone.gemfire.internal.cache.InternalDataView#getSerializedValue(com.gemstone.gemfire.internal.cache.LocalRegion, java.lang.Object, java.lang.Object)
    */
   @Retained
-  public Object getSerializedValue(LocalRegion localRegion, KeyInfo keyInfo, boolean doNotLockEntry, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, 
-      boolean returnTombstones, boolean allowReadFromHDFS) throws DataLocationException {
+  public Object getSerializedValue(LocalRegion localRegion,
+                                   KeyInfo keyInfo,
+                                   boolean doNotLockEntry,
+                                   ClientProxyMembershipID requestingClient,
+                                   EntryEventImpl clientEvent,
+                                   boolean returnTombstones) throws DataLocationException {
     final Object key = keyInfo.getKey();
     TXEntryState tx = txReadEntry(keyInfo, localRegion, true,true/*create txEntry is absent*/);
     if (tx != null) {
       Object val = tx.getPendingValue();
       if(val==null || Token.isInvalidOrRemoved(val)) {
         val = findObject(keyInfo,localRegion, val!=Token.INVALID,
-            true, val, false, false, requestingClient, clientEvent, false, allowReadFromHDFS);
+            true, val, false, false, requestingClient, clientEvent, false);
       }
       return val;
     } else {
@@ -1434,7 +1453,7 @@ public class TXState implements TXStateInterface {
       // so we should never come here
       assert localRegion instanceof PartitionedRegion;
       PartitionedRegion pr = (PartitionedRegion)localRegion;
-      return pr.getDataStore().getSerializedLocally(keyInfo, doNotLockEntry, null, null, returnTombstones, allowReadFromHDFS);
+      return pr.getDataStore().getSerializedLocally(keyInfo, doNotLockEntry, null, null, returnTombstones);
     }
   }
 
@@ -1512,9 +1531,17 @@ public class TXState implements TXStateInterface {
   /* (non-Javadoc)
    * @see com.gemstone.gemfire.internal.cache.TXStateInterface#findObject(com.gemstone.gemfire.internal.cache.LocalRegion, java.lang.Object, java.lang.Object, boolean, boolean, java.lang.Object)
    */
-  public Object findObject(KeyInfo key, LocalRegion r, boolean isCreate,
-      boolean generateCallbacks, Object value, boolean disableCopyOnRead, boolean preferCD, ClientProxyMembershipID requestingClient, EntryEventImpl clientEvent, boolean returnTombstones, boolean allowReadFromHDFS) {
-    return r.findObjectInSystem(key, isCreate, this, generateCallbacks, value, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones, allowReadFromHDFS);
+  public Object findObject(KeyInfo key,
+                           LocalRegion r,
+                           boolean isCreate,
+                           boolean generateCallbacks,
+                           Object value,
+                           boolean disableCopyOnRead,
+                           boolean preferCD,
+                           ClientProxyMembershipID requestingClient,
+                           EntryEventImpl clientEvent,
+                           boolean returnTombstones) {
+    return r.findObjectInSystem(key, isCreate, this, generateCallbacks, value, disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
   }
 
   private boolean readEntryAndCheckIfDestroyed(KeyInfo keyInfo, LocalRegion localRegion,
@@ -1623,7 +1650,7 @@ public class TXState implements TXStateInterface {
 
 
   public boolean isFireCallbacks() {
-    return true;
+    return !getEvent().hasOnlyInternalEvents();
   }
 
   public boolean isOriginRemoteForEvents() {
@@ -1749,7 +1776,7 @@ public class TXState implements TXStateInterface {
 //	        final boolean requiresRegionContext = theRegion.keyRequiresRegionContext();
 	        InternalDistributedMember myId = theRegion.getDistributionManager().getDistributionManagerId();
 	        for (int i = 0; i < putallOp.putAllDataSize; ++i) {
-	          EntryEventImpl ev = PutAllPRMessage.getEventFromEntry(theRegion, myId,myId, i, putallOp.putAllData, false, putallOp.getBaseEvent().getContext(), false, !putallOp.getBaseEvent().isGenerateCallbacks(), false);
+	          @Released EntryEventImpl ev = PutAllPRMessage.getEventFromEntry(theRegion, myId,myId, i, putallOp.putAllData, false, putallOp.getBaseEvent().getContext(), false, !putallOp.getBaseEvent().isGenerateCallbacks(), false);
 	          try {
 	          ev.setPutAllOperation(putallOp);
 	          if (theRegion.basicPut(ev, false, false, null, false)) {
@@ -1780,11 +1807,13 @@ public class TXState implements TXStateInterface {
         public void run() {
           InternalDistributedMember myId = theRegion.getDistributionManager().getDistributionManagerId();
           for (int i = 0; i < op.removeAllDataSize; ++i) {
-            EntryEventImpl ev = RemoveAllPRMessage.getEventFromEntry(theRegion, myId, myId, i, op.removeAllData, false, op.getBaseEvent().getContext(), false, !op.getBaseEvent().isGenerateCallbacks());
+            @Released EntryEventImpl ev = RemoveAllPRMessage.getEventFromEntry(theRegion, myId, myId, i, op.removeAllData, false, op.getBaseEvent().getContext(), false, !op.getBaseEvent().isGenerateCallbacks());
             ev.setRemoveAllOperation(op);
             try {
               theRegion.basicDestroy(ev, true/* should we invoke cacheWriter? */, null);
             } catch (EntryNotFoundException ignore) {
+            } finally {
+              ev.release();
             }
             successfulOps.addKeyAndVersion(op.removeAllData[i].key, null);
           }

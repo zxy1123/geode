@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.junit.experimental.categories.Category;
+
 import com.gemstone.gemfire.cache.AttributesFactory;
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.CacheFactory;
@@ -55,6 +57,7 @@ import com.gemstone.gemfire.test.dunit.SerializableRunnableIF;
 import com.gemstone.gemfire.test.dunit.VM;
 import com.gemstone.gemfire.test.dunit.Wait;
 import com.gemstone.gemfire.test.dunit.WaitCriterion;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
 public class FixedPRSinglehopDUnitTest extends CacheTestCase {
 
@@ -194,6 +197,7 @@ public class FixedPRSinglehopDUnitTest extends CacheTestCase {
   // Put data, get data and make the metadata stable.
   // Now verify that metadata has all 8 buckets info.
   // Now update and ensure the fetch service is never called.
+  @Category(FlakyTest.class) // GEODE-1176: random ports, time sensitive, waitForCriterion
   public void test_MetadataContents() {
     
     final Host host = Host.getHost(0);
@@ -630,6 +634,22 @@ public class FixedPRSinglehopDUnitTest extends CacheTestCase {
     region.put(q2dateJun1, "update99");
     region.put(q3dateSep1, "update1010");
     region.put(q4dateDec1, "update1111");
+    
+    region.put(q1dateJan1, "update000");
+    region.put(q1dateFeb1, "update444");
+    region.put(q1dateMar1, "update888");
+    region.put(q2dateApr1, "update111");
+    region.put(q2dateMay1, "update555");
+    region.put(q2dateJun1, "update999");
+    region.put(q1dateJan1, "update0000");
+    region.put(q3dateJuly1, "update222");
+    region.put(q3dateAug1, "update666");
+    region.put(q3dateSep1, "update101010");
+    region.put(q1dateJan1, "update00000");
+    region.put(q4dateOct1, "update333");              
+    region.put(q4dateNov1, "update777");          
+    region.put(q4dateDec1, "update111111");
+    region.put(q1dateJan1, "update000000");
     
   }
 

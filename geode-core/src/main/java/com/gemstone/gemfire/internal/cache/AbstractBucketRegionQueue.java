@@ -34,8 +34,6 @@ import com.gemstone.gemfire.cache.Operation;
 import com.gemstone.gemfire.cache.RegionAttributes;
 import com.gemstone.gemfire.cache.RegionDestroyedException;
 import com.gemstone.gemfire.cache.TimeoutException;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSBucketRegionQueue;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSGatewayEventImpl;
 import com.gemstone.gemfire.internal.cache.lru.LRUStatistics;
 import com.gemstone.gemfire.internal.cache.versions.RegionVersionVector;
 import com.gemstone.gemfire.internal.cache.versions.VersionSource;
@@ -48,6 +46,7 @@ import com.gemstone.gemfire.internal.concurrent.ConcurrentHashSet;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 import com.gemstone.gemfire.internal.logging.LogService;
 import com.gemstone.gemfire.internal.offheap.OffHeapRegionEntryHelper;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 
 public abstract class AbstractBucketRegionQueue extends BucketRegion {
   protected static final Logger logger = LogService.getLogger();
@@ -232,7 +231,7 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
     if (logger.isDebugEnabled()) {
       logger.debug(" destroying primary key {}", key);
     }
-    EntryEventImpl event = getPartitionedRegion().newDestroyEntryEvent(key,
+    @Released EntryEventImpl event = getPartitionedRegion().newDestroyEntryEvent(key,
         null);
     event.setEventId(new EventID(cache.getSystem()));
     try {
@@ -458,17 +457,8 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
     }
     waitIfQueueFull();
     
-    int sizeOfHdfsEvent = -1;
     try {
-      if (this instanceof HDFSBucketRegionQueue) {
-        // need to fetch the size before event is inserted in queue.
-        // fix for #50016
-        if (this.getBucketAdvisor().isPrimary()) {
-          HDFSGatewayEventImpl hdfsEvent = (HDFSGatewayEventImpl)event.getValue();
-          sizeOfHdfsEvent = hdfsEvent.getSizeOnHDFSInBytes(!((HDFSBucketRegionQueue)this).isBucketSorted);
-        }
-      }
-      
+
       didPut = virtualPut(event, false, false, null, false, startPut, true);
       
       checkReadiness();
@@ -491,7 +481,7 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
       destroyKey(key);
       didPut = false;
     } else {
-      addToEventQueue(key, didPut, event, sizeOfHdfsEvent);
+      addToEventQueue(key, didPut, event);
     }
     return didPut;
   }
@@ -521,8 +511,7 @@ public abstract class AbstractBucketRegionQueue extends BucketRegion {
   }
   
   protected abstract void clearQueues();
-  protected abstract void addToEventQueue(Object key, boolean didPut, EntryEventImpl event, 
-      int sizeOfHdfsEvent);
+  protected abstract void addToEventQueue(Object key, boolean didPut, EntryEventImpl event);
   
   @Override
   public void afterAcquiringPrimaryState() {

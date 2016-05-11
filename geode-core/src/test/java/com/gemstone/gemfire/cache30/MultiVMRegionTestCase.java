@@ -16,6 +16,8 @@
  */
 package com.gemstone.gemfire.cache30;
 
+import static com.gemstone.gemfire.internal.lang.ThrowableUtils.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -45,6 +47,7 @@ import junit.framework.AssertionFailedError;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.Ignore;
+import org.junit.experimental.categories.Category;
 
 import com.gemstone.gemfire.DataSerializable;
 import com.gemstone.gemfire.DataSerializer;
@@ -125,7 +128,7 @@ import com.gemstone.gemfire.test.dunit.Wait;
 import com.gemstone.gemfire.test.dunit.WaitCriterion;
 import com.gemstone.gemfire.test.dunit.IgnoredException;
 import com.gemstone.gemfire.test.dunit.Invoke;
-
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
 /**
  * Abstract superclass of {@link Region} tests that involve more than
@@ -1162,6 +1165,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
   /**
    * Tests that a {@link CacheListener} is invoked in a remote VM.
    */
+  @Category(FlakyTest.class) // GEODE-153 & GEODE-932: time sensitive, waitForInvocation (waitForCriterion), 3 second timeouts
   public void testRemoteCacheListener() throws InterruptedException {
     assertTrue(getRegionAttributes().getScope().isDistributed());
 
@@ -1725,8 +1729,8 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 //            public Object load2(LoaderHelper helper)
 //              throws CacheLoaderException {
 //
-//              assertEquals(key, helper.getKey());
-//              assertEquals(name, helper.getRegion().getName());
+//              assertIndexDetailsEquals(key, helper.getKey());
+//              assertIndexDetailsEquals(name, helper.getRegion().getName());
 //              return value;
 //            }
 //          };
@@ -2840,15 +2844,15 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 //           // longer optimize updates based on size.
 //           Region.Entry entry1 = region.getEntry(key1);
 //           assertNotNull(entry1);
-//           assertEquals(value1, entry1.getValue());
+//           assertIndexDetailsEquals(value1, entry1.getValue());
 
 //           Region.Entry entry2 = region.getEntry(key2);
 //           assertNotNull(entry2);
-//           assertEquals(value2, entry2.getValue());
+//           assertIndexDetailsEquals(value2, entry2.getValue());
 
 //           Region.Entry entry3 = region.getEntry(key3);
 //           assertNotNull(entry3);
-//           assertEquals(value3, entry3.getValue());
+//           assertIndexDetailsEquals(value3, entry3.getValue());
 //         }
 //       });
 //   }
@@ -3838,8 +3842,8 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
    * Tests that an entry in a distributed region that expires with a distributed
    * destroy causes an event in other VM with isExpiration flag set.
    */
-    public void testEntryTtlDestroyEvent()
-    throws InterruptedException {
+  @Category(FlakyTest.class) // GEODE-583: time sensitive, expiration, waitForCriterion, short timeouts
+  public void testEntryTtlDestroyEvent() throws InterruptedException {
       
       if(getRegionAttributes().getPartitionAttributes() != null)
         return;
@@ -3992,11 +3996,11 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
     }
 
   /**
-     * Tests that an entry in a distributed region expires with a local
-     * destroy after a given time to live.
-     */
-    public void testEntryTtlLocalDestroy()
-    throws InterruptedException {
+   * Tests that an entry in a distributed region expires with a local
+   * destroy after a given time to live.
+   */
+  @Category(FlakyTest.class) // GEODE-671: time sensitive, expiration, retry loop, async actions, waitForCriterion
+  public void testEntryTtlLocalDestroy() throws InterruptedException {
       if(getRegionAttributes().getPartitionAttributes() != null)
         return;
       final boolean mirrored = getRegionAttributes().getDataPolicy().withReplication();
@@ -4391,7 +4395,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 //               if (getRegionAttributes().getScope().isDistributedAck()) {
 //                 // do a nonblocking netSearch
 //                 region.localInvalidate(key);
-//                 assertEquals(value, region.get(key));
+//                 assertIndexDetailsEquals(value, region.get(key));
 //               }
               break;
             case 3: // INVALIDATE
@@ -4716,7 +4720,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 //               if (getRegionAttributes().getScope().isDistributedAck()) {
 //                 // do a nonblocking netSearch
 //                 region.localInvalidate(key);
-//                 assertEquals(value, region.get(key));
+//                 assertIndexDetailsEquals(value, region.get(key));
 //               }
               break;
             case 3: // INVALIDATE
@@ -5033,7 +5037,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 //               if (getRegionAttributes().getScope().isDistributedAck()) {
 //                 // do a nonblocking netSearch
 //                 region.localInvalidate(key);
-//                 assertEquals(value, region.get(key));
+//                 assertIndexDetailsEquals(value, region.get(key));
 //               }
               break;
             case 3: // INVALIDATE
@@ -5329,7 +5333,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 //               if (getRegionAttributes().getScope().isDistributedAck()) {
 //                 // do a nonblocking netSearch
 //                 region.localInvalidate(key);
-//                 assertEquals(value, region.get(key));
+//                 assertIndexDetailsEquals(value, region.get(key));
 //               }
               break;
             case 3: // INVALIDATE
@@ -6712,7 +6716,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 
           ev = (EntryEvent)it.next();
           assertSame(rgn1, ev.getRegion());
-          //assertEquals(tl.expectedTxId, ev.getTransactionId());
+          //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
           assertEquals("key", ev.getKey());
           assertEquals("value1", ev.getNewValue());
           assertEquals(null, ev.getOldValue());
@@ -6728,7 +6732,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 
           ev = (EntryEvent)it.next();
           assertSame(rgn3, ev.getRegion());
-          //assertEquals(tl.expectedTxId, ev.getTransactionId());
+          //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
           assertEquals("key", ev.getKey());
           assertEquals("value3", ev.getNewValue());
           assertEquals(null, ev.getOldValue());
@@ -6787,7 +6791,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 
           ev = (EntryEvent)it.next();
           assertSame(rgn2, ev.getRegion());
-          //assertEquals(tl.expectedTxId, ev.getTransactionId());
+          //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
           assertEquals("key", ev.getKey());
           assertEquals("value2", ev.getNewValue());
           assertEquals(null, ev.getOldValue());
@@ -6803,7 +6807,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 
           ev = (EntryEvent)it.next();
           assertSame(rgn3, ev.getRegion());
-          //assertEquals(tl.expectedTxId, ev.getTransactionId());
+          //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
           assertEquals("key", ev.getKey());
           assertEquals("value3", ev.getNewValue());
           assertEquals(null, ev.getOldValue());
@@ -6843,7 +6847,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
             }
             assertEquals(1, events.size());
             EntryEvent ev = (EntryEvent)events.iterator().next();
-            //assertEquals(tl.expectedTxId, ev.getTransactionId());
+            //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
             assertTrue(ev.getRegion() == rgn);
             assertEquals("key", ev.getKey());
             assertEquals("value1", ev.getNewValue());
@@ -6883,7 +6887,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
             }
             assertEquals(1, events.size());
             EntryEvent ev = (EntryEvent)events.iterator().next();
-            //assertEquals(tl.expectedTxId, ev.getTransactionId());
+            //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
             assertTrue(ev.getRegion() == rgn);
             assertEquals("key", ev.getKey());
             assertEquals("value2", ev.getNewValue());
@@ -6923,7 +6927,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
             }
             assertEquals(1, events.size());
             EntryEvent ev = (EntryEvent)events.iterator().next();
-            //assertEquals(tl.expectedTxId, ev.getTransactionId());
+            //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
             assertTrue(ev.getRegion() == rgn);
             assertEquals("key", ev.getKey());
             assertEquals("value3", ev.getNewValue());
@@ -7375,7 +7379,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
           Collection events = tl.lastEvent.getCreateEvents();
           assertEquals(1, events.size());
           EntryEvent ev = (EntryEvent)events.iterator().next();
-          //assertEquals(tl.expectedTxId, ev.getTransactionId());
+          //assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
           assertTrue(ev.getRegion() == rgn);
           assertEquals("key", ev.getKey());
           assertEquals("value", ev.getNewValue());
@@ -7526,7 +7530,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
               }
               assertEquals(1, events.size());
               EntryEvent ev = (EntryEvent)events.iterator().next();
-              // assertEquals(tl.expectedTxId, ev.getTransactionId());
+              // assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
               assertTrue(ev.getRegion() == rgn1);
               assertEquals("key", ev.getKey());
               assertEquals("value2", ev.getNewValue());
@@ -7604,7 +7608,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
               }
               assertEquals(1, events.size());
               EntryEvent ev = (EntryEvent)events.iterator().next();
-              // assertEquals(tl.expectedTxId, ev.getTransactionId());
+              // assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
               assertTrue(ev.getRegion() == rgn1);
               assertEquals("key", ev.getKey());
               assertNull(ev.getNewValue());
@@ -7749,7 +7753,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
               Collection events = tl.lastEvent.getDestroyEvents();
               assertEquals(1, events.size());
               EntryEvent ev = (EntryEvent)events.iterator().next();
-              // assertEquals(tl.expectedTxId, ev.getTransactionId());
+              // assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
               assertTrue(ev.getRegion() == rgn1);
               assertNull(ev.getKey());
               assertNull(ev.getNewValue());
@@ -7813,7 +7817,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
               }
               assertEquals(1, events.size());
               EntryEvent ev = (EntryEvent)events.iterator().next();
-              // assertEquals(tl.expectedTxId, ev.getTransactionId());
+              // assertIndexDetailsEquals(tl.expectedTxId, ev.getTransactionId());
               assertTrue(ev.getRegion() == rgn1);
               assertEquals("key", ev.getKey());
               assertEquals("value1", ev.getNewValue());
@@ -8400,13 +8404,13 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
       // that they originate that maybe should have been elided.  For this reason we can't
       // guarantee their consistency and don't check for it here.
 //      if (r1Contents.containsKey(key)) {
-//        assertEquals("region contents are not consistent", r1Contents.get(key), r2Contents.get(key));
+//        assertIndexDetailsEquals("region contents are not consistent", r1Contents.get(key), r2Contents.get(key));
 //      }
       assertEquals("region contents are not consistent for " + key, r2Contents.get(key), r3Contents.get(key));
       for (int subi=1; subi<3; subi++) {
         String subkey = key + "-" + subi;
         if (r2Contents.containsKey(subkey)) {
-//          assertEquals("region contents are not consistent for " + subkey, r1Contents.get(subkey), r2Contents.get(subkey));
+//          assertIndexDetailsEquals("region contents are not consistent for " + subkey, r1Contents.get(subkey), r2Contents.get(subkey));
           assertEquals("region contents are not consistent for " + subkey, r2Contents.get(subkey), r3Contents.get(subkey));
         } else {
           // can't assert this because a clear() op will cause non-replicated to start rejecting
@@ -8439,6 +8443,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
     final long oldClientTimeout = TombstoneService.CLIENT_TOMBSTONE_TIMEOUT;
     final long oldExpiredTombstoneLimit = TombstoneService.EXPIRED_TOMBSTONE_LIMIT;
     final boolean oldIdleExpiration = TombstoneService.IDLE_EXPIRATION;
+    final double oldLimit = TombstoneService.GC_MEMORY_THRESHOLD;
     try {
       SerializableRunnable setTimeout = new SerializableRunnable() {
         public void run() {
@@ -8446,6 +8451,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
           TombstoneService.CLIENT_TOMBSTONE_TIMEOUT = 19000;
           TombstoneService.EXPIRED_TOMBSTONE_LIMIT = 1000;
           TombstoneService.IDLE_EXPIRATION = true;
+          TombstoneService.GC_MEMORY_THRESHOLD = 0;  // turn this off so heap profile won't cause test to fail
         }
       };
       vm0.invoke(setTimeout);
@@ -8501,6 +8507,8 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
           WaitCriterion waitForExpiration = new WaitCriterion() {
             @Override
             public boolean done() {
+              // TODO: in GEODE-561 this was changed to no longer wait for it
+              // to go to zero. But I think it should.
               return CCRegion.getTombstoneCount() < numEntries;
             }
             @Override
@@ -8526,11 +8534,9 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
 
       vm0.invoke(new SerializableRunnable("create/destroy entries and check tombstone count") {
         public void run() {
-          double oldLimit = TombstoneService.GC_MEMORY_THRESHOLD;
           long count = CCRegion.getTombstoneCount();
           final long origCount = count;
           try {
-            TombstoneService.GC_MEMORY_THRESHOLD = 0;  // turn this off so heap profile won't cause test to fail
             WaitCriterion waitForExpiration = new WaitCriterion() {
               @Override
               public boolean done() {
@@ -8569,8 +8575,6 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
             throw e;
           } catch (CacheException e) {
             com.gemstone.gemfire.test.dunit.Assert.fail("while performing create/destroy operations", e);
-          } finally {
-            TombstoneService.GC_MEMORY_THRESHOLD = oldLimit;
           }
         }
       });
@@ -8614,16 +8618,18 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
           assertEquals("expected zero tombstones", 0, count);
           assertEquals("expected "+numEntries+" afterCreates", numEntries, afterCreates);
           assertEquals(numEntries, CCRegion.size());
-          // make sure the actual removal of the tombstones by the sweeper doesn't mess
-          // up anything
-          try {
-            Thread.sleep(TombstoneService.REPLICATED_TOMBSTONE_TIMEOUT + 5000);
-          } catch (InterruptedException e) {
-            fail("sleep was interrupted");
-          }
-          count = CCRegion.getTombstoneCount();
-          assertEquals("expected zero tombstones", 0, count);
-          assertEquals(numEntries, CCRegion.size());
+          // TODO: It is not clear what this hard sleep is testing since the tombstone count
+          // has already gone to zero. Deadcoding since it always sleeps for no reason.
+//          // make sure the actual removal of the tombstones by the sweeper doesn't mess
+//          // up anything
+//          try {
+//            Thread.sleep(TombstoneService.REPLICATED_TOMBSTONE_TIMEOUT + 5000);
+//          } catch (InterruptedException e) {
+//            fail("sleep was interrupted");
+//          }
+//          count = CCRegion.getTombstoneCount();
+//          assertIndexDetailsEquals("expected zero tombstones", 0, count);
+//          assertIndexDetailsEquals(numEntries, CCRegion.size());
         }
       });
 
@@ -8641,6 +8647,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
           TombstoneService.CLIENT_TOMBSTONE_TIMEOUT = oldClientTimeout;
           TombstoneService.EXPIRED_TOMBSTONE_LIMIT = oldExpiredTombstoneLimit;
           TombstoneService.IDLE_EXPIRATION = oldIdleExpiration;
+          TombstoneService.GC_MEMORY_THRESHOLD = oldLimit;
         }
       };
       vm0.invoke(resetTimeout);
@@ -8914,7 +8921,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
       assertEquals("region contents are not consistent", r1Contents.get(key), r2Contents.get(key));
       assertEquals("region contents are not consistent", r2Contents.get(key), r3Contents.get(key));
 //      if (r0Contents.containsKey(key)) {
-//        assertEquals("region contents are not consistent", r1Contents.get(key), r0Contents.get(key));
+//        assertIndexDetailsEquals("region contents are not consistent", r1Contents.get(key), r0Contents.get(key));
 //      }
       for (int subi=1; subi<3; subi++) {
         String subkey = key + "-" + subi;
@@ -9047,16 +9054,7 @@ public abstract class MultiVMRegionTestCase extends RegionTestCase {
     try {
       async.getResult();
     } catch (Throwable e) {
-      if (e.getCause() instanceof RMIException) {
-        Throwable e2 = e.getCause();
-        if (e2.getCause() instanceof AssertionFailedError &&
-            e2.getCause().getMessage().equals(expectedError)) {
-          failed=true;
-        }
-      }
-      if (!failed) {
-        com.gemstone.gemfire.test.dunit.Assert.fail("asyncInvocation 0 returned exception", e);
-      }
+      assertTrue(hasCauseMessage(e, expectedError));
     }
     return failed;
   }

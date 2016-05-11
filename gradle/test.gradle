@@ -201,7 +201,8 @@ subprojects {
         }
         
         maxHeapSize '768m'
-        jvmArgs = ['-XX:+HeapDumpOnOutOfMemoryError', '-ea',"-XX:+PrintGC", "-XX:+PrintGCDetails","-XX:+PrintGCTimeStamps"]
+//        jvmArgs = ['-XX:+HeapDumpOnOutOfMemoryError', '-ea',"-XX:+PrintGC", "-XX:+PrintGCDetails","-XX:+PrintGCTimeStamps"]
+        jvmArgs = ['-XX:+HeapDumpOnOutOfMemoryError', '-ea']
 
         systemProperty 'gemfire.DEFAULT_MAX_OPLOG_SIZE', '10'
         systemProperty 'gemfire.disallowMcastDefaults', 'true'
@@ -209,6 +210,10 @@ subprojects {
         def logLevel = System.getProperty('logLevel')
         if (logLevel != null) {
           systemProperty 'logLevel', logLevel
+        }
+        def log4jLocation = System.getProperty('log4j.configurationFile')
+        if (log4jLocation != null) {
+          systemProperty 'log4j.configurationFile', log4jLocation
         }
 
         def eol = System.getProperty('line.separator')

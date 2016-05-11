@@ -16,23 +16,23 @@
  */
 package com.gemstone.gemfire.management.internal.cli.commands;
 
+import static org.junit.Assert.*;
+
 import java.io.File;
 import java.util.Properties;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
 import com.gemstone.gemfire.distributed.internal.DistributionConfig;
 import com.gemstone.gemfire.distributed.internal.DistributionConfigImpl;
-import com.gemstone.gemfire.util.test.TestUtil;
 import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
+import com.gemstone.gemfire.util.test.TestUtil;
 
 /**
- * 
  * @since 8.1
  */
 @Category(IntegrationTest.class)
@@ -68,7 +68,9 @@ public class HTTPServiceSSLSupportJUnitTest {
     return sb.toString();
   }
 
-  public void _testSSLWithClusterSSL() throws Exception {
+  @Ignore("disabled for unknown reason")
+  @Test
+  public void testSSLWithClusterSSL() throws Exception {
 
     Properties localProps = new Properties();
     localProps.setProperty(DistributionConfig.MCAST_PORT_NAME, "0");
@@ -116,7 +118,7 @@ public class HTTPServiceSSLSupportJUnitTest {
 
     assertEquals(config.getHttpServiceSSLProperties().get("javax.net.ssl.keyStore"), jks.getCanonicalPath());
     assertEquals(config.getHttpServiceSSLProperties().get("javax.net.ssl.keyStorePassword"), "password");
-    // assertEquals(system.getConfig().getHttpServiceSSLKeyStoreType(),"JKS");
+    // assertIndexDetailsEquals(system.getConfig().getHttpServiceSSLKeyStoreType(),"JKS");
     assertEquals(config.getHttpServiceSSLProperties().get("javax.net.ssl.trustStore"), jks.getCanonicalPath());
     assertEquals(config.getHttpServiceSSLProperties().get("javax.net.ssl.trustStorePassword"), "password");
 

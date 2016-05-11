@@ -16,7 +16,11 @@
  */
 package com.gemstone.gemfire.internal.cache.ha;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.Properties;
+
+import org.junit.experimental.categories.Category;
 
 import com.gemstone.gemfire.cache.AttributesFactory;
 import com.gemstone.gemfire.cache.CacheFactory;
@@ -45,6 +49,7 @@ import com.gemstone.gemfire.test.dunit.IgnoredException;
 import com.gemstone.gemfire.test.dunit.VM;
 import com.gemstone.gemfire.test.dunit.Wait;
 import com.gemstone.gemfire.test.dunit.WaitCriterion;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
 public class Bug48571DUnitTest extends DistributedTestCase {
 
@@ -87,6 +92,32 @@ public class Bug48571DUnitTest extends DistributedTestCase {
     }
   }
 
+  private static void verifyProxyHasBeenPaused() {
+    WaitCriterion criterion = new WaitCriterion() {
+      @Override
+      public boolean done() {
+        CacheClientNotifier ccn = CacheClientNotifier.getInstance();
+        Collection<CacheClientProxy> ccProxies = ccn.getClientProxies();
+
+        Iterator<CacheClientProxy> itr = ccProxies.iterator();
+
+        while (itr.hasNext()) {
+          CacheClientProxy ccp = itr.next();
+          System.out.println("proxy status " + ccp.getState());
+          if (ccp.isPaused())
+            return true;
+        }
+        return false;
+      }
+      @Override
+      public String description() {
+        // TODO Auto-generated method stub
+        return "Proxy has not paused yet";
+      }
+    };
+    Wait.waitForCriterion(criterion, 15 * 1000, 200, true);
+  }
+  
   public void testStatsMatchWithSize() throws Exception {
     IgnoredException.addIgnoredException("Unexpected IOException||Connection reset");
     // start a server
@@ -97,8 +128,10 @@ public class Bug48571DUnitTest extends DistributedTestCase {
     server.invoke(() -> Bug48571DUnitTest.doPuts());
     // close durable client
     client.invoke(() -> Bug48571DUnitTest.closeClientCache());
+    
+    server.invoke("verifyProxyHasBeenPaused", () -> verifyProxyHasBeenPaused() );
     // resume puts on server, add another 100.
-    server.invokeAsync(() -> Bug48571DUnitTest.resumePuts());
+    server.invokeAsync(() -> Bug48571DUnitTest.resumePuts()); // TODO: join or await result
     // start durable client
     client.invoke(() -> Bug48571DUnitTest.createClientCache(client.getHost(), port));
     // wait for full queue dispatch
@@ -127,9 +160,8 @@ public class Bug48571DUnitTest extends DistributedTestCase {
     rf.setConcurrencyChecksEnabled(false);
     rf.create(region);
 
-    int port = AvailablePort.getRandomAvailablePort(AvailablePort.SOCKET);
     CacheServer server1 = cache.addCacheServer();
-    server1.setPort(port);
+    server1.setPort(0);
     server1.start();
     return server1.getPort();
   }

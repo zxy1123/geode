@@ -126,16 +126,6 @@ import com.gemstone.gemfire.cache.client.internal.ClientMetadataService;
 import com.gemstone.gemfire.cache.client.internal.ClientRegionFactoryImpl;
 import com.gemstone.gemfire.cache.client.internal.PoolImpl;
 import com.gemstone.gemfire.cache.execute.FunctionService;
-import com.gemstone.gemfire.cache.hdfs.HDFSStoreFactory;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSIntegrationUtil;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSStoreCreation;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSStoreFactoryImpl;
-import com.gemstone.gemfire.cache.hdfs.internal.HDFSStoreImpl;
-import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HDFSFlushQueueFunction;
-import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HDFSForceCompactionFunction;
-import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HDFSLastCompactionTimeFunction;
-import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HDFSRegionDirector;
-import com.gemstone.gemfire.cache.hdfs.internal.hoplog.HDFSStoreDirector;
 import com.gemstone.gemfire.cache.query.QueryService;
 import com.gemstone.gemfire.cache.query.internal.DefaultQuery;
 import com.gemstone.gemfire.cache.query.internal.DefaultQueryService;
@@ -176,7 +166,6 @@ import com.gemstone.gemfire.internal.Assert;
 import com.gemstone.gemfire.internal.ClassPathLoader;
 import com.gemstone.gemfire.internal.JarDeployer;
 import com.gemstone.gemfire.internal.SocketCreator;
-import com.gemstone.gemfire.internal.SocketIOWithTimeout;
 import com.gemstone.gemfire.internal.SystemTimer;
 import com.gemstone.gemfire.internal.cache.control.InternalResourceManager;
 import com.gemstone.gemfire.internal.cache.control.InternalResourceManager.ResourceType;
@@ -348,6 +337,7 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
 
   private final ConcurrentMap pathToRegion = new ConcurrentHashMap();
 
+  protected volatile boolean isInitialized = false;
   protected volatile boolean isClosing = false;
   protected volatile boolean closingGatewaySendersByShutdownAll = false;
   protected volatile boolean closingGatewayReceiversByShutdownAll = false;
@@ -933,9 +923,6 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
         HARegionQueue.setMessageSyncInterval(HARegionQueue.DEFAULT_MESSAGE_SYNC_INTERVAL);
       }
       FunctionService.registerFunction(new PRContainsValueFunction());
-      FunctionService.registerFunction(new HDFSLastCompactionTimeFunction());
-      FunctionService.registerFunction(new HDFSForceCompactionFunction());
-      FunctionService.registerFunction(new HDFSFlushQueueFunction());
       this.expirationScheduler = new ExpirationScheduler(this.system);
 
       // uncomment following line when debugging CacheExistsException
@@ -1201,6 +1188,7 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
         DEFAULT_CLIENT_FUNCTION_TIMEOUT);
     clientFunctionTimeout = time >= 0 ? time : DEFAULT_CLIENT_FUNCTION_TIMEOUT;
 
+    isInitialized = true;
   }
 
   /**
@@ -2072,10 +2060,10 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
           // ignore
         }
 
-        try {
-          GatewaySenderAdvisor advisor = null;
-          for (GatewaySender sender : this.getAllGatewaySenders()) {
-            ((AbstractGatewaySender) sender).stop();
+        GatewaySenderAdvisor advisor = null;
+        for (GatewaySender sender : this.getAllGatewaySenders()) {
+          try {
+            sender.stop();
             advisor = ((AbstractGatewaySender) sender).getSenderAdvisor();
             if (advisor != null) {
               if (isDebugEnabled) {
@@ -2083,12 +2071,11 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
               }
               advisor.close();
             }
+          } catch (CancelException ce) {
           }
-          ParallelGatewaySenderQueue.cleanUpStatics(null);
-        } catch (CancelException ce) {
-
         }
-        
+        ParallelGatewaySenderQueue.cleanUpStatics(null);
+
         destroyGatewaySenderLockService();
 
         if (ASYNC_EVENT_LISTENERS) {
@@ -2187,8 +2174,6 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
           closeDiskStores();
           diskMonitor.close();
           
-          closeHDFSStores();
-          
           // Close the CqService Handle.
           try {
             if (isDebugEnabled) {
@@ -2274,7 +2259,6 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
         } catch (CancelException e) {
           // make sure the disk stores get closed
           closeDiskStores();
-          closeHDFSStores();
           // NO DISTRIBUTED MESSAGING CAN BE DONE HERE!
 
           // okay, we're taking too long to do this stuff, so let's
@@ -2351,7 +2335,6 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
       SequenceLoggerImpl.signalCacheClose();
       SystemFailure.signalCacheClose();
       
-      SocketIOWithTimeout.stopSelectorCleanUpThread();
     } // static synchronization on GemFireCache.class
 
   }
@@ -2363,7 +2346,15 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
 
   // see Cache.waitUntilReconnected(long, TimeUnit)
   public boolean waitUntilReconnected(long time, TimeUnit units) throws InterruptedException {
-    return this.system.waitUntilReconnected(time,  units);
+    boolean systemReconnected = this.system.waitUntilReconnected(time,  units);
+    if (!systemReconnected) {
+      return false;
+    }
+    GemFireCacheImpl cache = getInstance();
+    if (cache == null || !cache.isInitialized()) {
+      return false;
+    }
+    return true;
   }
   
   // see Cache.stopReconnecting()
@@ -2373,8 +2364,8 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
   
   // see Cache.getReconnectedCache()
   public Cache getReconnectedCache() {
-    Cache c = GemFireCacheImpl.getInstance();
-    if (c == this) {
+    GemFireCacheImpl c = GemFireCacheImpl.getInstance();
+    if (c == this || !c.isInitialized()) {
       c = null;
     }
     return c;
@@ -3122,8 +3113,6 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
             future = (Future) this.reinitializingRegions.get(fullPath);
           }
           if (future == null) {
-            HDFSIntegrationUtil.createAndAddAsyncQueue(regionPath, attrs, this);
-            attrs = setEvictionAttributesForLargeRegion(attrs);
             if (internalRegionArgs.getInternalMetaRegion() != null) {
               rgn = internalRegionArgs.getInternalMetaRegion();
             } else if (isPartitionedRegion) {
@@ -3246,54 +3235,6 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
     for(RegionListener listener : regionListeners) {
       listener.afterCreate(region);
     }
-  }
-
-  /**
-   * turn on eviction by default for HDFS regions
-   */
-  @SuppressWarnings("deprecation")
-  public <K, V> RegionAttributes<K, V> setEvictionAttributesForLargeRegion(
-      RegionAttributes<K, V> attrs) {
-    RegionAttributes<K, V> ra = attrs;
-    if (DISABLE_AUTO_EVICTION) {
-      return ra;
-    }
-    if (attrs.getDataPolicy().withHDFS()
-        || attrs.getHDFSStoreName() != null) {
-      // make the region overflow by default
-      EvictionAttributes evictionAttributes = attrs.getEvictionAttributes();
-      boolean hasNoEvictionAttrs = evictionAttributes == null
-          || evictionAttributes.getAlgorithm().isNone();
-      AttributesFactory<K, V> af = new AttributesFactory<K, V>(attrs);
-      String diskStoreName = attrs.getDiskStoreName();
-      // set the local persistent directory to be the same as that for
-      // HDFS store
-      if (attrs.getHDFSStoreName() != null) {
-        HDFSStoreImpl hdfsStore = findHDFSStore(attrs.getHDFSStoreName());
-        if (attrs.getPartitionAttributes().getLocalMaxMemory() != 0 && hdfsStore == null) {
-          // HDFS store expected to be found at this point
-          throw new IllegalStateException(
-              LocalizedStrings.HOPLOG_HDFS_STORE_NOT_FOUND
-                  .toLocalizedString(attrs.getHDFSStoreName()));
-        }
-        // if there is no disk store, use the one configured for hdfs queue
-        if (attrs.getPartitionAttributes().getLocalMaxMemory() != 0 && diskStoreName == null) {
-          diskStoreName = hdfsStore.getDiskStoreName();
-        }
-      }
-      // set LRU heap eviction with overflow to disk for HDFS stores with
-      // local Oplog persistence
-      // set eviction attributes only if not set
-      if (hasNoEvictionAttrs) {
-        if (diskStoreName != null) {
-          af.setDiskStoreName(diskStoreName);
-        }
-        af.setEvictionAttributes(EvictionAttributes.createLRUHeapAttributes(
-            ObjectSizer.DEFAULT, EvictionAction.OVERFLOW_TO_DISK));
-      }
-      ra = af.create();
-    }
-    return ra;
   }
 
   public final Region getRegion(String path) {
@@ -3569,6 +3510,10 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
       }
     } catch (DistributedSystemDisconnectedException ignore) {
     }
+  }
+
+  public boolean isInitialized() {
+    return this.isInitialized;
   }
 
   public boolean isClosed() {
@@ -5405,39 +5350,6 @@ public class GemFireCacheImpl implements InternalCache, ClientCache, HasCachePer
       loc.startJmxManagerLocationService(this);
     }
   }
-  
-  public HDFSStoreFactory createHDFSStoreFactory(HDFSStoreCreation creation) {
-    return new HDFSStoreFactoryImpl(this, creation);
-  }
-  public void addHDFSStore(HDFSStoreImpl hsi) {
-    HDFSStoreDirector.getInstance().addHDFSStore(hsi);
-    //TODO:HDFS Add a resource event for hdfs store creation as well 
-    // like the following disk store event
-    //system.handleResourceEvent(ResourceEvent.DISKSTORE_CREATE, dsi);
-  }
-
-  public void removeHDFSStore(HDFSStoreImpl hsi) {
-    //hsi.destroy();
-    HDFSStoreDirector.getInstance().removeHDFSStore(hsi.getName());
-    //TODO:HDFS Add a resource event for hdfs store as well 
-    // like the following disk store event
-    //system.handleResourceEvent(ResourceEvent.DISKSTORE_REMOVE, dsi);
-  }
-
-  public void closeHDFSStores() {
-    HDFSRegionDirector.reset();
-    HDFSStoreDirector.getInstance().closeHDFSStores();
-  }
-
-  
-  public HDFSStoreImpl findHDFSStore(String name) {
-    return HDFSStoreDirector.getInstance().getHDFSStore(name);
-  }
-  
-  public Collection<HDFSStoreImpl> getHDFSStores() {
-    return HDFSStoreDirector.getInstance().getAllHDFSStores();
-  }
-  
   
   public TemporaryResultSetFactory getResultSetFactory() {
     return this.resultSetFactory;

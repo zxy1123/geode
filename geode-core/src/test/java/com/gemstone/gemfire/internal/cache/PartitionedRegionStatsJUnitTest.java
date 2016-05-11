@@ -265,8 +265,8 @@ public class PartitionedRegionStatsJUnitTest
      * int minRedundantCopies = stats.get("minRedundantCopies").intValue();
      * int avgRedundantCopies = stats.get("avgRedundantCopies").intValue();
      * 
-     * assertEquals(minRedundantCopies, 2); assertEquals(maxRedundantCopies,
-     * 2); assertEquals(avgRedundantCopies, 2);
+     * assertIndexDetailsEquals(minRedundantCopies, 2); assertIndexDetailsEquals(maxRedundantCopies,
+     * 2); assertIndexDetailsEquals(avgRedundantCopies, 2);
      */
   }
   
@@ -436,11 +436,7 @@ public class PartitionedRegionStatsJUnitTest
     
     pr.getDiskStore().flush();
     
-    //Workaround for GEODE-92. We are leaving more than 1 entry in memory. To
-    //validate that stats, let's confirm the stats match what is actually in
-    //memory
-    //int entriesInMem = 1;
-    int entriesInMem = countEntriesInMem(pr);
+    int entriesInMem = 1;
     
     assertEquals(singleEntryMemSize * entriesInMem, stats.getLong("dataStoreBytesInUse"));
     assertEquals(numEntries , stats.getInt("dataStoreEntryCount"));
@@ -475,19 +471,13 @@ public class PartitionedRegionStatsJUnitTest
     System.out.println("----Done with random operations");
 
     numEntries = pr.entryCount();
-    
-    //Workaround for GEODE-92. We are leaving more than 1 entry in memory. To
-    //validate that stats, let's confirm the stats match what is actually in
-    //memory
-    //entriesInMem = 1;
-    entriesInMem = countEntriesInMem(pr);
-    
+        
     assertEquals(singleEntryMemSize * entriesInMem, stats.getLong("dataStoreBytesInUse"));
     assertEquals(numEntries , stats.getInt("dataStoreEntryCount"));
     assertEquals((numEntries - entriesInMem) * entryOverflowSize, diskStats.getNumOverflowBytesOnDisk());
     //Disabled for GEODE-93. numEntriesInVM and numOVerflowOnDisk are incorrect
-//    assertEquals(entriesInMem , diskStats.getNumEntriesInVM());
-//    assertEquals((numEntries - entriesInMem) , diskStats.getNumOverflowOnDisk());
+//    assertIndexDetailsEquals(entriesInMem , diskStats.getNumEntriesInVM());
+//    assertIndexDetailsEquals((numEntries - entriesInMem) , diskStats.getNumOverflowOnDisk());
       assertEquals(stats.getLong("dataStoreBytesInUse"), getMemBytes(pr));
       assertEquals(diskStats.getNumOverflowBytesOnDisk(), getDiskBytes(pr));
     }

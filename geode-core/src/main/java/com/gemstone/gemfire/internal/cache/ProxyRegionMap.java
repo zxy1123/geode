@@ -44,6 +44,7 @@ import com.gemstone.gemfire.internal.cache.versions.VersionSource;
 import com.gemstone.gemfire.internal.cache.versions.VersionStamp;
 import com.gemstone.gemfire.internal.cache.versions.VersionTag;
 import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 
 /**
  * Internal implementation of {@link RegionMap}for regions whose DataPolicy is
@@ -187,9 +188,12 @@ final class ProxyRegionMap implements RegionMap {
       throws EntryNotFoundException {
     
     if (event.getOperation().isLocal()) {
+      if (this.owner.isInitialized()) {
+        AbstractRegionMap.forceInvalidateEvent(event, this.owner);
+      }
       throw new EntryNotFoundException(event.getKey().toString());
     }
-    this.owner.cacheWriteBeforeInvalidate(event, invokeCallbacks, forceNewEntry);
+    this.owner.serverInvalidate(event);
     this.owner.recordEvent(event);
     this.owner.basicInvalidatePart2(markerEntry, event, false /*Clear conflict occurred */, true);
     this.owner.basicInvalidatePart3(markerEntry, event, true);
@@ -274,9 +278,9 @@ final class ProxyRegionMap implements RegionMap {
         txEvent.addDestroy(this.owner, markerEntry, key,aCallbackArgument);
       }
       if (AbstractRegionMap.shouldCreateCBEvent(this.owner,
-                                                false, !inTokenMode)) {
+                                                !inTokenMode)) {
         // fix for bug 39526
-        EntryEventImpl e = AbstractRegionMap.createCBEvent(this.owner, op,
+        @Released EntryEventImpl e = AbstractRegionMap.createCBEvent(this.owner, op,
             key, null, txId, txEvent, eventId, aCallbackArgument,filterRoutingInfo,bridgeContext, txEntryState, versionTag, tailKey);
         boolean cbEventInPending = false;
         try {
@@ -304,10 +308,10 @@ final class ProxyRegionMap implements RegionMap {
         txEvent.addInvalidate(this.owner, markerEntry, key, newValue,aCallbackArgument);
       }
       if (AbstractRegionMap.shouldCreateCBEvent(this.owner,
-                                                true, this.owner.isInitialized())) {
+                                                this.owner.isInitialized())) {
         // fix for bug 39526
         boolean cbEventInPending = false;
-        EntryEventImpl e = AbstractRegionMap.createCBEvent(this.owner, 
+        @Released EntryEventImpl e = AbstractRegionMap.createCBEvent(this.owner, 
             localOp ? Operation.LOCAL_INVALIDATE : Operation.INVALIDATE,
             key, newValue, txId, txEvent, eventId, aCallbackArgument,filterRoutingInfo,bridgeContext, txEntryState, versionTag, tailKey);
         try {
@@ -338,10 +342,10 @@ final class ProxyRegionMap implements RegionMap {
         txEvent.addPut(putOp, this.owner, markerEntry, key, newValue,aCallbackArgument);
       }
       if (AbstractRegionMap.shouldCreateCBEvent(this.owner,
-                                                false, this.owner.isInitialized())) {
+                                                this.owner.isInitialized())) {
         // fix for bug 39526
         boolean cbEventInPending = false;
-        EntryEventImpl e = AbstractRegionMap.createCBEvent(this.owner, putOp, key, 
+        @Released EntryEventImpl e = AbstractRegionMap.createCBEvent(this.owner, putOp, key, 
             newValue, txId, txEvent, eventId, aCallbackArgument,filterRoutingInfo,bridgeContext, txEntryState, versionTag, tailKey);
         try {
         AbstractRegionMap.switchEventOwnerAndOriginRemote(e, txEntryState == null);
@@ -619,27 +623,6 @@ final class ProxyRegionMap implements RegionMap {
     @Override
     public void setUpdateInProgress(boolean underUpdate) {
       throw new UnsupportedOperationException(LocalizedStrings.ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0.toLocalizedString(DataPolicy.EMPTY));
-    }
-
-    @Override
-    public boolean isMarkedForEviction() {
-      throw new UnsupportedOperationException(LocalizedStrings
-          .ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0
-              .toLocalizedString(DataPolicy.EMPTY));
-    }
-
-    @Override
-    public void setMarkedForEviction() {
-      throw new UnsupportedOperationException(LocalizedStrings
-          .ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0
-              .toLocalizedString(DataPolicy.EMPTY));
-    }
-
-    @Override
-    public void clearMarkedForEviction() {
-      throw new UnsupportedOperationException(LocalizedStrings
-          .ProxyRegionMap_NO_ENTRY_SUPPORT_ON_REGIONS_WITH_DATAPOLICY_0
-              .toLocalizedString(DataPolicy.EMPTY));
     }
 
     @Override

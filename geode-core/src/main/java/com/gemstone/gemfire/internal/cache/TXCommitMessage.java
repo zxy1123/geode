@@ -75,6 +75,7 @@ import com.gemstone.gemfire.internal.i18n.LocalizedStrings;
 import com.gemstone.gemfire.internal.logging.LogService;
 import com.gemstone.gemfire.internal.logging.LoggingThreadGroup;
 import com.gemstone.gemfire.internal.logging.log4j.LocalizedMessage;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 
 /** TXCommitMessage is the message that contains all the information
  * that needs to be distributed, on commit, to other cache members.
@@ -699,7 +700,9 @@ public class TXCommitMessage extends PooledDistributionMessage implements Member
       /*
        * We need to make sure that we should fire a TX afterCommit event.
        */
-      if(!disableListeners && (forceListener || (txEvent!=null && txEvent.getEvents().size()>0))) {
+      boolean internalEvent = (txEvent != null && txEvent.hasOnlyInternalEvents());
+      if (!disableListeners && !internalEvent
+          && (forceListener || (txEvent!=null && !txEvent.isEmpty()))) {
         for (int i=0; i < tls.length; i++) {
           try {
             tls[i].afterCommit(txEvent);
@@ -1305,6 +1308,7 @@ public class TXCommitMessage extends PooledDistributionMessage implements Member
         /*
          * This happens when we don't have the bucket and are getting adjunct notification
          */
+        // No need to release because it is added to pendingCallbacks and they will be released later
         EntryEventImpl eei = AbstractRegionMap.createCBEvent(this.r, entryOp.op, entryOp.key, entryOp.value, this.msg.txIdent, txEvent, getEventId(entryOp), entryOp.callbackArg,entryOp.filterRoutingInfo,this.msg.bridgeContext, null, entryOp.versionTag, entryOp.tailKey);
         if(entryOp.filterRoutingInfo!=null) {
           eei.setLocalFilterInfo(entryOp.filterRoutingInfo.getFilterInfo(this.r.getCache().getMyId()));
@@ -1405,7 +1409,7 @@ public class TXCommitMessage extends PooledDistributionMessage implements Member
         /*
          * This happens when we don't have the bucket and are getting adjunct notification
          */
-        EntryEventImpl eei = AbstractRegionMap.createCBEvent(this.r, entryOp.op, entryOp.key, entryOp.value, this.msg.txIdent, txEvent, getEventId(entryOp), entryOp.callbackArg,entryOp.filterRoutingInfo,this.msg.bridgeContext, null, entryOp.versionTag, entryOp.tailKey);
+        @Released EntryEventImpl eei = AbstractRegionMap.createCBEvent(this.r, entryOp.op, entryOp.key, entryOp.value, this.msg.txIdent, txEvent, getEventId(entryOp), entryOp.callbackArg,entryOp.filterRoutingInfo,this.msg.bridgeContext, null, entryOp.versionTag, entryOp.tailKey);
         try {
         if(entryOp.filterRoutingInfo!=null) {
           eei.setLocalFilterInfo(entryOp.filterRoutingInfo.getFilterInfo(this.r.getCache().getMyId()));
@@ -2457,13 +2461,13 @@ private static final long serialVersionUID = 589384721273797822L;
   }
   
   
-	/**
-	 * Disable firing of TX Listeners. Currently on used on clients.
-	 * @param b disable the listeners
-	 */
-	public void setDisableListeners(boolean b) {
-		disableListeners = true;
-	}
+  /**
+   * Disable firing of TX Listeners. Currently on used on clients.
+   * @param b disable the listeners
+   */
+  public void setDisableListeners(boolean b) {
+    disableListeners = true;
+  }
 
   public Version getClientVersion() {
     return clientVersion;

@@ -401,30 +401,6 @@ public class RegionFactory<K,V>
   }
 
   /**
-   * Set custom {@link EvictionCriteria} for the region with start time and
-   * interval of evictor task to be run in milliseconds, or evict incoming rows
-   * in case both start and frequency are specified as zero.
-   * 
-   * @param criteria
-   *          an {@link EvictionCriteria} to be used for eviction for HDFS
-   *          persistent regions
-   * @param start
-   *          the start time at which periodic evictor task should be first
-   *          fired to apply the provided {@link EvictionCriteria}; if this is
-   *          zero then current time is used for the first invocation of evictor
-   * @param interval
-   *          the periodic frequency at which to run the evictor task after the
-   *          initial start; if this is if both start and frequency are zero
-   *          then {@link EvictionCriteria} is applied on incoming insert/update
-   *          to determine whether it is to be retained
-   */
-  public RegionFactory<K, V> setCustomEvictionAttributes(
-      EvictionCriteria<K, V> criteria, long start, long interval) {
-    this.attrsFactory.setCustomEvictionAttributes(criteria, start, interval);
-    return this;
-  }
-
-  /**
    * Sets the scope for the next <code>RegionAttributes</code> created.
    *
    * @param scopeType
@@ -745,6 +721,7 @@ public class RegionFactory<K,V>
    * @param ra the MembershipAttributes to use
    * @return a reference to this RegionFactory object
    * @see AttributesFactory#setMembershipAttributes
+   * @deprecated this API is scheduled to be removed
    */
   public RegionFactory<K,V> setMembershipAttributes(MembershipAttributes ra) {
     this.attrsFactory.setMembershipAttributes(ra);

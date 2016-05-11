@@ -193,16 +193,8 @@ public class EntryEventImpl
   /** version tag for concurrency checks */
   protected VersionTag versionTag;
 
-  /** boolean to indicate that this operation should be optimized by not fetching from HDFS*/
-  private transient boolean fetchFromHDFS = true;
-  
   private transient boolean isPutDML = false;
 
-  /** boolean to indicate that the RegionEntry for this event was loaded from HDFS*/
-  private transient boolean loadedFromHDFS= false;
-  
-  private transient boolean isCustomEviction = false;
-  
   /** boolean to indicate that the RegionEntry for this event has been evicted*/
   private transient boolean isEvicted = false;
   
@@ -213,29 +205,6 @@ public class EntryEventImpl
   public EntryEventImpl() {
   }
   
-  /**
-   * create a new entry event that will be used for conveying version information
-   * and anything else of use while processing another event
-   * @return the empty event object
-   */
-  @Retained
-  public static EntryEventImpl createVersionTagHolder() {
-    return createVersionTagHolder(null);
-  }
-  
-  /**
-   * create a new entry event that will be used for conveying version information
-   * and anything else of use while processing another event
-   * @return the empty event object
-   */
-  @Retained
-  public static EntryEventImpl createVersionTagHolder(VersionTag tag) {
-    EntryEventImpl result = new EntryEventImpl();
-    result.setVersionTag(tag);
-    result.disallowOffHeapValues();
-    return result;
-  }
-
   /**
    * Reads the contents of this message from the given input.
    */
@@ -389,18 +358,6 @@ public class EntryEventImpl
   public EntryEventImpl(Object key2) {
     this.keyInfo = new KeyInfo(key2, null, null);
   }
-  
-  /**
-   * This constructor is used to create a bridge event in server-side
-   * command classes.  Events created with this are not intended to be
-   * used in cache operations.
-   * @param id the identity of the client's event
-   */
-  @Retained
-  public EntryEventImpl(EventID id) {
-    this.eventID = id;
-    this.offHeapOk = false;
-  }
 
   /**
    * Creates and returns an EntryEventImpl.  Generates and assigns a bucket id to the
@@ -493,7 +450,7 @@ public class EntryEventImpl
       DistributedPutAllOperation putAllOp, LocalRegion region,
       Operation entryOp, Object entryKey, @Retained(ENTRY_EVENT_NEW_VALUE) Object entryNewValue)
   {
-    EntryEventImpl e;
+    @Retained EntryEventImpl e;
     if (putAllOp != null) {
       EntryEventImpl event = putAllOp.getBaseEvent();
       if (event.isBridgeEvent()) {
@@ -515,11 +472,12 @@ public class EntryEventImpl
     return e;
   }
   
+  @Retained
   protected static EntryEventImpl createRemoveAllEvent(
       DistributedRemoveAllOperation op, 
       LocalRegion region,
       Object entryKey) {
-    EntryEventImpl e;
+    @Retained EntryEventImpl e;
     final Operation entryOp = Operation.REMOVEALL_DESTROY;
     if (op != null) {
       EntryEventImpl event = op.getBaseEvent();
@@ -692,14 +650,6 @@ public class EntryEventImpl
     return this.op.isEviction();
   }
 
-  public final boolean isCustomEviction() {
-    return this.isCustomEviction;
-  }
-  
-  public final void setCustomEviction(boolean customEvict) {
-    this.isCustomEviction = customEvict;
-  }
-  
   public final void setEvicted() {
     this.isEvicted = true;
   }
@@ -833,7 +783,6 @@ public class EntryEventImpl
       }
       boolean doCopyOnRead = getRegion().isCopyOnRead();
       if (ov != null) {
-        // TODO OFFHEAP: returns off-heap PdxInstance
         if (ov instanceof CachedDeserializable) {
           CachedDeserializable cd = (CachedDeserializable)ov;
           if (doCopyOnRead) {
@@ -861,7 +810,7 @@ public class EntryEventImpl
   /**
    * Like getRawNewValue except that if the result is an off-heap reference then copy it to the heap.
    * ALERT: If there is a Delta, returns that, not the (applied) new value.
-   * TODO OFFHEAP: to prevent the heap copy use getRawNewValue instead
+   * Note: to prevent the heap copy use getRawNewValue instead
    */
   public final Object getRawNewValueAsHeapObject() {
     if (this.delta != null) {
@@ -1105,8 +1054,6 @@ public class EntryEventImpl
         // I'm not sure this can even happen
         return AbstractRegion.handleNotAvailable(nv);
       }
-      // TODO OFFHEAP currently we copy offheap new value to the heap here. Check callers of this method to see if they can be optimized to use offheap values.
-      // TODO OFFHEAP: returns off-heap PdxInstance
       if (nv instanceof CachedDeserializable) {
         CachedDeserializable cd = (CachedDeserializable)nv;
         Object v = null;
@@ -1281,7 +1228,6 @@ public class EntryEventImpl
     if (tmp instanceof CachedDeserializable) {
       CachedDeserializable cd = (CachedDeserializable) tmp;
       if (!cd.isSerialized()) {
-        // TODO OFFHEAP can we handle offheap byte[] better?
         return null;
       }
       byte[] bytes = this.newValueBytes;
@@ -1363,7 +1309,6 @@ public class EntryEventImpl
               setCachedSerializedNewValue(bytes);
             }
           } else {
-            // TODO OFFHEAP: returns off-heap PdxInstance which is not ok since isUnretainedNewReferenceOk returned false
             importer.importNewObject(so.getValueAsDeserializedHeapObject(), true);
           }
         }
@@ -1445,7 +1390,6 @@ public class EntryEventImpl
           if (!isSerialized || prefersSerialized) {
             importer.importOldBytes(so.getValueAsHeapByteArray(), isSerialized);
           } else {
-            // TODO OFFHEAP: returns off-heap PdxInstance which is not ok since isUnretainedNewReferenceOk returned false
            importer.importOldObject(so.getValueAsDeserializedHeapObject(), true);
           }
         }
@@ -2053,7 +1997,7 @@ public class EntryEventImpl
     if (this.op != Operation.LOCAL_INVALIDATE
         && this.op != Operation.LOCAL_DESTROY) {
       // fix for bug 34387
-      tx.setPendingValue(OffHeapHelper.copyIfNeeded(v)); // TODO OFFHEAP optimize
+      tx.setPendingValue(OffHeapHelper.copyIfNeeded(v));
     }
     tx.setCallbackArgument(getCallbackArgument());
   }
@@ -2306,6 +2250,8 @@ public class EntryEventImpl
 
     buf.append("op=");
     buf.append(getOperation());
+    buf.append(";region=");
+    buf.append(getRegion().getFullPath());
     buf.append(";key=");
     buf.append(this.getKey());
     buf.append(";oldValue=");
@@ -2335,6 +2281,9 @@ public class EntryEventImpl
     }
     if (callbacksInvoked()) { 
       buf.append(";callbacksInvoked");
+    }
+    if (inhibitCacheListenerNotification()) {
+      buf.append(";inhibitCacheListenerNotification");
     }
     if (this.versionTag != null) {
       buf.append(";version=").append(this.versionTag);
@@ -2491,7 +2440,6 @@ public class EntryEventImpl
     if (tmp instanceof CachedDeserializable) {
       CachedDeserializable cd = (CachedDeserializable) tmp;
       if (!cd.isSerialized()) {
-        // TODO OFFHEAP can we handle offheap byte[] better?
         return null;
       }
       return new SerializedCacheValueImpl(this, this.region, this.re, cd, this.oldValueBytes);
@@ -2880,16 +2828,13 @@ public class EntryEventImpl
       return getDeserializedValue(this.r, this.re);
     }
     public Object getDeserializedForReading() {
-      // TODO OFFHEAP: returns off-heap PdxInstance
       return OffHeapHelper.getHeapForm(getCd().getDeserializedForReading());
     }
     public Object getDeserializedWritableCopy(Region rgn, RegionEntry entry) {
-      // TODO OFFHEAP: returns off-heap PdxInstance
       return OffHeapHelper.getHeapForm(getCd().getDeserializedWritableCopy(rgn, entry));
     }
 
     public Object getDeserializedValue(Region rgn, RegionEntry reentry) {
-      // TODO OFFHEAP: returns off-heap PdxInstance
       return OffHeapHelper.getHeapForm(getCd().getDeserializedValue(rgn, reentry));
     }
     public Object getValue() {
@@ -2990,6 +2935,7 @@ public class EntryEventImpl
   }
   
   /** returns a copy of this event with the additional fields for WAN conflict resolution */
+  @Retained
   public TimestampedEntryEvent getTimestampedEvent(
       final int newDSID, final int oldDSID,
       final long newTimestamp, final long oldTimestamp) {
@@ -3026,16 +2972,6 @@ public class EntryEventImpl
     // Note that this method does not set the old/new values to null but
     // leaves them set to the off-heap value so that future calls to getOld/NewValue
     // will fail with an exception.
-//    LocalRegion lr = getLocalRegion();
-//    if (lr != null) {
-//      if (lr.isCacheClosing()) {
-//        // to fix races during closing and recreating cache (see bug 47883) don't bother
-//        // trying to decrement reference counts if we are closing the cache.
-//        // TODO OFFHEAP: this will cause problems once offheap lives longer than a cache.
-//        this.offHeapOk = false;
-//        return;
-//      }
-//    }
     Object ov = basicGetOldValue();
     Object nv = basicGetNewValue();
     this.offHeapOk = false;
@@ -3095,13 +3031,6 @@ public class EntryEventImpl
   public boolean isOldValueOffHeap() {
     return isOffHeapReference(this.oldValue);
   }
-  public final boolean isFetchFromHDFS() {
-    return fetchFromHDFS;
-  }
-
-  public final void setFetchFromHDFS(boolean fetchFromHDFS) {
-    this.fetchFromHDFS = fetchFromHDFS;
-  }
 
   public final boolean isPutDML() {
     return this.isPutDML;
@@ -3109,13 +3038,5 @@ public class EntryEventImpl
 
   public final void setPutDML(boolean val) {
     this.isPutDML = val;
-  }
-
-  public final boolean isLoadedFromHDFS() {
-    return loadedFromHDFS;
-  }
-
-  public final void setLoadedFromHDFS(boolean loadedFromHDFS) {
-    this.loadedFromHDFS = loadedFromHDFS;
   }
 }

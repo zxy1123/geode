@@ -28,6 +28,8 @@ import com.gemstone.gemfire.cache.Operation;
 import com.gemstone.gemfire.cache.TransactionEvent;
 import com.gemstone.gemfire.cache.TransactionId;
 import com.gemstone.gemfire.distributed.DistributedMember;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
+import com.gemstone.gemfire.internal.offheap.annotations.Retained;
 
 /**
  * <p>
@@ -44,6 +46,8 @@ public class TXRmtEvent implements TransactionEvent
 
   private Cache cache;
 
+  // This list of EntryEventImpls are released by calling freeOffHeapResources
+  @Released
   private List events;
   
   TXRmtEvent(TransactionId txId, Cache cache) {
@@ -82,6 +86,30 @@ public class TXRmtEvent implements TransactionEvent
         return Collections.unmodifiableList(result);
       }
     }
+  }
+  
+  /**
+   * Do all operations touch internal regions?
+   * Returns false if the transaction is empty
+   * or if any events touch non-internal regions.
+   */
+  public boolean hasOnlyInternalEvents() {
+    if (events == null || events.isEmpty()) {
+      return false;
+    }
+    Iterator<CacheEvent<?,?>> it = this.events.iterator();
+    while (it.hasNext()) {
+      CacheEvent<?,?> event = it.next();
+      if (isEventUserVisible(event)) {
+        LocalRegion region = (LocalRegion)event.getRegion();
+        if (region != null
+            && !region.isPdxTypesRegion()
+            && !region.isInternalRegion()) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   public List getCreateEvents()
@@ -175,7 +203,12 @@ public class TXRmtEvent implements TransactionEvent
       }
     }
   }
+  
+  public boolean isEmpty() {
+    return (events == null) || events.isEmpty();
+  }
 
+  @Retained
   private EntryEventImpl createEvent(LocalRegion r, Operation op,
       RegionEntry re, Object key, Object newValue,Object aCallbackArgument)
   {
@@ -186,7 +219,7 @@ public class TXRmtEvent implements TransactionEvent
     if (r.isUsedForPartitionedRegionBucket()) {
       eventRegion = r.getPartitionedRegion();
     }
-    EntryEventImpl event = EntryEventImpl.create(
+    @Retained EntryEventImpl event = EntryEventImpl.create(
         eventRegion, op, key, newValue,
         aCallbackArgument, // callbackArg
         true, // originRemote
@@ -236,7 +269,5 @@ public class TXRmtEvent implements TransactionEvent
         e.release();
       }
     }
-    // TODO Auto-generated method stub
-    
   }
 }

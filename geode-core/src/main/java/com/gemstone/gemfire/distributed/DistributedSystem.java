@@ -110,7 +110,7 @@ import com.gemstone.gemfire.security.GemFireSecurityException;
  *   <a name="groups"><dt>groups</dt></a>
  *   <dd><U>Description</U>: Defines the list of groups this member belongs to.
  *   Use commas to separate group names.
- *   Note that anything defined by the roles gemfire property will also be considered a group.
+ *   Note that anything defined by the deprecated roles gemfire property will also be considered a group.
  *   <dd><U>Default</U>: ""</dd>
  *   <dd><U>Since</U>: 7.0</dd>
  * </dl>
@@ -780,7 +780,7 @@ import com.gemstone.gemfire.security.GemFireSecurityException;
  *   </dd>
  *   <dd><U>Default</U>: ""</dd>
  *   <dd><U>Since</U>: 5.0</dd>
- *   <dd><U>Deprecated</U>: as of 7.0 use <a href="#groups"><code>groups</code></a> instead.</dd>
+ *   <dd><U>Deprecated</U>: This feature is scheduled to be removed.</dd>
  * </dl>
  *
  * <dl>
@@ -800,6 +800,7 @@ import com.gemstone.gemfire.security.GemFireSecurityException;
  *   to reconnect to the distributed system when required roles are missing.
  *   This does not apply to reconnect attempts due to a forced disconnect.
  *   </dd>
+ *   <dd><U>Deprecated</U>: this setting is scheduled to be removed.</dd>
  *   <dd><U>Default</U>: "3"</dd>
  *   <dd><U>Since</U>: 5.0</dd>
  * </dl>
@@ -1498,15 +1499,6 @@ public abstract class DistributedSystem implements StatisticsFactory {
    */
   protected static final Object existingSystemsLock = new Object();
 
-  //public static Properties props = new Properties();
-
-  /**
-   * Used to indicate a reconnect is tried in case of required role
-   * loss.
-   * */
-
- // public static boolean reconnect = false;
-
   ////////////////////////  Static Methods  ////////////////////////
 
   /**
@@ -1602,12 +1594,17 @@ public abstract class DistributedSystem implements StatisticsFactory {
 
       } else {
         boolean existingSystemDisconnecting = true;
-        while (!existingSystems.isEmpty() && existingSystemDisconnecting) {
+        boolean isReconnecting = false;
+        while (!existingSystems.isEmpty() && existingSystemDisconnecting && !isReconnecting) {
           Assert.assertTrue(existingSystems.size() == 1);
 
           InternalDistributedSystem existingSystem =
               (InternalDistributedSystem) existingSystems.get(0);
           existingSystemDisconnecting = existingSystem.isDisconnecting();
+          // a reconnecting DS will block on GemFireCache.class and a ReconnectThread
+          // holds that lock and invokes this method, so we break out of the loop
+          // if we detect this condition
+          isReconnecting = existingSystem.isReconnectingDS();
           if (existingSystemDisconnecting) {
             boolean interrupted = Thread.interrupted();
             try {

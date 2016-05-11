@@ -74,6 +74,7 @@ import com.gemstone.gemfire.internal.logging.LogService;
 import com.gemstone.gemfire.internal.logging.LoggingThreadGroup;
 import com.gemstone.gemfire.internal.logging.log4j.LocalizedMessage;
 import com.gemstone.gemfire.internal.offheap.Releasable;
+import com.gemstone.gemfire.internal.offheap.annotations.Released;
 import com.gemstone.gemfire.internal.offheap.annotations.Retained;
 import com.gemstone.gemfire.internal.offheap.annotations.Unretained;
 
@@ -155,8 +156,6 @@ public abstract class AbstractGatewaySender implements GatewaySender,
   private int dispatcherThreads;
   
   protected boolean isBucketSorted;
-  
-  protected boolean isHDFSQueue;
   
   protected boolean isMetaQueue;
   
@@ -259,7 +258,6 @@ public abstract class AbstractGatewaySender implements GatewaySender,
     this.maxMemoryPerDispatcherQueue = this.queueMemory / this.dispatcherThreads;
     this.myDSId = InternalDistributedSystem.getAnyInstance().getDistributionManager().getDistributedSystemId();
     this.serialNumber = DistributionAdvisor.createSerialNumber();
-    this.isHDFSQueue = attrs.isHDFSQueue();
     this.isMetaQueue = attrs.isMetaQueue();
     if (!(this.cache instanceof CacheCreation)) {
       this.stopper = new Stopper(cache.getCancelCriterion());
@@ -268,8 +266,7 @@ public abstract class AbstractGatewaySender implements GatewaySender,
         this.statistics = new GatewaySenderStats(cache.getDistributedSystem(),
             id);
       }
-      if (!attrs.isHDFSQueue())
-        initializeEventIdIndex();
+      initializeEventIdIndex();
     }
     this.isBucketSorted = attrs.isBucketSorted();
   }
@@ -317,12 +314,10 @@ public abstract class AbstractGatewaySender implements GatewaySender,
             cache.getDistributedSystem(), AsyncEventQueueImpl
                 .getAsyncEventQueueIdFromSenderId(id));
       }
-      if (!attrs.isHDFSQueue())
-        initializeEventIdIndex();
+      initializeEventIdIndex();
     }
     this.isBucketSorted = attrs.isBucketSorted();
-    this.isHDFSQueue = attrs.isHDFSQueue();
-   
+
   }
   
   public GatewaySenderAdvisor getSenderAdvisor() {
@@ -481,10 +476,6 @@ public abstract class AbstractGatewaySender implements GatewaySender,
     return this.isBucketSorted;
   }
 
-  public boolean getIsHDFSQueue() {
-    return this.isHDFSQueue;
-  }
-  
   public boolean getIsMetaQueue() {
     return this.isMetaQueue;
   }
@@ -690,20 +681,6 @@ public abstract class AbstractGatewaySender implements GatewaySender,
   public int getMyDSId() {
     return this.myDSId;
   }
-  
-  /**
-   * @param removeFromQueueOnException the removeFromQueueOnException to set
-   */
-  public void setRemoveFromQueueOnException(boolean removeFromQueueOnException) {
-    this.removeFromQueueOnException = removeFromQueueOnException;
-  }
-
-  /**
-   * @return the removeFromQueueOnException
-   */
-  public boolean isRemoveFromQueueOnException() {
-    return removeFromQueueOnException;
-  }
 
   public CancelCriterion getStopper() {
     return this.stopper;
@@ -876,12 +853,6 @@ public abstract class AbstractGatewaySender implements GatewaySender,
       return;
     }
     
-    if (getIsHDFSQueue() && event.getOperation().isEviction()) {
-      if (logger.isDebugEnabled())
-        logger.debug("Eviction event not queued: " + event);
-      stats.incEventsNotQueued();
-      return;
-    }
     // this filter is defined by Asif which exist in old wan too. new wan has
     // other GatewaEventFilter. Do we need to get rid of this filter. Cheetah is
     // not cinsidering this filter
@@ -889,8 +860,8 @@ public abstract class AbstractGatewaySender implements GatewaySender,
       getStatistics().incEventsFiltered();
       return;
     }
-    
-    EntryEventImpl clonedEvent = new EntryEventImpl(event, false);
+    // released by this method or transfers ownership to TmpQueueEvent
+    @Released EntryEventImpl clonedEvent = new EntryEventImpl(event, false);
     boolean freeClonedEvent = true;
     try {
 

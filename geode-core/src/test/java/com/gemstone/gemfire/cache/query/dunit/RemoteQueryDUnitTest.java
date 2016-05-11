@@ -50,9 +50,11 @@ import com.gemstone.gemfire.test.dunit.NetworkUtils;
 import com.gemstone.gemfire.test.dunit.SerializableRunnable;
 import com.gemstone.gemfire.test.dunit.VM;
 import com.gemstone.gemfire.test.dunit.Wait;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
 import cacheRunner.Portfolio;
 import cacheRunner.Position;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests remote (client/server) query execution.
@@ -199,7 +201,7 @@ public class RemoteQueryDUnitTest extends CacheTestCase {
           } catch (Exception e) {
             fail("Failed executing " + queryString, e);
         }
-          assertEquals(100, results.size());
+          assertIndexDetailsEquals(100, results.size());
           assertTrue(results instanceof ResultsCollectionWrapper);
           IdComparator comparator = new IdComparator();
           Object[] resultsArray = results.toArray();
@@ -657,7 +659,7 @@ public class RemoteQueryDUnitTest extends CacheTestCase {
             Assert.fail("Failed executing " + queryString, e);
           }
           LogWriterUtils.getLogWriter().fine("size: " + results.size());
-          //assertEquals(numberOfEntries, results.size());
+          //assertIndexDetailsEquals(numberOfEntries, results.size());
           assertTrue(!results.getCollectionType().allowsDuplicates() && results.getCollectionType().getElementType().isStructType());
         }
       });
@@ -939,6 +941,7 @@ public class RemoteQueryDUnitTest extends CacheTestCase {
    * Tests remote query execution using a BridgeClient as the CacheWriter
    * and CacheLoader.
    */
+  @Category(FlakyTest.class) // GEODE-490: random port
   public void testRemoteBridgeClientQueries() throws CacheException {
 
     final String name = this.getName();

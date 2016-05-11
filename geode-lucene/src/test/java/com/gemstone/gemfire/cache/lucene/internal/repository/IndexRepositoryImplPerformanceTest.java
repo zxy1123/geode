@@ -65,7 +65,7 @@ import com.gemstone.gemfire.cache.lucene.internal.directory.RegionDirectory;
 import com.gemstone.gemfire.cache.lucene.internal.distributed.TopEntriesCollector;
 import com.gemstone.gemfire.cache.lucene.internal.filesystem.ChunkKey;
 import com.gemstone.gemfire.cache.lucene.internal.filesystem.File;
-import com.gemstone.gemfire.cache.lucene.internal.repository.serializer.HeterogenousLuceneSerializer;
+import com.gemstone.gemfire.cache.lucene.internal.repository.serializer.HeterogeneousLuceneSerializer;
 import com.gemstone.gemfire.cache.query.QueryException;
 import com.gemstone.gemfire.test.junit.categories.PerformanceTest;
 
@@ -119,7 +119,7 @@ public class IndexRepositoryImplPerformanceTest {
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         writer = new IndexWriter(dir, config);
         String[] indexedFields= new String[] {"text"};
-        HeterogenousLuceneSerializer mapper = new HeterogenousLuceneSerializer(indexedFields);
+        HeterogeneousLuceneSerializer mapper = new HeterogeneousLuceneSerializer(indexedFields);
         repo = new IndexRepositoryImpl(fileRegion, writer, mapper);
       }
 
@@ -222,7 +222,7 @@ public class IndexRepositoryImplPerformanceTest {
         RegionDirectory dir = new RegionDirectory(new ConcurrentHashMap<String, File>(), new ConcurrentHashMap<ChunkKey, byte[]>());
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         writer = new IndexWriter(dir, config);
-        searcherManager = new SearcherManager(writer, true, null);
+        searcherManager = new SearcherManager(writer, true, true, null);
       }
 
       @Override
@@ -275,7 +275,7 @@ public class IndexRepositoryImplPerformanceTest {
         RAMDirectory dir = new RAMDirectory();
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         writer = new IndexWriter(dir, config);
-        searcherManager = new SearcherManager(writer, true, null);
+        searcherManager = new SearcherManager(writer, true, true, null);
       }
 
       @Override
@@ -381,7 +381,7 @@ public class IndexRepositoryImplPerformanceTest {
         int size  = callbacks.query(query);
 //        int size  = callbacks.query(parser.parse(word));
         //All of my tests sometimes seem to be missing a couple of words, including the stock lucene
-//        assertEquals("Error on query " + i + " word=" + word, counts[wordIndex], size);
+//        assertIndexDetailsEquals("Error on query " + i + " word=" + word, counts[wordIndex], size);
       }
       end = System.nanoTime();
       results.queryTime = end - start;

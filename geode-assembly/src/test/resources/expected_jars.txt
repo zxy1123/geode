@@ -55,16 +55,14 @@ paranamer
 ra.jar
 scala-library
 scala-reflect
+shiro-core
 slf4j-api
 snappy-java
 spring-aop
 spring-aspects
 spring-beans
 spring-context
-spring-context-support
 spring-core
-spring-data-commons
-spring-data-gemfire
 spring-expression
 spring-hateoas
 spring-ldap-core

@@ -31,7 +31,6 @@ import com.gemstone.gemfire.test.junit.categories.UnitTest;
 
 /**
  * Unit tests for {@link SharedConfiguration}.
- * 
  *
  * @since 8.1
  */
@@ -48,7 +47,7 @@ public class SharedConfigurationJUnitTest {
     String schemaLocation = XmlUtils.getAttribute(doc.getDocumentElement(), W3C_XML_SCHEMA_INSTANCE_ATTRIBUTE_SCHEMA_LOCATION, W3C_XML_SCHEMA_INSTANCE_NS_URI);
 
     assertNotNull(schemaLocation);
-    assertEquals(CacheXml.NAMESPACE + " " + CacheXml.LATEST_SCHEMA_LOCATION, schemaLocation);
+    assertEquals(CacheXml.GEODE_NAMESPACE + " " + CacheXml.LATEST_SCHEMA_LOCATION, schemaLocation);
 
     assertEquals(CacheXml.VERSION_LATEST, XmlUtils.getAttribute(doc.getDocumentElement(), "version"));
   }

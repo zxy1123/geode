@@ -16,56 +16,67 @@
  */
 package com.gemstone.gemfire.distributed.internal;
 
-import com.gemstone.gemfire.InternalGemFireException;
-import com.gemstone.gemfire.UnmodifiableException;
-import com.gemstone.gemfire.internal.ConfigSource;
-import com.gemstone.gemfire.test.junit.categories.UnitTest;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-/**
- * Created by jiliao on 2/2/16.
- */
+import com.gemstone.gemfire.InternalGemFireException;
+import com.gemstone.gemfire.UnmodifiableException;
+import com.gemstone.gemfire.internal.ConfigSource;
+import com.gemstone.gemfire.management.internal.security.JSONAuthorization;
+import com.gemstone.gemfire.test.junit.categories.UnitTest;
+
 @Category(UnitTest.class)
-
 public class DistributionConfigJUnitTest {
-  static Map<String, ConfigAttribute> attributes;
-  static Map<String, Method> setters;
-  static Map<String, Method> getters;
-  static Map<String, Method> isModifiables;
-  static Map<String, Method> checkers;
-  static String[] attNames;
-  DistributionConfigImpl config;
 
-  @BeforeClass
-  public static void beforeClass() {
+  private Map<Class<?>, Class<?>> classMap;
+
+  private Map<String, ConfigAttribute> attributes;
+  private Map<String, Method> setters;
+  private Map<String, Method> getters;
+  private Map<String, Method> checkers;
+  private String[] attNames;
+
+  private DistributionConfigImpl config;
+
+  @Before
+  public void before() {
+    classMap = new HashMap<Class<?>, Class<?>>();
+    classMap.put(boolean.class, Boolean.class);
+    classMap.put(byte.class, Byte.class);
+    classMap.put(short.class, Short.class);
+    classMap.put(char.class, Character.class);
+    classMap.put(int.class, Integer.class);
+    classMap.put(long.class, Long.class);
+    classMap.put(float.class, Float.class);
+    classMap.put(double.class, Double.class);
+
     attributes = DistributionConfig.attributes;
     setters = DistributionConfig.setters;
     getters = DistributionConfig.getters;
     attNames = DistributionConfig.dcValidAttributeNames;
     checkers = AbstractDistributionConfig.checkers;
-  }
 
-  @Before
-  public void before() {
     config = new DistributionConfigImpl(new Properties());
   }
 
   @Test
   public void testGetAttributeNames() {
     String[] attNames = AbstractDistributionConfig._getAttNames();
-    assertEquals(attNames.length, 140);
+    assertEquals(attNames.length, 141);
 
     List boolList = new ArrayList();
     List intList = new ArrayList();
@@ -96,11 +107,27 @@ public class DistributionConfigJUnitTest {
     System.out.println("filelList: " + fileList);
     System.out.println();
     System.out.println("otherList: " + otherList);
+
     assertEquals(boolList.size(), 30);
     assertEquals(intList.size(), 33);
-    assertEquals(stringList.size(), 69);
+    assertEquals(stringList.size(), 70);
     assertEquals(fileList.size(), 5);
     assertEquals(otherList.size(), 3);
+  }
+
+  @Test
+  public void testAttributeDesc(){
+    String[] attNames = AbstractDistributionConfig._getAttNames();
+    for(String attName:attNames){
+      assertTrue("Does not contain description for attribute "+ attName, AbstractDistributionConfig.dcAttDescriptions.containsKey(attName));
+    }
+    List<String> attList = Arrays.asList(attNames);
+    for(Object attName:AbstractDistributionConfig.dcAttDescriptions.keySet()){
+      if(!attList.contains(attName)){
+        System.out.println("Has unused description for "+attName.toString());
+      }
+      //assertTrue("Has unused description for "+attName.toString(), attList.contains(attName));
+    }
   }
 
   @Test
@@ -227,6 +254,7 @@ public class DistributionConfigJUnitTest {
         modifiables.add(attName);
       }
     }
+
     assertEquals(modifiables.size(), 10);
     assertEquals(modifiables.get(0), "archive-disk-space-limit");
     assertEquals(modifiables.get(1), "archive-file-size-limit");
@@ -238,7 +266,6 @@ public class DistributionConfigJUnitTest {
     assertEquals(modifiables.get(7), "statistic-archive-file");
     assertEquals(modifiables.get(8), "statistic-sample-rate");
     assertEquals(modifiables.get(9), "statistic-sampling-enabled");
-
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -298,16 +325,31 @@ public class DistributionConfigJUnitTest {
     assertTrue(config.isAttributeModifiable("jmx-manager-http-port"));
   }
 
-  public final static Map<Class<?>, Class<?>> classMap = new HashMap<Class<?>, Class<?>>();
 
-  static {
-    classMap.put(boolean.class, Boolean.class);
-    classMap.put(byte.class, Byte.class);
-    classMap.put(short.class, Short.class);
-    classMap.put(char.class, Character.class);
-    classMap.put(int.class, Integer.class);
-    classMap.put(long.class, Long.class);
-    classMap.put(float.class, Float.class);
-    classMap.put(double.class, Double.class);
+  @Test
+  public void testSecurityProps(){
+    Properties props = new Properties();
+    props.put(DistributionConfig.SECURITY_CLIENT_AUTHENTICATOR_NAME, JSONAuthorization.class.getName() + ".create");
+    props.put(DistributionConfig.SECURITY_CLIENT_ACCESSOR_NAME, JSONAuthorization.class.getName() + ".create");
+    props.put(DistributionConfig.SECURITY_LOG_LEVEL_NAME, "config");
+    // add another non-security property to verify it won't get put in the security properties
+    props.put(DistributionConfig.ACK_WAIT_THRESHOLD_NAME, 2);
+
+    DistributionConfig config = new DistributionConfigImpl(props);
+    assertEquals(config.getSecurityProps().size(), 3);
+  }
+
+  @Test
+  public void testSecurityPropsWithNoSetter(){
+    Properties props = new Properties();
+    props.put(DistributionConfig.SECURITY_CLIENT_AUTHENTICATOR_NAME, JSONAuthorization.class.getName() + ".create");
+    props.put(DistributionConfig.SECURITY_CLIENT_ACCESSOR_NAME, JSONAuthorization.class.getName() + ".create");
+    props.put(DistributionConfig.SECURITY_LOG_LEVEL_NAME, "config");
+    // add another non-security property to verify it won't get put in the security properties
+    props.put(DistributionConfig.ACK_WAIT_THRESHOLD_NAME, 2);
+    props.put("security-username", "testName");
+
+    DistributionConfig config = new DistributionConfigImpl(props);
+    assertEquals(config.getSecurityProps().size(), 4);
   }
 }

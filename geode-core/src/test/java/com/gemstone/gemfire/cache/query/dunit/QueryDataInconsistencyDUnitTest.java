@@ -18,6 +18,8 @@ package com.gemstone.gemfire.cache.query.dunit;
 
 import java.util.Properties;
 
+import org.junit.experimental.categories.Category;
+
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.CacheException;
 import com.gemstone.gemfire.cache.CacheFactory;
@@ -49,12 +51,11 @@ import com.gemstone.gemfire.test.dunit.SerializableRunnable;
 import com.gemstone.gemfire.test.dunit.ThreadUtils;
 import com.gemstone.gemfire.test.dunit.VM;
 import com.gemstone.gemfire.test.dunit.Wait;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
 /**
  * This tests the data inconsistency during update on an index and querying the
  * same UNLOCKED index.
- * 
- * 
  */
 public class QueryDataInconsistencyDUnitTest extends CacheTestCase {
 
@@ -82,8 +83,6 @@ public class QueryDataInconsistencyDUnitTest extends CacheTestCase {
 
   public static String[] queriesForRR = new String[] { "<trace> select * from /"
       + repRegionName + " where ID=1" };
-
-  private static PRQueryDUnitHelper PRQHelp = new PRQueryDUnitHelper("");
 
   public static volatile boolean hooked = false;
   /**
@@ -293,8 +292,9 @@ public class QueryDataInconsistencyDUnitTest extends CacheTestCase {
     });
     ThreadUtils.join(putThread, 200);
   }
-  
-  public void testRangeIndexWithIndexAndQueryFromCluaseMisMatch() {
+
+  @Category(FlakyTest.class) // GEODE-925: time sensitive, async actions, short timeouts
+  public void testRangeIndexWithIndexAndQueryFromCluaseMisMatch() { // TODO: fix misspelling
     // Create caches
     Properties props = new Properties();
     server.invoke(() -> PRClientServerTestBase.createCacheInVm( props ));
@@ -381,7 +381,7 @@ public class QueryDataInconsistencyDUnitTest extends CacheTestCase {
         }
       }
     });
-    ThreadUtils.join(putThread, 200);
+    ThreadUtils.join(putThread, 200); // GEODE-925 occurs here and this is very short join 200 millis
   }
 
   public void testRangeIndexWithIndexAndQueryFromCluaseMisMatch2() {

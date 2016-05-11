@@ -293,7 +293,7 @@ public class JGroupsMessenger implements Messenger {
     // give the stats to the jchannel statistics recorder
     StatRecorder sr = (StatRecorder)myChannel.getProtocolStack().findProtocol(StatRecorder.class);
     if (sr != null) {
-      sr.setDMStats(services.getStatistics());
+      sr.setServices(services);
     }
     
     Transport transport = (Transport)myChannel.getProtocolStack().getTransport();
@@ -477,8 +477,11 @@ public class JGroupsMessenger implements Messenger {
 
     // add the JGroups logical address to the GMSMember
     UUID uuid = this.jgAddress;
-    ((GMSMember)localAddress.getNetMember()).setUUID(uuid);
-    ((GMSMember)localAddress.getNetMember()).setMemberWeight((byte)(services.getConfig().getMemberWeight() & 0xff));
+    GMSMember gmsMember = (GMSMember)localAddress.getNetMember();
+    gmsMember.setUUID(uuid);
+    gmsMember.setMemberWeight((byte)(services.getConfig().getMemberWeight() & 0xff));
+    gmsMember.setNetworkPartitionDetectionEnabled(services.getConfig().getDistributionConfig().getEnableNetworkPartitionDetection());
+
   }
   
   @Override
@@ -556,7 +559,13 @@ public class JGroupsMessenger implements Messenger {
       }
       String received = "none";
       long[] senderSeqnos = digest.get(jgSender);
-      if (senderSeqnos == null || senderSeqnos[0] >= seqno.longValue()) {
+      if (senderSeqnos == null) {
+        break;
+      }
+      if (logger.isDebugEnabled()) {
+        logger.debug("waiting for multicast messages from {}.  Current seqno={} and expected seqno={}", sender, senderSeqnos[0], seqno);
+      }
+      if (senderSeqnos[0] >= seqno.longValue()) {
         break;
       }
       long now = System.currentTimeMillis();

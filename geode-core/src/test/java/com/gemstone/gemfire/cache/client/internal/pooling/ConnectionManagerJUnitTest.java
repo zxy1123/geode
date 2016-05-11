@@ -62,13 +62,12 @@ import com.gemstone.gemfire.internal.logging.LocalLogWriter;
 import com.gemstone.gemfire.test.dunit.ThreadUtils;
 import com.gemstone.gemfire.test.dunit.Wait;
 import com.gemstone.gemfire.test.dunit.WaitCriterion;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
 
-/**
- *
- */
 @Category(IntegrationTest.class)
 public class ConnectionManagerJUnitTest {
+
   private static final long TIMEOUT = 30 * 1000;
   //This is added for some windows machines which think the connection expired
   //before the idle timeout due to precision issues.
@@ -228,7 +227,8 @@ public class ConnectionManagerJUnitTest {
 //    }
 //    
 //  }
-  
+
+  @Category(FlakyTest.class) // GEODE-923: time sensitive, expiration, thread sleeps, wait loop
   @Test
   public void testIdleExpiration() throws InterruptedException, AllConnectionsInUseException, NoAvailableServersException {
     final long nanoToMillis = 1000000;
@@ -448,8 +448,8 @@ public class ConnectionManagerJUnitTest {
     
 //     //wait to make sure checked out connections aren't timed out
 //     Thread.sleep(idleTimeout + 100);
-//     Assert.assertEquals(5,factory.creates);
-//     Assert.assertEquals(0,factory.destroys);
+//     Assert.assertIndexDetailsEquals(5,factory.creates);
+//     Assert.assertIndexDetailsEquals(0,factory.destroys);
     
 //     manager.returnConnection(conn1);
 //     manager.returnConnection(conn2);
@@ -468,8 +468,8 @@ public class ConnectionManagerJUnitTest {
 //     long elapsed = System.currentTimeMillis() - start;
 //     Assert.assertTrue(elapsed > idleTimeout);
     
-//     Assert.assertEquals(5,factory.creates);
-//     Assert.assertEquals(3,factory.destroys);
+//     Assert.assertIndexDetailsEquals(5,factory.creates);
+//     Assert.assertIndexDetailsEquals(3,factory.destroys);
   }
   
   @Test

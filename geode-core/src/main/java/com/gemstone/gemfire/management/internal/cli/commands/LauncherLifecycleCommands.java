@@ -16,45 +16,9 @@
  */
 package com.gemstone.gemfire.management.internal.cli.commands;
 
-import java.awt.Desktop;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EmptyStackException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.Stack;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.Query;
-import javax.management.QueryExp;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-
 import com.gemstone.gemfire.GemFireException;
 import com.gemstone.gemfire.SystemFailure;
+import com.gemstone.gemfire.cache.operations.OperationContext;
 import com.gemstone.gemfire.cache.server.CacheServer;
 import com.gemstone.gemfire.distributed.AbstractLauncher;
 import com.gemstone.gemfire.distributed.AbstractLauncher.ServiceState;
@@ -76,7 +40,6 @@ import com.gemstone.gemfire.internal.lang.ObjectUtils;
 import com.gemstone.gemfire.internal.lang.StringUtils;
 import com.gemstone.gemfire.internal.lang.SystemUtils;
 import com.gemstone.gemfire.internal.process.ClusterConfigurationNotAvailableException;
-import com.gemstone.gemfire.internal.process.NonBlockingProcessStreamReader;
 import com.gemstone.gemfire.internal.process.ProcessLauncherContext;
 import com.gemstone.gemfire.internal.process.ProcessStreamReader;
 import com.gemstone.gemfire.internal.process.ProcessStreamReader.InputListener;
@@ -112,10 +75,46 @@ import com.gemstone.gemfire.management.internal.cli.util.VisualVmNotFoundExcepti
 import com.gemstone.gemfire.management.internal.configuration.domain.SharedConfigurationStatus;
 import com.gemstone.gemfire.management.internal.configuration.messages.SharedConfigurationStatusRequest;
 import com.gemstone.gemfire.management.internal.configuration.messages.SharedConfigurationStatusResponse;
-
+import com.gemstone.gemfire.management.internal.security.ResourceOperation;
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
+
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.Query;
+import javax.management.QueryExp;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import java.awt.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EmptyStackException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.Stack;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The LauncherLifecycleCommands class encapsulates all GemFire launcher commands for GemFire tools (like starting
@@ -156,32 +155,6 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
 
   protected static final String CORE_DEPENDENCIES_JAR_PATHNAME =
     IOUtils.appendToPath(GEMFIRE_HOME, "lib", "geode-dependencies.jar");
-
-  protected static final String SPRING_AOP_JAR_NAME_PREFIX = "spring-aop";
-  protected static final String SPRING_BEANS_JAR_NAME_PREFIX = "spring-beans";
-  protected static final String SPRING_CONTEXT_JAR_NAME_PREFIX = "spring-context";
-  protected static final String SPRING_CONTEXT_SUPPORT_JAR_NAME_PREFIX = "spring-context-support";
-  protected static final String SPRING_DATA_COMMONS_JAR_NAME_PREFIX = "spring-data-commons";
-  protected static final String SPRING_DATA_GEMFIRE_JAR_NAME_PREFIX = "spring-data-gemfire";
-  protected static final String SPRING_EXPRESSION_JAR_NAME_PREFIX = "spring-expression";
-  protected static final String SPRING_TX_JAR_NAME_PREFIX = "spring-tx";
-
-  protected static final Set<String> SPRING_JAR_NAME_PREFIXES;
-
-  static {
-    Set<String> springJarNamePrefixes = new HashSet<>(8);
-
-    springJarNamePrefixes.add(SPRING_AOP_JAR_NAME_PREFIX);
-    springJarNamePrefixes.add(SPRING_BEANS_JAR_NAME_PREFIX);
-    springJarNamePrefixes.add(SPRING_CONTEXT_JAR_NAME_PREFIX);
-    springJarNamePrefixes.add(SPRING_CONTEXT_SUPPORT_JAR_NAME_PREFIX);
-    springJarNamePrefixes.add(SPRING_DATA_COMMONS_JAR_NAME_PREFIX);
-    springJarNamePrefixes.add(SPRING_DATA_GEMFIRE_JAR_NAME_PREFIX);
-    springJarNamePrefixes.add(SPRING_EXPRESSION_JAR_NAME_PREFIX);
-    springJarNamePrefixes.add(SPRING_TX_JAR_NAME_PREFIX);
-
-    SPRING_JAR_NAME_PREFIXES = Collections.unmodifiableSet(springJarNamePrefixes);
-  }
 
   protected static boolean isAttachApiAvailable() {
     if (ATTACH_API_AVAILABLE.get() == null) {
@@ -604,7 +577,7 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
         }
 
         getGfsh().setOperationInvoker(new JmxOperationInvoker(memberEndpoint.getHost(), memberEndpoint.getPort(),
-          null, null, configurationProperties));
+          null, null, configurationProperties, null));
 
         String shellAndLogMessage = CliStrings.format(CliStrings.CONNECT__MSG__SUCCESS, memberEndpoint.toString(false));
 
@@ -855,6 +828,7 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
 
   @CliCommand(value=CliStrings.STOP_LOCATOR, help=CliStrings.STOP_LOCATOR__HELP)
   @CliMetaData(shellOnly=true, relatedTopic = {CliStrings.TOPIC_GEMFIRE_LOCATOR, CliStrings.TOPIC_GEMFIRE_LIFECYCLE})
+  @ResourceOperation(resource= OperationContext.Resource.CLUSTER, operation = OperationContext.OperationCode.MANAGE)
   public Result stopLocator(@CliOption(key = CliStrings.STOP_LOCATOR__MEMBER,
                                        optionContext = ConverterHint.LOCATOR_MEMBER_IDNAME,
                                        unspecifiedDefaultValue=CliMetaData.ANNOTATION_NULL_VALUE,
@@ -1143,47 +1117,14 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
   }
 
   protected String getServerClasspath(final boolean includeSystemClasspath,
-                                      final boolean includeSpringDependencies,
                                       final String userClasspath)
   {
     List<String> jarFilePathnames = new ArrayList<>();
 
     jarFilePathnames.add(CORE_DEPENDENCIES_JAR_PATHNAME);
 
-    if (includeSpringDependencies) {
-      jarFilePathnames.addAll(getSpringJars());
-    }
-
     return toClasspath(includeSystemClasspath, jarFilePathnames.toArray(new String[jarFilePathnames.size()]),
       userClasspath);
-  }
-
-  protected List<String> getSpringJars() {
-    File gemfireHomeDirectory= new File(GEMFIRE_HOME);
-
-    assertArgument(gemfireHomeDirectory.isDirectory(),
-      "Please set the GEMFIRE environment variable to the product installation directory.");
-
-    List<String> springJarFilePathnames = new ArrayList<>(SPRING_JAR_NAME_PREFIXES.size());
-
-    for (File jarFile : new File(gemfireHomeDirectory, "lib").listFiles(new FileFilter() {
-      @Override public boolean accept(final File pathname) {
-        return (pathname.getName().startsWith("spring-") && pathname.getAbsolutePath().endsWith(".jar"));
-      }
-    })) {
-      String jarFileName = jarFile.getName();
-      String jarFileNamePrefix = jarFileName.substring(0, jarFileName.lastIndexOf("-"));
-
-      if (SPRING_JAR_NAME_PREFIXES.contains(jarFileNamePrefix.toLowerCase().trim())) {
-        springJarFilePathnames.add(jarFile.getAbsolutePath());
-      }
-    }
-
-    assertState(springJarFilePathnames.size() == SPRING_JAR_NAME_PREFIXES.size(),
-      "Unable to find all the necessary Spring JAR files in $GEMFIRE/lib (%1$s): expected (%2$s); but was (%3$s)",
-        gemfireHomeDirectory, SPRING_JAR_NAME_PREFIXES, springJarFilePathnames);
-
-    return springJarFilePathnames;
   }
 
   protected String getSystemClasspath() {
@@ -1809,7 +1750,7 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
     commandLine.add("-server");
     commandLine.add("-classpath");
     commandLine.add(getServerClasspath(Boolean.TRUE.equals(includeSystemClasspath),
-      launcher.isSpringXmlLocationSpecified(), userClasspath));
+      userClasspath));
 
     addCurrentLocators(commandLine, gemfireProperties);
     addGemFirePropertyFile(commandLine, gemfirePropertiesPathname);
@@ -2006,6 +1947,7 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
 
   @CliCommand(value = CliStrings.STOP_SERVER, help = CliStrings.STOP_SERVER__HELP)
   @CliMetaData(shellOnly = true, relatedTopic = { CliStrings.TOPIC_GEMFIRE_SERVER, CliStrings.TOPIC_GEMFIRE_LIFECYCLE })
+  @ResourceOperation(resource= OperationContext.Resource.CLUSTER, operation = OperationContext.OperationCode.MANAGE)
   public Result stopServer(@CliOption(key = CliStrings.STOP_SERVER__MEMBER,
                                       optionContext = ConverterHint.MEMBERIDNAME,
                                       unspecifiedDefaultValue = CliMetaData.ANNOTATION_NULL_VALUE,

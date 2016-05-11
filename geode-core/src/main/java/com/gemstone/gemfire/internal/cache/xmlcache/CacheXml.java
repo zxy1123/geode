@@ -45,31 +45,38 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
    * This always refers to the latest GemFire version, in those cases where
    * we default to the current released version of GemFire.
    *
-   * WHenever you upgrade the DTD, you will need to search for occurrences of
+   * Whenever you upgrade the DTD, you will need to search for occurrences of
    * the previous version strings and upgrade them as well.
    *
    * @since 5.5
    */
-  public static final String VERSION_LATEST = CacheXml.VERSION_9_0;
+  public static final String VERSION_LATEST = CacheXml.VERSION_1_0;
   
   /**
-   * @deprecated As of 8.1 use {@link #NAMESPACE}
+   * @deprecated As of 8.1 use {@link #GEODE_NAMESPACE}
    */
   @Deprecated
   public static final String LATEST_SYSTEM_ID = CacheXml.SYSTEM_ID_8_0;
 
   /**
-   * @deprecated As of 8.1 use {@link #NAMESPACE}.
+   * @deprecated As of 8.1 use {@link #GEODE_NAMESPACE}.
    */
   @Deprecated
   public static final String LATEST_PUBLIC_ID = CacheXml.PUBLIC_ID_8_0;
-  
+
+  /**
+   * Namespace URI for older, GemFire {@link CacheXml} documents.
+   *
+   * @since 8.1
+   */
+  public static final String GEMFIRE_NAMESPACE = "http://schema.pivotal.io/gemfire/cache";
+
   /**
    * Namespace URI for {@link CacheXml} documents.
    * 
    * @since 8.1
    */
-  public static final String NAMESPACE = "http://schema.pivotal.io/gemfire/cache";
+  public static final String GEODE_NAMESPACE = "http://geode.apache.org/schema/cache";
 
   /**
    * Namespace prefix for {@link CacheXml} documents.
@@ -79,11 +86,11 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
   public static final String PREFIX = "cache";
 
   /**
-   * Latest schema location for {@link #NAMESPACE}.
+   * Latest schema location for {@link #GEODE_NAMESPACE}.
    * 
    * @since 8.1
    */
-  public static final String LATEST_SCHEMA_LOCATION = CacheXml.SCHEMA_9_0_LOCATION;
+  public static final String LATEST_SCHEMA_LOCATION = CacheXml.SCHEMA_1_0_LOCATION;
   
   /**
    * Location of the latest DTD file for Gemfire
@@ -101,11 +108,11 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
   public static final String VERSION_8_1 = "8.1";
   
   /**
-   * Version string for GemFire 9.0
+   * Version string for Geode 1.0
    * 
-   * @since 9.0
+   * @since 1.0
    */
-  public static final String VERSION_9_0 = "9.0";
+  public static final String VERSION_1_0 = "1.0";
   
   /**
    * The location of the GemFire 8.1 schema file.
@@ -114,11 +121,11 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
    */
   protected static final String SCHEMA_8_1_LOCATION = "http://schema.pivotal.io/gemfire/cache/cache-8.1.xsd";
   /**
-   * The location of the GemFire 9.0 schema file.
+   * The location of the Geeode 1.0 schema file.
    * 
-   * @since 9.0
+   * @since 1.0
    */
-  protected static final String SCHEMA_9_0_LOCATION = "http://schema.pivotal.io/gemfire/cache/cache-9.0.xsd";
+  protected static final String SCHEMA_1_0_LOCATION = "http://geode.apache.org/schema/cache/cache-1.0.xsd";
 
   //---------------------------------
   /** Version string for GemFire 8.0 */
@@ -480,8 +487,6 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
   protected static final String PERSISTENT_REPLICATE_DP = "persistent-replicate";
   protected static final String PARTITION_DP = "partition";
   protected static final String PERSISTENT_PARTITION_DP = "persistent-partition";
-  protected static final String HDFS_PARTITION_DP = "hdfs-partition";
-  protected static final String HDFS_PERSISTENT_PARTITION_DP = "hdfs-persistent-partition";
 
   /** The name of the <code>keep-alive-timeout</code> attribute */
   protected static final String KEEP_ALIVE_TIMEOUT = "keep-alive-timeout";
@@ -758,35 +763,6 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
   public static final String ASYNC_EVENT_QUEUE = "async-event-queue";
   protected static final String ASYNC_EVENT_QUEUE_IDS = "async-event-queue-ids";
   
-  protected static final String HDFS_EVENT_QUEUE = "hdfs-event-queue";
-  protected static final String HDFS_STORE_NAME = "hdfs-store-name";
-  public static final String HDFS_STORE = "hdfs-store";
-  protected static final String HDFS_HOME_DIR = "home-dir";
-  protected static final String HDFS_READ_CACHE_SIZE = "read-cache-size";
-  protected static final String HDFS_MAX_MEMORY = "max-memory";
-  protected static final String HDFS_BATCH_SIZE = "batch-size";
-  protected static final String HDFS_BATCH_INTERVAL = "batch-interval";
-  protected static final String HDFS_DISPATCHER_THREADS = "dispatcher-threads";
-  protected static final String HDFS_BUFFER_PERSISTENT = "buffer-persistent";
-  protected static final String HDFS_SYNCHRONOUS_DISK_WRITE = "synchronous-disk-write";
-  protected static final String HDFS_DISK_STORE = "disk-store";
-  protected static final String HDFS_MAX_WRITE_ONLY_FILE_SIZE = "max-write-only-file-size";
-  public static final String HDFS_WRITE_ONLY_FILE_ROLLOVER_INTERVAL = "write-only-file-rollover-interval";
-  
-  protected static final String HDFS_NAMENODE_URL = "namenode-url";
-  protected static final String HDFS_CLIENT_CONFIG_FILE = "hdfs-client-config-file";
-  public static final String HDFS_PURGE_INTERVAL = "purge-interval";
-  public static final String HDFS_MAJOR_COMPACTION = "major-compaction";
-  public static final String HDFS_MAJOR_COMPACTION_INTERVAL = "major-compaction-interval";
-  public static final String HDFS_MAJOR_COMPACTION_THREADS = "major-compaction-threads";
-  public static final String HDFS_MINOR_COMPACTION = "minor-compaction";
-  public static final String HDFS_MINOR_COMPACTION_THREADS = "minor-compaction-threads";   
-  
-  public static final String HDFS_TIME_FOR_FILE_ROLLOVER = "file-rollover-time-secs";
-  
-  protected static final String HDFS_WRITE_ONLY = "hdfs-write-only";
-  protected static final String HDFS_QUEUE_BATCH_SIZE = "batch-size-mb";
-  
   /** The name of the <code>compressor</code> attribute */
   protected static final String COMPRESSOR = "compressor";
   /** The name of the <code>off-heap</code> attribute
@@ -815,59 +791,59 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
     String location;
     if (SYSTEM_ID_3_0.equals(systemId) || PUBLIC_ID_3_0.equals(publicId)) {
       location = DTD_3_0_LOCATION;
-      version = CacheXmlVersion.VERSION_3_0;
+      version = CacheXmlVersion.GEMFIRE_3_0;
     }
     else if (SYSTEM_ID_4_0.equals(systemId) || PUBLIC_ID_4_0.equals(publicId)) {
       location = DTD_4_0_LOCATION;
-      version = CacheXmlVersion.VERSION_4_0;
+      version = CacheXmlVersion.GEMFIRE_4_0;
     }
     else if (SYSTEM_ID_4_1.equals(systemId) || PUBLIC_ID_4_1.equals(publicId)) {
       location = DTD_4_1_LOCATION;
-      version = CacheXmlVersion.VERSION_4_1;
+      version = CacheXmlVersion.GEMFIRE_4_1;
     }
     else if (SYSTEM_ID_5_0.equals(systemId) || PUBLIC_ID_5_0.equals(publicId)) {
       location = DTD_5_0_LOCATION;
-      version = CacheXmlVersion.VERSION_5_0;
+      version = CacheXmlVersion.GEMFIRE_5_0;
     }
     else if (SYSTEM_ID_5_1.equals(systemId) || PUBLIC_ID_5_1.equals(publicId)) {
       location = DTD_5_1_LOCATION;
-      version = CacheXmlVersion.VERSION_5_1;
+      version = CacheXmlVersion.GEMFIRE_5_1;
     }
     else if (SYSTEM_ID_5_5.equals(systemId) || PUBLIC_ID_5_5.equals(publicId)) {
       location = DTD_5_5_LOCATION;
-      version = CacheXmlVersion.VERSION_5_5;
+      version = CacheXmlVersion.GEMFIRE_5_5;
     }
     else if (SYSTEM_ID_5_7.equals(systemId) || PUBLIC_ID_5_7.equals(publicId)) {
       location = DTD_5_7_LOCATION;
-      version = CacheXmlVersion.VERSION_5_7;
+      version = CacheXmlVersion.GEMFIRE_5_7;
     }
     else if (SYSTEM_ID_5_8.equals(systemId) || PUBLIC_ID_5_8.equals(publicId)) {
       location = DTD_5_8_LOCATION;
-      version = CacheXmlVersion.VERSION_5_8;
+      version = CacheXmlVersion.GEMFIRE_5_8;
     }
     else if (SYSTEM_ID_6_0.equals(systemId) || PUBLIC_ID_6_0.equals(publicId)) {
       location = DTD_6_0_LOCATION;
-      version = CacheXmlVersion.VERSION_6_0;
+      version = CacheXmlVersion.GEMFIRE_6_0;
     }
     else if (SYSTEM_ID_6_1.equals(systemId) || PUBLIC_ID_6_1.equals(publicId)) {
       location = DTD_6_1_LOCATION;
-      version = CacheXmlVersion.VERSION_6_1;
+      version = CacheXmlVersion.GEMFIRE_6_1;
     }
     else if (SYSTEM_ID_6_5.equals(systemId) || PUBLIC_ID_6_5.equals(publicId)) {
       location = DTD_6_5_LOCATION;
-      version = CacheXmlVersion.VERSION_6_5;
+      version = CacheXmlVersion.GEMFIRE_6_5;
     }
     else if (SYSTEM_ID_6_6.equals(systemId) || PUBLIC_ID_6_6.equals(publicId)) {
       location = DTD_6_6_LOCATION;
-      version = CacheXmlVersion.VERSION_6_6;
+      version = CacheXmlVersion.GEMFIRE_6_6;
     }
     else if (SYSTEM_ID_7_0.equals(systemId) || PUBLIC_ID_7_0.equals(publicId)) {
       location = DTD_7_0_LOCATION;
-      version = CacheXmlVersion.VERSION_7_0;
+      version = CacheXmlVersion.GEMFIRE_7_0;
     }
     else if (SYSTEM_ID_8_0.equals(systemId) || PUBLIC_ID_8_0.equals(publicId)) {
       location = DTD_8_0_LOCATION;
-      version = CacheXmlVersion.VERSION_8_0;
+      version = CacheXmlVersion.GEMFIRE_8_0;
     }
     else {
       // Instruct the XML parser to open a URI connection to the

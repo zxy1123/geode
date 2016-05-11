@@ -60,16 +60,15 @@ import com.gemstone.gemfire.internal.cache.Oplog.OPLOG_TYPE;
 import com.gemstone.gemfire.test.dunit.ThreadUtils;
 import com.gemstone.gemfire.test.dunit.Wait;
 import com.gemstone.gemfire.test.dunit.WaitCriterion;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 import com.gemstone.gemfire.test.junit.categories.IntegrationTest;
 import com.jayway.awaitility.Awaitility;
 
 /**
  * Testing Oplog API's
- *
  */
 @Category(IntegrationTest.class)
-public class OplogJUnitTest extends DiskRegionTestingBase
-{
+public class OplogJUnitTest extends DiskRegionTestingBase {
   boolean proceed = false;
 
   private final DiskRegionProperties diskProps = new DiskRegionProperties();
@@ -610,8 +609,8 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //     region.remove(new Integer(2));
 //     assertNull(writer
 //         .getAsynchOpForEntryFromPendingFlushMap(entry2.getDiskId()));
-//     assertEquals(opSizeBeforeCreateRemove, dr.getChild().getOplogSize());
-//     assertEquals(pendingFlushSize, dr.getChild().getAsynchWriter()
+//     assertIndexDetailsEquals(opSizeBeforeCreateRemove, dr.getChild().getOplogSize());
+//     assertIndexDetailsEquals(pendingFlushSize, dr.getChild().getAsynchWriter()
 //         .getCurrentBufferedBytesSize());
 
 //     closeDown();
@@ -1112,7 +1111,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //       fail("exception not expected" + e);
 //       fail("The test failed as the oplog could not eb synched to disk");
 //     }
-//     assertEquals((this.numCreate + this.numDel + this.numModify),
+//     assertIndexDetailsEquals((this.numCreate + this.numDel + this.numModify),
 //         this.totalSuccessfulOperations);
 //     assertTrue(" The expected oplog size =" + inMemOplogSize
 //         + " Actual Oplog file size =" + actFileSize,
@@ -1297,7 +1296,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 // //       if (j < currentOplogID) {
 // //         // oplogs are now closed to save memory and file descriptors
 // //         // once they are no longer needed
-// //         assertEquals(null, oplog);
+// //         assertIndexDetailsEquals(null, oplog);
 // //       } else {
 //         inMemOplogSize += oplog.getOplogSize();
 //         logWriter.info(" Oplog size="+ oplog.getOplogSize() + " Max Oplog size acceptable="+MAX_OPLOG_SIZE );
@@ -1320,7 +1319,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //         assertTrue(
 //                    " The max Oplog Size limit is violated when taken the actual file size",
 //                    oplog.getActualFileLength() <= MAX_OPLOG_SIZE);
-//         assertEquals(oplog.getOplogSize(), oplog.getActualFileLength());
+//         assertIndexDetailsEquals(oplog.getOplogSize(), oplog.getActualFileLength());
 // //       }
 //     }
 
@@ -1330,7 +1329,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //         + this.expectedOplogSize + " Actual sizes of all oplogs ="
 //         + inMemOplogSize, this.expectedOplogSize == inMemOplogSize);
 
-//     assertEquals((this.numCreate + this.numDel + this.numModify),
+//     assertIndexDetailsEquals((this.numCreate + this.numDel + this.numModify),
 //         this.totalSuccessfulOperations);
 //     closeDown();
 
@@ -1413,7 +1412,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 // //       if (j < currentOplogID) {
 // //         // oplogs are now closed to save memory and file descriptors
 // //         // once they are no longer needed
-// //         assertEquals(null, oplog);
+// //         assertIndexDetailsEquals(null, oplog);
 // //       } else {
 //         inMemOplogSize += oplog.getOplogSize();
 //         //oplog.forceFlush();
@@ -1434,7 +1433,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //         assertTrue(
 //                    " The max Oplog Size limit is violated when taken the actual file size",
 //                    oplog.getActualFileLength() <= MAX_OPLOG_SIZE);
-//         assertEquals(oplog.getOplogSize(), oplog.getActualFileLength());
+//         assertIndexDetailsEquals(oplog.getOplogSize(), oplog.getActualFileLength());
 // //       }
 //     }
 
@@ -1443,7 +1442,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //     assertTrue(" The sum of all oplogs size as expected  ="
 //         + this.expectedOplogSize + " Actual sizes of all oplogs ="
 //         + inMemOplogSize, this.expectedOplogSize == inMemOplogSize);
-//     assertEquals((this.numCreate + this.numDel + this.numModify),
+//     assertIndexDetailsEquals((this.numCreate + this.numDel + this.numModify),
 //         this.totalSuccessfulOperations);
 //     assertFalse(failureCause, testFailed);
 //     closeDown();
@@ -1576,7 +1575,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //     long currentOplogID = currOplog.getOplogId();
 //     long expectedSize = currOplog.getOplogSize();
 //     // Ensure that now switching has happned during the operations
-//     assertEquals(1, currentOplogID);
+//     assertIndexDetailsEquals(1, currentOplogID);
 //     assertTrue(
 //         "The number of operations did not cause asynch writer to run atleast once , the expected file size = "
 //             + expectedSize, expectedSize > 1000);
@@ -2175,11 +2174,11 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //     Oplog.ByteBufferPool pool = (Oplog.ByteBufferPool)bbPools.get(1);
 //     ByteBuffer bb1 = pool.getBufferFromPool();
 //     ByteBuffer bb2 = pool.getBufferFromPool();
-//     assertEquals(2, pool.getTotalBuffers());
-//     assertEquals(2, pool.getBuffersInUse());
+//     assertIndexDetailsEquals(2, pool.getTotalBuffers());
+//     assertIndexDetailsEquals(2, pool.getBuffersInUse());
 //     ((LocalRegion)region).getDiskRegion().getChild().releaseBuffer(bb1);
 //     ((LocalRegion)region).getDiskRegion().getChild().releaseBuffer(bb2);
-//     assertEquals(0, pool.getBuffersInUse());
+//     assertIndexDetailsEquals(0, pool.getBuffersInUse());
 //     region.close();
 
 //     System.setProperty("/testRegion_MAX_POOL_SIZE", "1");
@@ -2192,11 +2191,11 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //     pool = (Oplog.ByteBufferPool)bbPools.get(1);
 //     bb1 = pool.getBufferFromPool();
 //     bb2 = pool.getBufferFromPool();
-//     assertEquals(1, pool.getTotalBuffers());
-//     assertEquals(1, pool.getBuffersInUse());
+//     assertIndexDetailsEquals(1, pool.getTotalBuffers());
+//     assertIndexDetailsEquals(1, pool.getBuffersInUse());
 //     ((LocalRegion)region).getDiskRegion().getChild().releaseBuffer(bb1);
 //     ((LocalRegion)region).getDiskRegion().getChild().releaseBuffer(bb2);
-//     assertEquals(0, pool.getBuffersInUse());
+//     assertIndexDetailsEquals(0, pool.getBuffersInUse());
 //     closeDown();
 
 //   }
@@ -2554,7 +2553,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
     //((LocalRegion)region).getDiskRegion().getChild().forceFlush();
 //     int x = ((LocalRegion)region).getDiskRegion().getChild().getAsynchWriter()
 //         .getApproxFreeBuffers();
-//     assertEquals(10, x);
+//     assertIndexDetailsEquals(10, x);
   }
 
   // we no longer have a pendingFlushMap
@@ -2622,7 +2621,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //         if (!proceedForValidation) {
 //           try {
 //             OplogJUnitTest.class.wait(9000);
-//             assertEquals(true, proceedForValidation);
+//             assertIndexDetailsEquals(true, proceedForValidation);
 //           }
 //           catch (InterruptedException e) {
 //             fail("interrupted");
@@ -2632,7 +2631,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //     }
 
 //     cache.getLogger().info("valueRead : " + valueRead);
-//     assertEquals("valueRead is stale, doesnt match with latest PUT", NEW_VALUE,
+//     assertIndexDetailsEquals("valueRead is stale, doesnt match with latest PUT", NEW_VALUE,
 //         valueRead);
 //     LocalRegion.ISSUE_CALLBACKS_TO_CACHE_OBSERVER = false;
 //     CacheObserverHolder.setInstance(old);
@@ -3420,9 +3419,9 @@ public class OplogJUnitTest extends DiskRegionTestingBase
    * Tests reduction in size of disk stats 
    * when the oplog is rolled.
    */
+  @Category(FlakyTest.class) // GEODE-527: jvm sizing sensitive, non-thread-safe test hooks, time sensitive
   @Test
-  public void testStatsSizeReductionOnRolling() throws Exception 
-  {
+  public void testStatsSizeReductionOnRolling() throws Exception {
     final int MAX_OPLOG_SIZE = 500*2;
     diskProps.setMaxOplogSize(MAX_OPLOG_SIZE);
     diskProps.setPersistBackup(true);
@@ -3445,6 +3444,8 @@ public class OplogJUnitTest extends DiskRegionTestingBase
     final int key3_size = DiskOfflineCompactionJUnitTest.getSize4Create(extra_byte_num_per_entry, "key3", val);
     final int tombstone_key1 = DiskOfflineCompactionJUnitTest.getSize4TombstoneWithKey(extra_byte_num_per_entry, "key1");
     final int tombstone_key2 = DiskOfflineCompactionJUnitTest.getSize4TombstoneWithKey(extra_byte_num_per_entry, "key2");
+
+    // TODO: move static methods from DiskOfflineCompactionJUnitTest to shared util class
 
     CacheObserver old = CacheObserverHolder
           .setInstance(new CacheObserverAdapter() {
@@ -3553,7 +3554,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
    * Tests stats verification with rolling enabled
    */
 //   @Test
-//  public void testSizeStatsAfterRecreationWithRollingEnabled() throws Exception 
+//  public void testSizeStatsAfterRecreationWithRollingEnabled() throws Exception
 //   {
 //     final int MAX_OPLOG_SIZE = 500;
 //     diskProps.setMaxOplogSize(MAX_OPLOG_SIZE);
@@ -3630,7 +3631,7 @@ public class OplogJUnitTest extends DiskRegionTestingBase
 //         size2 += dh.getDirStatsDiskSpaceUsage();
 //       }
 //       System.out.println("Size after recreation= "+ size2);
-//       assertEquals(size1, size2);
+//       assertIndexDetailsEquals(size1, size2);
 //       region.close();
       
 //     }

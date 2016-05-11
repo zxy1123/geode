@@ -153,7 +153,7 @@ public class DurableClientTestCase extends DistributedTestCase {
         assertTrue(proxy.isDurable());
         assertEquals(durableClientId, proxy.getDurableId());
         assertEquals(DistributionConfig.DEFAULT_DURABLE_CLIENT_TIMEOUT, proxy.getDurableTimeout());
-        //assertEquals(DistributionConfig.DEFAULT_DURABLE_CLIENT_KEEP_ALIVE, proxy.getDurableKeepAlive());
+        //assertIndexDetailsEquals(DistributionConfig.DEFAULT_DURABLE_CLIENT_KEEP_ALIVE, proxy.getDurableKeepAlive());
       }
     });
     
@@ -216,7 +216,7 @@ public class DurableClientTestCase extends DistributedTestCase {
 
           assertEquals(dId, proxy.getDurableId());
           assertEquals(DistributionConfig.DEFAULT_DURABLE_CLIENT_TIMEOUT, proxy.getDurableTimeout());
-          // assertEquals(DistributionConfig.DEFAULT_DURABLE_CLIENT_KEEP_ALIVE, proxy.getDurableKeepAlive());
+          // assertIndexDetailsEquals(DistributionConfig.DEFAULT_DURABLE_CLIENT_KEEP_ALIVE, proxy.getDurableKeepAlive());
         }
       });
 
@@ -339,7 +339,7 @@ public class DurableClientTestCase extends DistributedTestCase {
         assertTrue(proxy.isDurable());
         assertEquals(durableClientId, proxy.getDurableId());
         assertEquals(durableClientTimeout, proxy.getDurableTimeout());
-        //assertEquals(durableClientKeepAlive, proxy.getDurableKeepAlive());
+        //assertIndexDetailsEquals(durableClientKeepAlive, proxy.getDurableKeepAlive());
       }
     });
     
@@ -420,7 +420,7 @@ public class DurableClientTestCase extends DistributedTestCase {
         assertTrue(proxy.isDurable());
         assertEquals(durableClientId, proxy.getDurableId());
         assertEquals(durableClientTimeout, proxy.getDurableTimeout());
-        //assertEquals(durableClientKeepAlive, proxy.getDurableKeepAlive());
+        //assertIndexDetailsEquals(durableClientKeepAlive, proxy.getDurableKeepAlive());
       }
     });
     
@@ -1475,7 +1475,6 @@ public class DurableClientTestCase extends DistributedTestCase {
       CountDownLatch clientConnected = new CountDownLatch(1);
       
       public void doTestHook(String spot) {
-        System.out.println("JASON " + spot);
         try {
           if (spot.equals("CLIENT_PRE_RECONNECT")) {
             if (!reconnectLatch.await(60, TimeUnit.SECONDS)) {

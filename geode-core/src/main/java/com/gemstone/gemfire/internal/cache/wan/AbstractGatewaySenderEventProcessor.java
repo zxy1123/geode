@@ -629,8 +629,7 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
             logBatchFine("During normal processing, dispatching the following ", conflatedEventsToBeDispatched);
           }
           
-          boolean success = this.dispatcher.dispatchBatch(conflatedEventsToBeDispatched,
-              sender.isRemoveFromQueueOnException(), false);
+          boolean success = this.dispatcher.dispatchBatch(conflatedEventsToBeDispatched, false);
           if (success) {
             if (isDebugEnabled) {
               logger.debug("During normal processing, successfully dispatched {} events (batch #{})",
@@ -673,8 +672,7 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
             } else {
               handleUnSuccessfulBatchDispatch(events);
               if (!resetLastPeekedEvents) {
-                while (!this.dispatcher.dispatchBatch(conflatedEventsToBeDispatched,
-                    sender.isRemoveFromQueueOnException(), true)) {
+                while (!this.dispatcher.dispatchBatch(conflatedEventsToBeDispatched, true)) {
                   if (isDebugEnabled) {
                     logger.debug("During normal processing, unsuccessfully dispatched {} events (batch #{})",
                         conflatedEventsToBeDispatched.size(), getBatchId());
@@ -818,10 +816,12 @@ public abstract class AbstractGatewaySenderEventProcessor extends Thread {
     if (pdxRegion != null && pdxRegion.size() != pdxEventsMap.size()) {
       for (Map.Entry<Object, Object> typeEntry : pdxRegion.entrySet()) {
         if(!pdxEventsMap.containsKey(typeEntry.getKey())){
+          // event should never be off-heap so it does not need to be released
           EntryEventImpl event = EntryEventImpl.create(
               (LocalRegion) pdxRegion, Operation.UPDATE,
               typeEntry.getKey(), typeEntry.getValue(), null, false,
               cache.getMyId());
+          event.disallowOffHeapValues();
           event.setEventId(new EventID(cache.getSystem()));
           List<Integer> allRemoteDSIds = new ArrayList<Integer>();
           for (GatewaySender sender : cache.getGatewaySenders()) {

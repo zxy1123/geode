@@ -16,10 +16,10 @@
  */
 package com.gemstone.gemfire.pdx;
 
-import java.io.File;
 import java.util.Properties;
 
-import com.gemstone.gemfire.distributed.Locator;
+import org.junit.experimental.categories.Category;
+
 import com.gemstone.gemfire.distributed.internal.DistributionConfig;
 import com.gemstone.gemfire.distributed.internal.DistributionManager;
 import com.gemstone.gemfire.distributed.internal.InternalDistributedSystem;
@@ -29,14 +29,17 @@ import com.gemstone.gemfire.test.dunit.Host;
 import com.gemstone.gemfire.test.dunit.IgnoredException;
 import com.gemstone.gemfire.test.dunit.SerializableCallable;
 import com.gemstone.gemfire.test.dunit.VM;
+import com.gemstone.gemfire.test.junit.categories.FlakyTest;
 
-/**
- *
- */
 public class DistributedSystemIdDUnitTest extends DistributedTestCase {
   
   public DistributedSystemIdDUnitTest(String name) {
     super(name);
+  }
+
+  @Override
+  public void preSetUp() {
+    disconnectAllFromDS(); // GEODE-558 test fails due to infection from another test
   }
 
   public void testMatchingIds() {
@@ -55,9 +58,7 @@ public class DistributedSystemIdDUnitTest extends DistributedTestCase {
     
   }
   
-  
-
-  public void testInfectousId() {
+  public void testInfectiousId() {
     Host host = Host.getHost(0);
     VM vm0 = host.getVM(0);
     VM vm1 = host.getVM(1);
