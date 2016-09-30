@@ -1,9 +1,9 @@
-package org.apache.geode.container;
+package org.apache.geode.e2e.container;
 
 import static com.google.common.base.Charsets.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.spotify.docker.client.DefaultDockerClient;
@@ -78,7 +78,11 @@ public class DockerCluster {
       };
 
       String id = startContainer(i);
-      execCommand(id, command);
+      execCommand(id, true, null, command);
+
+      while (gfshCommand(null, null) != 0) {
+        Thread.sleep(250);
+      }
     }
 
     locatorAddress = String.format("%s[10334]", docker.inspectContainer(nodeIds.get(0)).networkSettings().ipAddress());
@@ -94,25 +98,71 @@ public class DockerCluster {
       };
 
       String id = startContainer(i);
-      execCommand(id, command);
+      execCommand(id, true, null, command);
+    }
+
+    int runningServers = 0;
+    while (runningServers != serverCount) {
+      Thread.sleep(200);
+
+      List<String> cmdOutput = new ArrayList<>();
+
+      ResultCallback cb = line -> cmdOutput.add(line);
+      gfshCommand("list members", cb);
+
+      runningServers = 0;
+      for (int i = 0; i < serverCount; i++) {
+        String server = String.format("%s-server-%d", name, i);
+        for (String s : cmdOutput) {
+          if (s.startsWith(server)) {
+            runningServers++;
+          }
+        }
+      }
     }
   }
 
-  public int gfshCommand(String command) throws DockerException, InterruptedException {
+  public int gfshCommand(String command, ResultCallback callback) throws DockerException, InterruptedException {
     String locatorId = nodeIds.get(0);
-    List<String> gfshCmd = Arrays.asList(command);
-    gfshCmd.add(0, "/tmp/work/bin/gfsh");
-    return execCommand(locatorId, gfshCmd.toArray(new String[]{}));
+    List<String> gfshCmd = new ArrayList<>();
+    Collections.addAll(gfshCmd, "/tmp/work/bin/gfsh", "-e", "connect --jmx-locator=localhost[1099]");
+
+    if (command != null) {
+      Collections.addAll(gfshCmd, "-e", command);
+    }
+
+    return execCommand(locatorId, false, callback, gfshCmd.toArray(new String[]{}));
   }
 
-  public int execCommand(String id, String... command) throws DockerException, InterruptedException {
-    String execId = docker.execCreate(id, command, DockerClient.ExecCreateParam.attachStdout(), DockerClient.ExecCreateParam
-      .attachStderr());
+  public int execCommand(String id, boolean startDetached,
+                         ResultCallback callback, String... command) throws DockerException, InterruptedException {
+    List<DockerClient.ExecCreateParam> execParams = new ArrayList<>();
+    execParams.add(DockerClient.ExecCreateParam.attachStdout());
+    execParams.add(DockerClient.ExecCreateParam.attachStderr());
+    execParams.add(DockerClient.ExecCreateParam.detach(startDetached));
+
+    String execId = docker.execCreate(id, command, execParams.toArray(new DockerClient.ExecCreateParam[]{}));
     LogStream output = docker.execStart(execId);
 
+    if (startDetached) {
+      return 0;
+    }
+
+    StringBuilder buffer = new StringBuilder();
     while (output.hasNext()) {
-      System.out.print(UTF_8.decode(output.next().content()));
-      System.out.flush();
+      String multiLine = UTF_8.decode(output.next().content()).toString();
+      buffer.append(multiLine);
+
+      if (buffer.indexOf("\n") >= 0) {
+        int n;
+        while ((n = buffer.indexOf("\n")) >=0 ) {
+          System.out.println("[gfsh]: " + buffer.substring(0, n));
+          if (callback != null) {
+            callback.call(buffer.substring(0, n));
+          }
+          buffer = new StringBuilder(buffer.substring(n + 1));
+        }
+      }
     }
 
     return docker.execInspect(execId).exitCode();

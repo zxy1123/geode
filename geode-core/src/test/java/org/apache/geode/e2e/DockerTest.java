@@ -1,4 +1,4 @@
-package org.apache.geode;
+package org.apache.geode.e2e;
 
 import static org.junit.Assert.*;
 
@@ -6,7 +6,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.geode.container.DockerCluster;
+import org.apache.geode.e2e.container.DockerCluster;
 
 public class DockerTest {
 
@@ -14,7 +14,7 @@ public class DockerTest {
 
   @Before
   public void setup() throws Exception {
-    cluster = new DockerCluster("testy", 2);
+    cluster = new DockerCluster("testy", 1);
   }
 
   @After
@@ -22,24 +22,22 @@ public class DockerTest {
     cluster.stop();
   }
 
-//  @Test
+  @Test
   public void sanity() throws Exception {
     cluster.start();
     assertNotNull("Locator address is null", cluster.getLocatorAddress());
   }
 
-//  @Test
+  @Test
   public void testInvalidGfshCommand() throws Exception {
     String id = cluster.startContainer(0);
-    int r = cluster.execCommand(id, new String[] { "/tmp/work/bin/gfsh", "startx" });
+    int r = cluster.execCommand(id, false, null, new String[] { "/tmp/work/bin/gfsh", "startx" });
     assertEquals(1, r);
   }
 
   @Test
   public void testCreateRegion() throws Exception {
     cluster.start();
-    cluster.gfshCommand("create region --name=FOO --type=REPLICATE");
-    cluster.gfshCommand("list regions");
+    cluster.gfshCommand("create region --name=FOO --type=REPLICATE", null);
   }
-
 }
