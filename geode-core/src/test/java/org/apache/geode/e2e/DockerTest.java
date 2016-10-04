@@ -14,7 +14,9 @@ public class DockerTest {
 
   @Before
   public void setup() throws Exception {
-    cluster = new DockerCluster("testy", 1);
+    cluster = new DockerCluster("testy");
+    cluster.setLocatorCount(1);
+    cluster.setServerCount(2);
   }
 
   @After
@@ -25,11 +27,11 @@ public class DockerTest {
   @Test
   public void sanity() throws Exception {
     cluster.start();
-    assertNotNull("Locator address is null", cluster.getLocatorAddress());
+    assertNotNull("Locator host is null", cluster.getLocatorHost());
   }
 
   @Test
-  public void testInvalidGfshCommand() throws Exception {
+  public void testInvalidGfshCommandReturnsNonZero() throws Exception {
     String id = cluster.startContainer(0);
     int r = cluster.execCommand(id, false, null, new String[] { "/tmp/work/bin/gfsh", "startx" });
     assertEquals(1, r);

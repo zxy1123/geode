@@ -72,6 +72,7 @@ subprojects {
     testCompile 'org.jmock:jmock-legacy:' + project.'jmock.version'
     testCompile 'pl.pragmatists:JUnitParams:' + project.'JUnitParams.version'
     testCompile 'com.spotify:docker-client:5.0.2'
+    testCompile 'org.jbehave:jbehave-core:4.0.5'
     
     testRuntime 'cglib:cglib:' + project.'cglib.version'
     testRuntime 'org.ow2.asm:asm:' + project.'asm.version'

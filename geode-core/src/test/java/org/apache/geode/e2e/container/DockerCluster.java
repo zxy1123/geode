@@ -4,15 +4,20 @@ import static com.google.common.base.Charsets.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.exceptions.DockerException;
+import com.spotify.docker.client.messages.Container;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.HostConfig;
+import com.spotify.docker.client.messages.NetworkSettings;
+import com.spotify.docker.client.messages.PortBinding;
 
 public class DockerCluster {
 
@@ -21,20 +26,23 @@ public class DockerCluster {
   private int serverCount;
   private String name;
   private List<String> nodeIds;
-  private String locatorAddress;
+  private String locatorHost;
+  private int locatorPort;
 
-  public DockerCluster(String name, int serverCount) {
-    this(name, 1, serverCount);
-  }
-
-  public DockerCluster(String name, int locatorCount, int serverCount) {
+  public DockerCluster(String name) {
     docker = DefaultDockerClient.builder().
       uri("unix:///var/run/docker.sock").build();
 
     this.name = name;
-    this.locatorCount = locatorCount;
-    this.serverCount = serverCount;
     this.nodeIds = new ArrayList<>();
+  }
+
+  public void setServerCount(int count) {
+    this.serverCount = count;
+  }
+
+  public void setLocatorCount(int count) {
+    this.locatorCount = count;
   }
 
   public void start() throws Exception {
@@ -43,17 +51,27 @@ public class DockerCluster {
   }
 
   public String startContainer(int index) throws DockerException, InterruptedException {
+    return startContainer(index, new HashMap<>());
+  }
+
+  public String startContainer(int index, Map<String, List<PortBinding>> portBindings) throws DockerException, InterruptedException {
     String geodeHome = System.getenv("GEODE_HOME");
+    if (geodeHome == null) {
+      throw new IllegalStateException("GEODE_HOME environment variable is not set");
+    }
+
     String vol = String.format("%s:/tmp/work", geodeHome);
 
     HostConfig hostConfig = HostConfig.
       builder().
+      portBindings(portBindings).
       appendBinds(vol).
       build();
 
     ContainerConfig config = ContainerConfig.builder().
       image("gemfire/ubuntu-gradle").
       openStdin(true).
+      exposedPorts(portBindings.keySet()).
       hostname(String.format("%s-%d", name, index)).
       hostConfig(hostConfig).
       workingDir("/tmp").
@@ -77,7 +95,12 @@ public class DockerCluster {
         String.format("--name=%s-locator-%d", name, i)
       };
 
-      String id = startContainer(i);
+      Map<String, List<PortBinding>> ports = new HashMap<>();
+      List<PortBinding> binding = new ArrayList<>();
+      binding.add(PortBinding.of("HostPort", (10334 + i) + ""));
+      ports.put((10334 + i) + "/tcp", binding);
+
+      String id = startContainer(i, ports);
       execCommand(id, true, null, command);
 
       while (gfshCommand(null, null) != 0) {
@@ -85,19 +108,28 @@ public class DockerCluster {
       }
     }
 
-    locatorAddress = String.format("%s[10334]", docker.inspectContainer(nodeIds.get(0)).networkSettings().ipAddress());
+    // Let's get the host port which is mapped to the container 10334 port
+    NetworkSettings networks = docker.inspectContainer(nodeIds.get(0)).networkSettings();
+    locatorPort = Integer.parseInt(networks.ports().get("10334/tcp").get(0).hostPort());
   }
 
   public void startServers() throws DockerException, InterruptedException {
-    for (int i = 0; i < serverCount+1; i++) {
+    String locatorAddress = String.format("%s[10334]", docker.inspectContainer(nodeIds.get(0)).networkSettings().ipAddress());
+    for (int i = 0; i < serverCount; i++) {
       String[] command = {
         "/tmp/work/bin/gfsh",
         "start server",
         String.format("--name=%s-server-%d", name, i),
-        String.format("--locators=%s", locatorAddress)
+        String.format("--locators=%s", locatorAddress),
+        "--hostname-for-clients=localhost"
       };
 
-      String id = startContainer(i);
+      Map<String, List<PortBinding>> ports = new HashMap<>();
+      List<PortBinding> binding = new ArrayList<>();
+      binding.add(PortBinding.of("HostPort", (40404 + i) + ""));
+      ports.put((40404 + i) + "/tcp", binding);
+
+      String id = startContainer(i, ports);
       execCommand(id, true, null, command);
     }
 
@@ -122,6 +154,10 @@ public class DockerCluster {
     }
   }
 
+  public int gfshCommand(String command) throws DockerException, InterruptedException {
+    return gfshCommand(command, null);
+  }
+
   public int gfshCommand(String command, ResultCallback callback) throws DockerException, InterruptedException {
     String locatorId = nodeIds.get(0);
     List<String> gfshCmd = new ArrayList<>();
@@ -137,14 +173,20 @@ public class DockerCluster {
   public int execCommand(String id, boolean startDetached,
                          ResultCallback callback, String... command) throws DockerException, InterruptedException {
     List<DockerClient.ExecCreateParam> execParams = new ArrayList<>();
-    execParams.add(DockerClient.ExecCreateParam.attachStdout());
-    execParams.add(DockerClient.ExecCreateParam.attachStderr());
-    execParams.add(DockerClient.ExecCreateParam.detach(startDetached));
+
+    if (startDetached) {
+      execParams.add(DockerClient.ExecCreateParam.detach(startDetached));
+    } else {
+      execParams.add(DockerClient.ExecCreateParam.attachStdout());
+      execParams.add(DockerClient.ExecCreateParam.attachStderr());
+    }
 
     String execId = docker.execCreate(id, command, execParams.toArray(new DockerClient.ExecCreateParam[]{}));
+
     LogStream output = docker.execStart(execId);
 
     if (startDetached) {
+      output.close();
       return 0;
     }
 
@@ -155,7 +197,7 @@ public class DockerCluster {
 
       if (buffer.indexOf("\n") >= 0) {
         int n;
-        while ((n = buffer.indexOf("\n")) >=0 ) {
+        while ((n = buffer.indexOf("\n")) >= 0) {
           System.out.println("[gfsh]: " + buffer.substring(0, n));
           if (callback != null) {
             callback.call(buffer.substring(0, n));
@@ -164,6 +206,8 @@ public class DockerCluster {
         }
       }
     }
+
+    output.close();
 
     return docker.execInspect(execId).exitCode();
   }
@@ -176,7 +220,22 @@ public class DockerCluster {
     docker.close();
   }
 
-  public String getLocatorAddress() {
-    return locatorAddress;
+  public String getLocatorHost() {
+    return locatorHost;
+  }
+
+  public int getLocatorPort() {
+    return locatorPort;
+  }
+
+  public static void scorch() throws DockerException, InterruptedException {
+    DockerClient docker = DefaultDockerClient.builder().
+      uri("unix:///var/run/docker.sock").build();
+
+    List<Container> containers = docker.listContainers();
+    for (Container c : containers) {
+      docker.stopContainer(c.id(), 0);
+      docker.removeContainer(c.id());
+    }
   }
 }
