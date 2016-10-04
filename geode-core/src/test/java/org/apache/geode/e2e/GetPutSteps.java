@@ -1,8 +1,11 @@
 package org.apache.geode.e2e;
 
+import static org.apache.geode.internal.cache.execute.DistributedRegionFunctionExecutionDUnitTest.region;
+import static org.bouncycastle.crypto.tls.ConnectionEnd.client;
 import static org.junit.Assert.assertEquals;
 
 import com.spotify.docker.client.exceptions.DockerException;
+import org.apache.geode.cache.CacheClosedException;
 import org.apache.geode.cache.CacheFactory;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.client.ClientCache;
@@ -22,6 +25,7 @@ public class GetPutSteps {
 
   @BeforeStories
   public void teardownContainers() throws DockerException, InterruptedException {
+    // Stop and delete all current containers
     DockerCluster.scorch();
   }
 
@@ -47,12 +51,14 @@ public class GetPutSteps {
     cluster.gfshCommand(String.format("create region --name=%s --type=%s", name, type));
   }
 
+  @Given("server $idx is killed")
+  public void killServer(int idx) throws Exception {
+    cluster.killServer(idx);
+  }
+
   @When("I put $count entries into region $name")
   public void when(int count, String name) throws Exception {
-    ClientCache cache = new ClientCacheFactory().
-      set("log-level", "warn").
-      addPoolLocator("localhost", cluster.getLocatorPort()).
-      create();
+    ClientCache cache = getClientCache();
     Region region = cache.createClientRegionFactory(ClientRegionShortcut.PROXY).create(name);
     for (int i = 0; i < count; i++) {
       region.put("key_" + i, "value_" + i);
@@ -61,11 +67,29 @@ public class GetPutSteps {
 
   @Then("I can get $count entries from region $name")
   public void then(int count, String name) throws Exception {
-    Region region = CacheFactory.getAnyInstance().getRegion(name);
+    ClientCache cache = getClientCache();
+    Region region = cache.getRegion(name);
 
     for (int i = 0; i < count; i++) {
       assertEquals("value_" + i, region.get("key_" + i));
     }
+  }
+
+  private ClientCache getClientCache() {
+    ClientCache cache;
+    try {
+      cache = ClientCacheFactory.getAnyInstance();
+      return cache;
+    } catch (CacheClosedException ignored) {
+      // ignored
+    }
+
+    cache = new ClientCacheFactory().
+      set("log-level", "fine").
+      addPoolLocator("localhost", cluster.getLocatorPort()).
+      create();
+
+    return cache;
   }
 }
 

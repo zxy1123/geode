@@ -18,6 +18,7 @@ import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.HostConfig;
 import com.spotify.docker.client.messages.NetworkSettings;
 import com.spotify.docker.client.messages.PortBinding;
+import com.sun.javaws.exceptions.InvalidArgumentException;
 
 public class DockerCluster {
 
@@ -226,6 +227,15 @@ public class DockerCluster {
 
   public int getLocatorPort() {
     return locatorPort;
+  }
+
+  public void killServer(int idx) throws DockerException, InterruptedException {
+    String id = nodeIds.get(idx + locatorCount);
+    if (id == null) {
+      throw new IllegalArgumentException("Could not find server with index: " + idx);
+    }
+    docker.killContainer(id);
+    docker.removeContainer(id);
   }
 
   public static void scorch() throws DockerException, InterruptedException {
