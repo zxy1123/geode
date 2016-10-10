@@ -1,12 +1,9 @@
 package org.apache.geode.e2e;
 
-import static org.apache.geode.internal.cache.execute.DistributedRegionFunctionExecutionDUnitTest.region;
-import static org.bouncycastle.crypto.tls.ConnectionEnd.client;
 import static org.junit.Assert.assertEquals;
 
 import com.spotify.docker.client.exceptions.DockerException;
 import org.apache.geode.cache.CacheClosedException;
-import org.apache.geode.cache.CacheFactory;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.cache.client.ClientCacheFactory;
@@ -51,6 +48,11 @@ public class GetPutSteps {
     cluster.gfshCommand(String.format("create region --name=%s --type=%s", name, type));
   }
 
+  @Given(value = "region $name is created as $type with redundancy $redundancy", priority = 1)
+  public void createRegionWithRedundancy(String name, String type, Integer redundancy) throws Exception {
+    cluster.gfshCommand(String.format("create region --name=%s --type=%s --redundancy=%d", name, type, redundancy));
+  }
+
   @Given("server $idx is killed")
   public void killServer(int idx) throws Exception {
     cluster.killServer(idx);
@@ -70,6 +72,7 @@ public class GetPutSteps {
     ClientCache cache = getClientCache();
     Region region = cache.getRegion(name);
 
+    assertEquals(count, region.keySetOnServer().size());
     for (int i = 0; i < count; i++) {
       assertEquals("value_" + i, region.get("key_" + i));
     }
@@ -85,7 +88,7 @@ public class GetPutSteps {
     }
 
     cache = new ClientCacheFactory().
-      set("log-level", "fine").
+      set("log-level", "warn").
       addPoolLocator("localhost", cluster.getLocatorPort()).
       create();
 

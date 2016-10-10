@@ -11,6 +11,7 @@ import java.util.Map;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogStream;
+import com.spotify.docker.client.exceptions.ContainerNotFoundException;
 import com.spotify.docker.client.exceptions.DockerException;
 import com.spotify.docker.client.messages.Container;
 import com.spotify.docker.client.messages.ContainerConfig;
@@ -18,7 +19,6 @@ import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.HostConfig;
 import com.spotify.docker.client.messages.NetworkSettings;
 import com.spotify.docker.client.messages.PortBinding;
-import com.sun.javaws.exceptions.InvalidArgumentException;
 
 public class DockerCluster {
 
@@ -93,13 +93,18 @@ public class DockerCluster {
       String[] command = {
         "/tmp/work/bin/gfsh",
         "start locator",
-        String.format("--name=%s-locator-%d", name, i)
+        String.format("--name=%s-locator-%d", name, i),
+        "--J=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
       };
 
       Map<String, List<PortBinding>> ports = new HashMap<>();
       List<PortBinding> binding = new ArrayList<>();
       binding.add(PortBinding.of("HostPort", (10334 + i) + ""));
       ports.put((10334 + i) + "/tcp", binding);
+
+      List<PortBinding> debugBinding = new ArrayList<>();
+      debugBinding.add(PortBinding.of("HostPort", (5005 + i) + ""));
+      ports.put("5005/tcp", debugBinding);
 
       String id = startContainer(i, ports);
       execCommand(id, true, null, command);
@@ -117,18 +122,25 @@ public class DockerCluster {
   public void startServers() throws DockerException, InterruptedException {
     String locatorAddress = String.format("%s[10334]", docker.inspectContainer(nodeIds.get(0)).networkSettings().ipAddress());
     for (int i = 0; i < serverCount; i++) {
+      String serverPort = Integer.toString(40404 + i);
       String[] command = {
         "/tmp/work/bin/gfsh",
         "start server",
         String.format("--name=%s-server-%d", name, i),
-        String.format("--locators=%s", locatorAddress),
-        "--hostname-for-clients=localhost"
+        "--locators=" + locatorAddress,
+        "--server-port=" + serverPort,
+        "--hostname-for-clients=localhost",
+        "--J=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
       };
 
       Map<String, List<PortBinding>> ports = new HashMap<>();
       List<PortBinding> binding = new ArrayList<>();
-      binding.add(PortBinding.of("HostPort", (40404 + i) + ""));
-      ports.put((40404 + i) + "/tcp", binding);
+      binding.add(PortBinding.of("HostPort", serverPort));
+      ports.put(serverPort + "/tcp", binding);
+
+      List<PortBinding> debugBinding = new ArrayList<>();
+      debugBinding.add(PortBinding.of("HostPort", (5005 + i + locatorCount) + ""));
+      ports.put("5005/tcp", debugBinding);
 
       String id = startContainer(i, ports);
       execCommand(id, true, null, command);
@@ -215,8 +227,12 @@ public class DockerCluster {
 
   public void stop() throws DockerException, InterruptedException {
     for (String id : nodeIds) {
-      docker.killContainer(id);
-      docker.removeContainer(id);
+      try {
+        docker.killContainer(id);
+        docker.removeContainer(id);
+      } catch (ContainerNotFoundException nex) {
+        // Ignored because a container may have already been killed by the test
+      }
     }
     docker.close();
   }
