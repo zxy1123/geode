@@ -36,7 +36,7 @@ public class GetPutSteps {
     cluster.stop();
   }
 
-  @Given("cluster is started with $locators locators and $servers servers")
+  @Given("cluster is started with $locators locator{s|} and $servers servers")
   public void startCluster(int locatorCount, int serverCount) throws Exception {
     cluster.setLocatorCount(locatorCount);
     cluster.setServerCount(serverCount);
