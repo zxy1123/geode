@@ -2,6 +2,11 @@ package org.apache.geode.e2e.container;
 
 import static com.google.common.base.Charsets.*;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,8 +34,21 @@ public class DockerCluster {
   private List<String> nodeIds;
   private String locatorHost;
   private int locatorPort;
+  private final String geodeHome;
+  private final String scratchDir;
 
-  public DockerCluster(String name) {
+  private static final String SCRATCH_DIR_BASENAME = "scratch";
+
+  public DockerCluster(String name) throws IOException {
+    geodeHome = System.getenv("GEODE_HOME");
+    if (geodeHome == null) {
+      throw new IllegalStateException("GEODE_HOME environment variable is not set");
+    }
+
+    Path scratch = Files.createDirectory(Paths.get(geodeHome, SCRATCH_DIR_BASENAME));
+    scratch.toFile().deleteOnExit();
+    scratchDir = scratch.toString();
+
     docker = DefaultDockerClient.builder().
       uri("unix:///var/run/docker.sock").build();
 
@@ -46,6 +64,25 @@ public class DockerCluster {
     this.locatorCount = count;
   }
 
+  public String getScratchDir() {
+    return scratchDir;
+  }
+
+  /**
+   * Given a file on the local host's filesystem, copy that file into the cluster's
+   * global scratch area. The scratch file is deleted on exit.
+   * @param hostFile
+   * @return the cluster relative file name - for example /tmp/work/scratch/foo.zip
+   */
+  public String injectScratchFile(String hostFile) throws IOException {
+    Path localPath = Paths.get(hostFile);
+    Path scratchFile = Paths.get(getScratchDir(), localPath.getFileName().toString());
+    Files.copy(localPath, scratchFile);
+    scratchFile.toFile().deleteOnExit();
+
+    return Paths.get("/", "tmp", "work", SCRATCH_DIR_BASENAME, scratchFile.getFileName().toString()).toString();
+  }
+
   public void start() throws Exception {
     startLocators();
     startServers();
@@ -56,12 +93,8 @@ public class DockerCluster {
   }
 
   public String startContainer(int index, Map<String, List<PortBinding>> portBindings) throws DockerException, InterruptedException {
-    String geodeHome = System.getenv("GEODE_HOME");
-    if (geodeHome == null) {
-      throw new IllegalStateException("GEODE_HOME environment variable is not set");
-    }
-
     String vol = String.format("%s:/tmp/work", geodeHome);
+    String hostname = String.format("%s-%d", name, index);
 
     HostConfig hostConfig = HostConfig.
       builder().
@@ -73,13 +106,14 @@ public class DockerCluster {
       image("gemfire/ubuntu-gradle").
       openStdin(true).
       exposedPorts(portBindings.keySet()).
-      hostname(String.format("%s-%d", name, index)).
+      hostname(hostname).
       hostConfig(hostConfig).
       workingDir("/tmp").
       build();
 
     ContainerCreation creation = docker.createContainer(config);
     String id = creation.id();
+//    docker.renameContainer(id, hostname);
     docker.startContainer(id);
     docker.inspectContainer(id);
 
