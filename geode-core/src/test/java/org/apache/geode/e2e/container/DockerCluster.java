@@ -129,7 +129,6 @@ public class DockerCluster {
         "/tmp/work/bin/gfsh",
         "start locator",
         "--name=" + memberName,
-        "--J=-Dgemfire.enable-cluster-configuration=false",
         "--J=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
       };
 
@@ -168,7 +167,6 @@ public class DockerCluster {
         "--locators=" + locatorAddress,
         "--server-port=" + serverPort,
         "--hostname-for-clients=localhost",
-//        "--J=-Dgemfire.locator-wait-time=30",
         "--J=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
       };
 
