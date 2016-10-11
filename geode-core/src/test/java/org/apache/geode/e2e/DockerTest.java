@@ -32,7 +32,7 @@ public class DockerTest {
 
   @Test
   public void testInvalidGfshCommandReturnsNonZero() throws Exception {
-    String id = cluster.startContainer(0);
+    String id = cluster.startContainer();
     int r = cluster.execCommand(id, false, null, new String[] { "/tmp/work/bin/gfsh", "startx" });
     assertEquals(1, r);
   }

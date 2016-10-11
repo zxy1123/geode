@@ -32,10 +32,10 @@ public class DockerCluster {
   private int serverCount;
   private String name;
   private List<String> nodeIds;
-  private String locatorHost;
   private int locatorPort;
   private final String geodeHome;
   private final String scratchDir;
+  private int containerCount = 0;
 
   private static final String SCRATCH_DIR_BASENAME = "scratch";
 
@@ -88,13 +88,13 @@ public class DockerCluster {
     startServers();
   }
 
-  public String startContainer(int index) throws DockerException, InterruptedException {
-    return startContainer(index, new HashMap<>());
+  public String startContainer() throws DockerException, InterruptedException {
+    return startContainer(new HashMap<>());
   }
 
-  public String startContainer(int index, Map<String, List<PortBinding>> portBindings) throws DockerException, InterruptedException {
+  public String startContainer(Map<String, List<PortBinding>> portBindings) throws DockerException, InterruptedException {
     String vol = String.format("%s:/tmp/work", geodeHome);
-    String hostname = String.format("%s-%d", name, index);
+    String hostname = String.format("%s-%d", name, containerCount++);
 
     HostConfig hostConfig = HostConfig.
       builder().
@@ -113,7 +113,7 @@ public class DockerCluster {
 
     ContainerCreation creation = docker.createContainer(config);
     String id = creation.id();
-//    docker.renameContainer(id, hostname);
+    docker.renameContainer(id, hostname);
     docker.startContainer(id);
     docker.inspectContainer(id);
 
@@ -140,7 +140,7 @@ public class DockerCluster {
       debugBinding.add(PortBinding.of("HostPort", (5005 + i) + ""));
       ports.put("5005/tcp", debugBinding);
 
-      String id = startContainer(i, ports);
+      String id = startContainer(ports);
       execCommand(id, true, null, command);
 
       while (gfshCommand(null, null) != 0) {
@@ -176,7 +176,7 @@ public class DockerCluster {
       debugBinding.add(PortBinding.of("HostPort", (5005 + i + locatorCount) + ""));
       ports.put("5005/tcp", debugBinding);
 
-      String id = startContainer(i, ports);
+      String id = startContainer(ports);
       execCommand(id, true, null, command);
     }
 
@@ -272,7 +272,7 @@ public class DockerCluster {
   }
 
   public String getLocatorHost() {
-    return locatorHost;
+    return "localhost";
   }
 
   public int getLocatorPort() {
