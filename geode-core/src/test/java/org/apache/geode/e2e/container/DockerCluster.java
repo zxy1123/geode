@@ -1,6 +1,7 @@
 package org.apache.geode.e2e.container;
 
 import static com.google.common.base.Charsets.*;
+import static org.apache.geode.internal.cache.CacheServerLauncher.serverPort;
 
 import java.io.File;
 import java.io.IOException;
@@ -88,13 +89,12 @@ public class DockerCluster {
     startServers();
   }
 
-  public String startContainer() throws DockerException, InterruptedException {
-    return startContainer(new HashMap<>());
+  public String startContainer(String name) throws DockerException, InterruptedException {
+    return startContainer(name, new HashMap<>());
   }
 
-  public String startContainer(Map<String, List<PortBinding>> portBindings) throws DockerException, InterruptedException {
+  public String startContainer(String name, Map<String, List<PortBinding>> portBindings) throws DockerException, InterruptedException {
     String vol = String.format("%s:/tmp/work", geodeHome);
-    String hostname = String.format("%s-%d", name, containerCount++);
 
     HostConfig hostConfig = HostConfig.
       builder().
@@ -106,14 +106,14 @@ public class DockerCluster {
       image("gemfire/ubuntu-gradle").
       openStdin(true).
       exposedPorts(portBindings.keySet()).
-      hostname(hostname).
+      hostname(name).
       hostConfig(hostConfig).
       workingDir("/tmp").
       build();
 
     ContainerCreation creation = docker.createContainer(config);
     String id = creation.id();
-    docker.renameContainer(id, hostname);
+    docker.renameContainer(id, name);
     docker.startContainer(id);
     docker.inspectContainer(id);
 
@@ -124,10 +124,12 @@ public class DockerCluster {
 
   public void startLocators() throws DockerException, InterruptedException {
     for (int i = 0; i < locatorCount; i++) {
+      String memberName = String.format("%s-locator-%d", name, i);
       String[] command = {
         "/tmp/work/bin/gfsh",
         "start locator",
-        String.format("--name=%s-locator-%d", name, i),
+        "--name=" + memberName,
+        "--J=-Dgemfire.enable-cluster-configuration=false",
         "--J=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
       };
 
@@ -140,9 +142,10 @@ public class DockerCluster {
       debugBinding.add(PortBinding.of("HostPort", (5005 + i) + ""));
       ports.put("5005/tcp", debugBinding);
 
-      String id = startContainer(ports);
+      String id = startContainer(memberName, ports);
       execCommand(id, true, null, command);
 
+      // Simply loop, trying to connect to the locator
       while (gfshCommand(null, null) != 0) {
         Thread.sleep(250);
       }
@@ -156,14 +159,16 @@ public class DockerCluster {
   public void startServers() throws DockerException, InterruptedException {
     String locatorAddress = String.format("%s[10334]", docker.inspectContainer(nodeIds.get(0)).networkSettings().ipAddress());
     for (int i = 0; i < serverCount; i++) {
+      String memberName = String.format("%s-server-%d", name, i);
       String serverPort = Integer.toString(40404 + i);
       String[] command = {
         "/tmp/work/bin/gfsh",
         "start server",
-        String.format("--name=%s-server-%d", name, i),
+        "--name=" + memberName,
         "--locators=" + locatorAddress,
         "--server-port=" + serverPort,
         "--hostname-for-clients=localhost",
+//        "--J=-Dgemfire.locator-wait-time=30",
         "--J=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
       };
 
@@ -176,7 +181,7 @@ public class DockerCluster {
       debugBinding.add(PortBinding.of("HostPort", (5005 + i + locatorCount) + ""));
       ports.put("5005/tcp", debugBinding);
 
-      String id = startContainer(ports);
+      String id = startContainer(memberName, ports);
       execCommand(id, true, null, command);
     }
 

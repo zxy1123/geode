@@ -1,12 +1,8 @@
 package org.apache.geode.e2e;
 
-import static junit.framework.TestCase.assertNotNull;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 import com.spotify.docker.client.exceptions.DockerException;
@@ -88,6 +84,25 @@ public class GetPutSteps {
     }
   }
 
+  @Given("class{es|} $fnName {is|are} deployed")
+  public void deployClasses(String fnClasses) throws Exception {
+    for (String fnClass : fnClasses.split(",")) {
+      String jar = cluster.injectScratchFile(Utils.getJarForClassName(fnClass));
+      cluster.gfshCommand("deploy --jar=" + jar);
+    }
+  }
+
+  @When("I call function with id $fnId on region $regionName with argument $arg it returns $returns")
+  public void testRegionBucketSizeWithFunction(String fnId, String regionName, String arg, int returns) {
+    ClientCache cache = getClientCache();
+    Region region = cache.getRegion(regionName);
+    Execution exe = FunctionService.onServers(region.getRegionService());
+    ResultCollector rs = exe.withArgs(regionName).execute(fnId);
+    List<Integer> results = (List<Integer>) rs.getResult();
+
+    assertEquals(returns, results.stream().mapToInt(i -> i.intValue()).sum());
+  }
+
   private ClientCache getClientCache() {
     ClientCache cache;
     try {
@@ -103,23 +118,6 @@ public class GetPutSteps {
       create();
 
     return cache;
-  }
-
-  @Given("function $fnName is deployed")
-  public void deployFunction(String fnClass) throws Exception {
-    String jar = cluster.injectScratchFile(Utils.getJarForClassName(fnClass));
-    cluster.gfshCommand("deploy --jar=" + jar);
-  }
-
-  @When("I call function with id $fnId on region $regionName with argument $arg it returns $returns")
-  public void foo(String fnId, String regionName, String arg, int returns) {
-    ClientCache cache = getClientCache();
-    Region region = cache.getRegion(regionName);
-    Execution exe = FunctionService.onServers(region.getRegionService());
-    ResultCollector rs = exe.withArgs(regionName).execute(fnId);
-    List<Integer> results = (List<Integer>) rs.getResult();
-
-    assertEquals(returns, results.stream().mapToInt(i -> i.intValue()).sum());
   }
 
 }
