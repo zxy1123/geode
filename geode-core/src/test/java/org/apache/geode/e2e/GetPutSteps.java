@@ -1,6 +1,8 @@
 package org.apache.geode.e2e;
 
-import static org.junit.Assert.assertEquals;
+import static com.sun.jmx.snmp.EnumRowStatus.destroy;
+import static org.bouncycastle.asn1.x500.style.RFC4519Style.member;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -65,18 +67,18 @@ public class GetPutSteps {
   }
 
   @When("I put $count entries into region $name")
-  public void when(int count, String name) throws Exception {
+  public void putEntries(int count, String name) throws Exception {
     ClientCache cache = getClientCache();
-    Region region = cache.createClientRegionFactory(ClientRegionShortcut.PROXY).create(name);
+    Region region = getOrCreateRegion(name);
     for (int i = 0; i < count; i++) {
       region.put("key_" + i, "value_" + i);
     }
   }
 
   @Then("I can get $count entries from region $name")
-  public void then(int count, String name) throws Exception {
+  public void getEntries(int count, String name) throws Exception {
     ClientCache cache = getClientCache();
-    Region region = cache.getRegion(name);
+    Region region = getOrCreateRegion(name);
 
     assertEquals(count, region.keySetOnServer().size());
     for (int i = 0; i < count; i++) {
@@ -92,15 +94,36 @@ public class GetPutSteps {
     }
   }
 
-  @When("I call function with id $fnId on region $regionName with argument $arg it returns $returns")
-  public void testRegionBucketSizeWithFunction(String fnId, String regionName, String arg, int returns) {
-    ClientCache cache = getClientCache();
-    Region region = cache.getRegion(regionName);
+  @When("I call function with id $fnId on region $regionName it returns $result")
+  public void testRegionBucketSizeWithFunction(String fnId, String regionName, int result) {
+    Region region = getOrCreateRegion(regionName);
     Execution exe = FunctionService.onServers(region.getRegionService());
     ResultCollector rs = exe.withArgs(regionName).execute(fnId);
     List<Integer> results = (List<Integer>) rs.getResult();
 
-    assertEquals(returns, results.stream().mapToInt(i -> i.intValue()).sum());
+    assertEquals(result, results.stream().mapToInt(i -> i.intValue()).sum());
+  }
+
+  @When("I export region $regionName")
+  public void exportRegion(String regionName) throws Exception {
+    for (String member : cluster.getServerMembers()) {
+      int rc = cluster.gfshCommand(String.format("export data --region=%1$s --file=export-%1$s.gfd --member=%2$s", regionName, member));
+      assertEquals(0, rc);
+    }
+  }
+
+  @Then("I import region $regionName")
+  public void importRegion(String regionName) throws Exception {
+    for (String member : cluster.getServerMembers()) {
+      int rc = cluster.gfshCommand(String.format("import data --region=%1$s --file=export-%1$s.gfd --member=%2$s", regionName, member));
+      assertEquals(0, rc);
+    }
+  }
+
+  @When("I destroy region $regionName")
+  public void destroyRegion(String regionName) throws Exception {
+    int rc = cluster.gfshCommand("destroy region --name=" + regionName);
+    assertEquals(0, rc);
   }
 
   private ClientCache getClientCache() {
@@ -120,5 +143,15 @@ public class GetPutSteps {
     return cache;
   }
 
+  private Region getOrCreateRegion(String name) {
+    ClientCache cache = getClientCache();
+
+    Region region = cache.getRegion(name);
+    if (region == null) {
+      region = cache.createClientRegionFactory(ClientRegionShortcut.PROXY).create(name);
+    }
+
+    return region;
+  }
 }
 

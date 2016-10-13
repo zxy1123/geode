@@ -1,9 +1,7 @@
 package org.apache.geode.e2e.container;
 
 import static com.google.common.base.Charsets.*;
-import static org.apache.geode.internal.cache.CacheServerLauncher.serverPort;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +34,7 @@ public class DockerCluster {
   private int locatorPort;
   private final String geodeHome;
   private final String scratchDir;
-  private int containerCount = 0;
+  private final List<String> serverMembers;
 
   private static final String SCRATCH_DIR_BASENAME = "scratch";
 
@@ -46,15 +44,19 @@ public class DockerCluster {
       throw new IllegalStateException("GEODE_HOME environment variable is not set");
     }
 
-    Path scratch = Files.createDirectory(Paths.get(geodeHome, SCRATCH_DIR_BASENAME));
-    scratch.toFile().deleteOnExit();
-    scratchDir = scratch.toString();
+    Path scratchDir = Paths.get(geodeHome, SCRATCH_DIR_BASENAME);
+    if (! Files.exists(scratchDir)) {
+      scratchDir = Files.createDirectory(Paths.get(geodeHome, SCRATCH_DIR_BASENAME));
+    }
+    scratchDir.toFile().deleteOnExit();
+    this.scratchDir = scratchDir.toString();
 
     docker = DefaultDockerClient.builder().
       uri("unix:///var/run/docker.sock").build();
 
     this.name = name;
     this.nodeIds = new ArrayList<>();
+    this.serverMembers = new ArrayList<>();
   }
 
   public void setServerCount(int count) {
@@ -67,6 +69,10 @@ public class DockerCluster {
 
   public String getScratchDir() {
     return scratchDir;
+  }
+
+  public List<String> getServerMembers() {
+    return serverMembers;
   }
 
   /**
@@ -181,6 +187,8 @@ public class DockerCluster {
 
       String id = startContainer(memberName, ports);
       execCommand(id, true, null, command);
+
+      serverMembers.add(memberName);
     }
 
     int runningServers = 0;

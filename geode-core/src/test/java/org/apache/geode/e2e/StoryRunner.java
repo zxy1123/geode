@@ -11,7 +11,6 @@ import org.jbehave.core.configuration.MostUsefulConfiguration;
 import org.jbehave.core.io.LoadFromClasspath;
 import org.jbehave.core.io.StoryFinder;
 import org.jbehave.core.junit.JUnitStories;
-import org.jbehave.core.junit.JUnitStory;
 import org.jbehave.core.reporters.Format;
 import org.jbehave.core.reporters.StoryReporterBuilder;
 import org.jbehave.core.steps.InjectableStepsFactory;
@@ -26,8 +25,15 @@ public class StoryRunner extends JUnitStories {
       // where to find the stories
       .useStoryLoader(new LoadFromClasspath(this.getClass()))
       // CONSOLE and TXT reporting
-      .useStoryReporterBuilder(new StoryReporterBuilder().withDefaultFormats()
-      .withFormats(Format.ANSI_CONSOLE, Format.TXT));
+      .useStoryReporterBuilder(new StoryReporterBuilder()
+        .withDefaultFormats()
+        .withFormats(Format.ANSI_CONSOLE, Format.TXT)
+        .withFailureTrace(true)
+      );
+  }
+
+  protected String storyGlob() {
+    return "**/*.story";
   }
 
   // Here we specify the steps classes
@@ -41,7 +47,7 @@ public class StoryRunner extends JUnitStories {
   protected List<String> storyPaths() {
     String codeLocation = codeLocationFromClass(this.getClass()).getFile() + "../../resources/test";
     List<String> stories = new ArrayList<>();
-    stories.add("**/*.story");
+    stories.add(storyGlob());
     return new StoryFinder().findPaths(codeLocation, stories, Collections.EMPTY_LIST);
   }
 }
