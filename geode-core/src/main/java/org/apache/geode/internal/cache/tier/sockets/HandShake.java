@@ -46,7 +46,6 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -57,6 +56,8 @@ import javax.crypto.spec.DHParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLSocket;
+
+import org.apache.logging.log4j.Logger;
 
 import org.apache.geode.CancelCriterion;
 import org.apache.geode.DataSerializer;
@@ -95,7 +96,6 @@ import org.apache.geode.security.AuthenticationFailedException;
 import org.apache.geode.security.AuthenticationRequiredException;
 import org.apache.geode.security.Authenticator;
 import org.apache.geode.security.GemFireSecurityException;
-import org.apache.logging.log4j.Logger;
 
 public class HandShake implements ClientHandShake {
   private static final Logger logger = LogService.getLogger();
@@ -228,7 +228,7 @@ public class HandShake implements ClientHandShake {
 
   /**
    * Test hooks for per client conflation
-   * 
+   *
    * @since GemFire 5.7
    */
   public static byte clientConflationForTesting = 0;
@@ -236,7 +236,7 @@ public class HandShake implements ClientHandShake {
 
   /**
    * Test hook for client version support
-   * 
+   *
    * @since GemFire 5.7
    */
   private static Version currentClientVersion = ConnectionProxy.VERSION;
@@ -450,7 +450,7 @@ public class HandShake implements ClientHandShake {
   }
 
   public byte write(DataOutputStream dos, DataInputStream dis, byte communicationMode,
-      int replyCode, int readTimeout, List ports, Properties p_credentials,
+      int replyCode, int readTimeout, boolean isNotification, Properties p_credentials,
       DistributedMember member, boolean isCallbackConnection) throws IOException {
     HeapDataOutputStream hdos = new HeapDataOutputStream(32, Version.CURRENT);
     byte acceptanceCode = -1;
@@ -464,11 +464,8 @@ public class HandShake implements ClientHandShake {
       }
 
       hdos.writeByte(replyCode);
-      if (ports != null) {
-        hdos.writeInt(ports.size());
-        for (int i = 0; i < ports.size(); i++) {
-          hdos.writeInt(Integer.parseInt((String) ports.get(i)));
-        }
+      if (isNotification) {
+        hdos.writeInt(0);
       } else {
         hdos.writeInt(readTimeout);
       }
@@ -491,19 +488,19 @@ public class HandShake implements ClientHandShake {
         }
       }
 
-      if (isCallbackConnection || communicationMode == Acceptor.GATEWAY_TO_GATEWAY) {
-        if (isCallbackConnection && this.multiuserSecureMode
-            && communicationMode != Acceptor.GATEWAY_TO_GATEWAY) {
+      if (communicationMode == Acceptor.GATEWAY_TO_GATEWAY) {
+        writeCredentials(dos, dis, p_credentials, isNotification, member, hdos);
+      } else if (isCallbackConnection) {
+        if (this.multiuserSecureMode) {
           hdos.writeByte(SECURITY_MULTIUSER_NOTIFICATIONCHANNEL);
           hdos.flush();
           dos.write(hdos.toByteArray());
           dos.flush();
         } else {
-          writeCredentials(dos, dis, p_credentials, ports != null, member, hdos);
+          writeCredentials(dos, dis, p_credentials, isNotification, member, hdos);
         }
       } else {
-        String authInitMethod = this.system.getProperties().getProperty(SECURITY_CLIENT_AUTH_INIT);
-        acceptanceCode = writeCredential(dos, dis, authInitMethod, ports != null, member, hdos);
+        acceptanceCode = writeCredential(dos, dis, p_credentials, isNotification, member, hdos);
       }
     } finally {
       hdos.close();
@@ -663,18 +660,18 @@ public class HandShake implements ClientHandShake {
    * 
    * @param dos
    * @param dis
-   * @param authInit
+   * @param credentials
    * @param isNotification
    * @param member
    * @param heapdos
    * @throws IOException
    * @throws GemFireSecurityException
    */
-  public byte writeCredential(DataOutputStream dos, DataInputStream dis, String authInit,
+  public byte writeCredential(DataOutputStream dos, DataInputStream dis, Properties credentials,
       boolean isNotification, DistributedMember member, HeapDataOutputStream heapdos)
       throws IOException, GemFireSecurityException {
 
-    if (!this.multiuserSecureMode && (authInit == null || authInit.length() == 0)) {
+    if (!this.multiuserSecureMode && credentials == null) {
       // No credentials indicator
       heapdos.writeByte(CREDENTIALS_NONE);
       heapdos.flush();
@@ -1214,16 +1211,18 @@ public class HandShake implements ClientHandShake {
           updateProxyID(dm.getDistributionManagerId());
         }
       }
+
+      Properties credentials = getCredentials(member);
       if (communicationMode == Acceptor.GATEWAY_TO_GATEWAY) {
-        this.credentials = getCredentials(member);
+        this.credentials = credentials;
       }
+
       byte intermediateAcceptanceCode = write(dos, dis, communicationMode, REPLY_OK,
-          this.clientReadTimeout, null, this.credentials, member, false);
+          this.clientReadTimeout, false, credentials, member, false);
 
       String authInit = this.system.getProperties().getProperty(SECURITY_CLIENT_AUTH_INIT);
       if (communicationMode != Acceptor.GATEWAY_TO_GATEWAY
-          && intermediateAcceptanceCode != REPLY_AUTH_NOT_REQUIRED
-          && (authInit != null && authInit.length() != 0)) {
+          && intermediateAcceptanceCode != REPLY_AUTH_NOT_REQUIRED && credentials != null) {
         location.compareAndSetRequiresCredentials(true);
       }
       // Read the acceptance code
@@ -1311,7 +1310,7 @@ public class HandShake implements ClientHandShake {
       }
       byte mode =
           isPrimary ? Acceptor.PRIMARY_SERVER_TO_CLIENT : Acceptor.SECONDARY_SERVER_TO_CLIENT;
-      write(dos, dis, mode, REPLY_OK, 0, new ArrayList(), this.credentials, member, true);
+      write(dos, dis, mode, REPLY_OK, 0, true, this.credentials, member, true);
 
       // Wait here for a reply before continuing. This ensures that the client
       // updater is registered with the server before continuing.

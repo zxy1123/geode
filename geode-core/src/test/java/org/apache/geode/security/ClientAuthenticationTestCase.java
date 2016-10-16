@@ -261,9 +261,9 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
         + credentials2 + " : " + javaProps2);
 
     client1.invoke(() -> createCacheClient(null, credentials1, javaProps1, port1, port2, 0,
-        multiUser, AUTHREQ_EXCEPTION));
+        multiUser, NO_EXCEPTION));
     client2.invoke(() -> createCacheClient(null, credentials2, javaProps2, port1, port2, 0,
-        multiUser, AUTHREQ_EXCEPTION));
+        multiUser, NO_EXCEPTION));
     client2.invoke(() -> closeCache());
 
     // Now also try with invalid credentials
@@ -271,7 +271,7 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
     Properties javaProps3 = gen.getJavaProperties();
 
     client2.invoke(() -> createCacheClient(null, credentials3, javaProps3, port1, port2, 0,
-        multiUser, AUTHREQ_EXCEPTION));
+        multiUser, AUTHFAIL_EXCEPTION));
   }
 
   /**
@@ -525,7 +525,7 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
       final int p2 = server2.invoke(
           () -> createCacheServer(locPort2, locString, 0, authenticator, extraProps, javaProps));
       client1.invoke(() -> createCacheClient(null, credentials1, javaProps1, p1, p2, 0, multiUser,
-          AUTHREQ_EXCEPTION));
+          NO_EXCEPTION));
 
       createClient2AuthReqException(multiUser, p1, p2, credentials2, javaProps2, zeroConns);
       createClient2AuthReqException(multiUser, p1, p2, credentials2, javaProps2, zeroConns);
@@ -593,7 +593,7 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
       final int port2, final Properties credentials2, final Properties javaProps2,
       final int zeroConns) {
     client2.invoke(() -> createCacheClient(null, credentials2, javaProps2, port1, port2, zeroConns,
-        multiUser, AUTHREQ_EXCEPTION));
+        multiUser, AUTHFAIL_EXCEPTION));
   }
 
   private void createClient1WithException(final boolean multiUser, final String authInit,

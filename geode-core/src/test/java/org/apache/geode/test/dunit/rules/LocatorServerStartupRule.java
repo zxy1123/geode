@@ -55,7 +55,7 @@ public class LocatorServerStartupRule extends ExternalResource implements Serial
 
   /**
    * Returns getHost(0).getVM(0) as a locator instance with the given configuration properties.
-   * 
+   *
    * @param locatorProperties
    *
    * @return VM locator vm
@@ -76,7 +76,7 @@ public class LocatorServerStartupRule extends ExternalResource implements Serial
 
   /**
    * starts a cache server that does not connect to a locator
-   * 
+   *
    * @return VM node vm
    */
 
@@ -86,7 +86,7 @@ public class LocatorServerStartupRule extends ExternalResource implements Serial
 
   /**
    * starts a cache server that connect to the locator running at the given port.
-   * 
+   *
    * @param index
    * @param properties
    * @param locatorPort
@@ -108,7 +108,7 @@ public class LocatorServerStartupRule extends ExternalResource implements Serial
 
   /**
    * this will simply returns the node
-   * 
+   *
    * @param index
    * @return
    */
