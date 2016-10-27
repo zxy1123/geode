@@ -14,22 +14,17 @@
  */
 package org.apache.geode.management.internal.cli.commands;
 
-import static org.apache.geode.distributed.ConfigurationProperties.*;
-import static org.apache.geode.test.dunit.Assert.*;
-import static org.apache.geode.test.dunit.LogWriterUtils.*;
-
-import java.io.IOException;
-import java.io.PrintStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Map;
-import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.geode.security.templates.SampleSecurityManager;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import static org.apache.geode.distributed.ConfigurationProperties.HTTP_SERVICE_PORT;
+import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER;
+import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER_BIND_ADDRESS;
+import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER_PORT;
+import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER_START;
+import static org.apache.geode.distributed.ConfigurationProperties.NAME;
+import static org.apache.geode.test.dunit.Assert.assertEquals;
+import static org.apache.geode.test.dunit.Assert.assertFalse;
+import static org.apache.geode.test.dunit.Assert.assertNotNull;
+import static org.apache.geode.test.dunit.Assert.assertTrue;
+import static org.apache.geode.test.dunit.LogWriterUtils.getLogWriter;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.internal.AvailablePortHelper;
@@ -37,14 +32,27 @@ import org.apache.geode.management.ManagementService;
 import org.apache.geode.management.internal.cli.CommandManager;
 import org.apache.geode.management.internal.cli.HeadlessGfsh;
 import org.apache.geode.management.internal.cli.i18n.CliStrings;
-import org.apache.geode.management.internal.cli.parser.CommandTarget;
 import org.apache.geode.management.internal.cli.result.CommandResult;
 import org.apache.geode.management.internal.cli.shell.Gfsh;
 import org.apache.geode.management.internal.cli.util.CommandStringBuilder;
+import org.apache.geode.security.templates.SampleSecurityManager;
 import org.apache.geode.test.dunit.Host;
 import org.apache.geode.test.dunit.IgnoredException;
 import org.apache.geode.test.dunit.cache.internal.JUnit4CacheTestCase;
 import org.apache.geode.test.dunit.rules.DistributedRestoreSystemProperties;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
+import org.springframework.shell.core.CommandMarker;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Base class for all the CLI/gfsh command dunit tests.
@@ -52,24 +60,45 @@ import org.apache.geode.test.dunit.rules.DistributedRestoreSystemProperties;
 public abstract class CliCommandTestBase extends JUnit4CacheTestCase {
 
   public static final String USE_HTTP_SYSTEM_PROPERTY = "useHTTP";
-
-  private boolean useHttpOnConnect = Boolean.getBoolean(USE_HTTP_SYSTEM_PROPERTY);
-
-  private ManagementService managementService;
-
-  private transient HeadlessGfsh shell;
-
+  @Rule
+  public transient DistributedRestoreSystemProperties restoreSystemProperties =
+      new DistributedRestoreSystemProperties();
+  @Rule
+  public transient TemporaryFolder temporaryFolder = new TemporaryFolder();
   protected transient int httpPort;
   protected transient int jmxPort;
   protected transient String jmxHost;
   protected transient String gfshDir;
+  private boolean useHttpOnConnect = Boolean.getBoolean(USE_HTTP_SYSTEM_PROPERTY);
+  private ManagementService managementService;
+  private transient HeadlessGfsh shell;
 
-  @Rule
-  public transient DistributedRestoreSystemProperties restoreSystemProperties =
-      new DistributedRestoreSystemProperties();
+  public static boolean checkIfCommandsAreLoadedOrNot() {
+    CommandManager manager;
+    try {
+      manager = CommandManager.getInstance();
+      List<CommandMarker> commands = manager.getCommandMarkers();
+      return commands.size() >= 1;
+    } catch (ClassNotFoundException | IOException e) {
+      throw new RuntimeException("Could not load commands", e);
+    }
+  }
 
-  @Rule
-  public transient TemporaryFolder temporaryFolder = new TemporaryFolder();
+  protected static String commandResultToString(final CommandResult commandResult) {
+    assertNotNull(commandResult);
+
+    commandResult.resetToFirstLine();
+
+    StringBuilder buffer = new StringBuilder(commandResult.getHeader());
+
+    while (commandResult.hasNextLine()) {
+      buffer.append(commandResult.nextLine());
+    }
+
+    buffer.append(commandResult.getFooter());
+
+    return buffer.toString();
+  }
 
   @Override
   public final void postSetUp() throws Exception {
@@ -193,20 +222,6 @@ public abstract class CliCommandTestBase extends JUnit4CacheTestCase {
     assertNotNull(this.managementService);
     assertTrue(this.managementService.isManager());
     assertTrue(checkIfCommandsAreLoadedOrNot());
-  }
-
-  public static boolean checkIfCommandsAreLoadedOrNot() {
-    CommandManager manager;
-    try {
-      manager = CommandManager.getInstance();
-      Map<String, CommandTarget> commands = manager.getCommands();
-      if (commands.size() < 1) {
-        return false;
-      }
-      return true;
-    } catch (ClassNotFoundException | IOException e) {
-      throw new RuntimeException("Could not load commands", e);
-    }
   }
 
   /**
@@ -385,22 +400,6 @@ public abstract class CliCommandTestBase extends JUnit4CacheTestCase {
 
     commandResult.resetToFirstLine();
     printStream.print(commandResultToString(commandResult));
-  }
-
-  protected static String commandResultToString(final CommandResult commandResult) {
-    assertNotNull(commandResult);
-
-    commandResult.resetToFirstLine();
-
-    StringBuilder buffer = new StringBuilder(commandResult.getHeader());
-
-    while (commandResult.hasNextLine()) {
-      buffer.append(commandResult.nextLine());
-    }
-
-    buffer.append(commandResult.getFooter());
-
-    return buffer.toString();
   }
 
   /**

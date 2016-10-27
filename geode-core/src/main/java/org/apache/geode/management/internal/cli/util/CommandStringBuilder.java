@@ -17,7 +17,6 @@ package org.apache.geode.management.internal.cli.util;
 import org.apache.geode.internal.lang.StringUtils;
 import org.apache.geode.internal.lang.SystemUtils;
 import org.apache.geode.management.internal.cli.GfshParser;
-import org.apache.geode.management.internal.cli.parser.SyntaxConstants;
 
 
 /**
@@ -27,10 +26,10 @@ import org.apache.geode.management.internal.cli.parser.SyntaxConstants;
  * @since GemFire 7.0
  */
 public class CommandStringBuilder {
-  private final String OPTION_MARKER = SyntaxConstants.LONG_OPTION_SPECIFIER;
-  private final String EQUAL_TO = SyntaxConstants.OPTION_VALUE_SPECIFIER;
-  private final String ARG_SEPARATOR = SyntaxConstants.OPTION_SEPARATOR;
-  private final String OPTION_SEPARATOR = SyntaxConstants.OPTION_SEPARATOR;
+  private final String OPTION_MARKER = GfshParser.LONG_OPTION_SPECIFIER;
+  private final String EQUAL_TO = GfshParser.OPTION_VALUE_SPECIFIER;
+  private final String ARG_SEPARATOR = GfshParser.OPTION_SEPARATOR;
+  private final String OPTION_SEPARATOR = GfshParser.OPTION_SEPARATOR;
   private final String SINGLE_SPACE = " ";
 
   private final StringBuffer buffer;
@@ -38,6 +37,15 @@ public class CommandStringBuilder {
 
   public CommandStringBuilder(String command) {
     buffer = new StringBuffer(command);
+  }
+
+  private static String getLineSeparator() {
+    // Until TestableGfsh issue #46388 is resolved
+    if (SystemUtils.isWindows()) {
+      return "\r";
+    } else {
+      return GfshParser.LINE_SEPARATOR;
+    }
   }
 
   public CommandStringBuilder addArgument(String argument) {
@@ -77,18 +85,9 @@ public class CommandStringBuilder {
 
   public CommandStringBuilder addNewLine() {
     buffer.append(SINGLE_SPACE); // add a space before continuation char
-    buffer.append(SyntaxConstants.CONTINUATION_CHARACTER);
+    buffer.append(GfshParser.CONTINUATION_CHARACTER);
     buffer.append(getLineSeparator());
     return this;
-  }
-
-  private static String getLineSeparator() {
-    // Until TestableGfsh issue #46388 is resolved
-    if (SystemUtils.isWindows()) {
-      return "\r";
-    } else {
-      return GfshParser.LINE_SEPARATOR;
-    }
   }
 
   public String getCommandString() {

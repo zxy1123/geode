@@ -14,6 +14,41 @@
  */
 package org.apache.geode.management.internal.cli.shell;
 
+import jline.Terminal;
+import jline.console.ConsoleReader;
+import org.apache.geode.internal.Banner;
+import org.apache.geode.internal.GemFireVersion;
+import org.apache.geode.internal.lang.ClassUtils;
+import org.apache.geode.internal.process.signal.AbstractSignalNotificationHandler;
+import org.apache.geode.internal.util.HostName;
+import org.apache.geode.internal.util.SunAPINotFoundException;
+import org.apache.geode.management.cli.CommandProcessingException;
+import org.apache.geode.management.cli.Result;
+import org.apache.geode.management.internal.cli.CliUtil;
+import org.apache.geode.management.internal.cli.CommandManager;
+import org.apache.geode.management.internal.cli.GfshParser;
+import org.apache.geode.management.internal.cli.LogWrapper;
+import org.apache.geode.management.internal.cli.i18n.CliStrings;
+import org.apache.geode.management.internal.cli.result.CommandResult;
+import org.apache.geode.management.internal.cli.result.CompositeResultData;
+import org.apache.geode.management.internal.cli.result.CompositeResultData.SectionResultData;
+import org.apache.geode.management.internal.cli.result.ResultBuilder;
+import org.apache.geode.management.internal.cli.shell.jline.ANSIHandler;
+import org.apache.geode.management.internal.cli.shell.jline.ANSIHandler.ANSIStyle;
+import org.apache.geode.management.internal.cli.shell.jline.GfshHistory;
+import org.apache.geode.management.internal.cli.shell.jline.GfshUnsupportedTerminal;
+import org.apache.geode.management.internal.cli.shell.unsafe.GfshSignalHandler;
+import org.apache.geode.management.internal.cli.util.CommentSkipHelper;
+import org.springframework.shell.core.AbstractShell;
+import org.springframework.shell.core.CommandMarker;
+import org.springframework.shell.core.Converter;
+import org.springframework.shell.core.ExecutionStrategy;
+import org.springframework.shell.core.ExitShellRequest;
+import org.springframework.shell.core.JLineLogHandler;
+import org.springframework.shell.core.JLineShell;
+import org.springframework.shell.core.Parser;
+import org.springframework.shell.event.ShellStatus.Status;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -28,48 +63,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
-
-import jline.Terminal;
-import jline.console.ConsoleReader;
-import org.springframework.shell.core.AbstractShell;
-import org.springframework.shell.core.CommandMarker;
-import org.springframework.shell.core.Converter;
-import org.springframework.shell.core.ExecutionStrategy;
-import org.springframework.shell.core.ExitShellRequest;
-import org.springframework.shell.core.JLineLogHandler;
-import org.springframework.shell.core.JLineShell;
-import org.springframework.shell.core.Parser;
-import org.springframework.shell.event.ShellStatus.Status;
-
-import org.apache.geode.internal.Banner;
-import org.apache.geode.internal.GemFireVersion;
-import org.apache.geode.internal.lang.ClassUtils;
-import org.apache.geode.internal.process.signal.AbstractSignalNotificationHandler;
-import org.apache.geode.internal.util.HostName;
-import org.apache.geode.internal.util.SunAPINotFoundException;
-import org.apache.geode.management.cli.CommandProcessingException;
-import org.apache.geode.management.cli.Result;
-import org.apache.geode.management.internal.cli.CliUtil;
-import org.apache.geode.management.internal.cli.CommandManager;
-import org.apache.geode.management.internal.cli.GfshParser;
-import org.apache.geode.management.internal.cli.LogWrapper;
-import org.apache.geode.management.internal.cli.i18n.CliStrings;
-import org.apache.geode.management.internal.cli.parser.SyntaxConstants;
-import org.apache.geode.management.internal.cli.result.CommandResult;
-import org.apache.geode.management.internal.cli.result.CompositeResultData;
-import org.apache.geode.management.internal.cli.result.CompositeResultData.SectionResultData;
-import org.apache.geode.management.internal.cli.result.ResultBuilder;
-import org.apache.geode.management.internal.cli.shell.jline.ANSIHandler;
-import org.apache.geode.management.internal.cli.shell.jline.ANSIHandler.ANSIStyle;
-import org.apache.geode.management.internal.cli.shell.jline.GfshHistory;
-import org.apache.geode.management.internal.cli.shell.jline.GfshUnsupportedTerminal;
-import org.apache.geode.management.internal.cli.shell.unsafe.GfshSignalHandler;
-import org.apache.geode.management.internal.cli.util.CommentSkipHelper;
 
 /**
  * Extends an interactive shell provided by
@@ -101,13 +98,8 @@ public class Gfsh extends JLineShell {
 
   public static final String LINE_INDENT = "    ";
   public static final String LINE_SEPARATOR = System.getProperty("line.separator");
-
-  private static final String DEFAULT_SECONDARY_PROMPT = ">";
-
   // Default Window dimensions
   public static final int DEFAULT_WIDTH = 100;
-  private static final int DEFAULT_HEIGHT = 100;
-
   public static final String ENV_APP_NAME = "APP_NAME";
   public static final String ENV_APP_CONTEXT_PATH = "APP_CONTEXT_PATH";
   public static final String ENV_APP_FETCH_SIZE = "APP_FETCH_SIZE";
@@ -119,7 +111,6 @@ public class Gfsh extends JLineShell {
   public static final String ENV_APP_LOG_FILE = "APP_LOG_FILE";
   public static final String ENV_APP_PWD = "APP_PWD";
   public static final String ENV_APP_RESULT_VIEWER = "APP_RESULT_VIEWER";
-
   // Environment Properties taken from the OS
   public static final String ENV_SYS_USER = "SYS_USER";
   public static final String ENV_SYS_USER_HOME = "SYS_USER_HOME";
@@ -129,7 +120,6 @@ public class Gfsh extends JLineShell {
   public static final String ENV_SYS_OS = "SYS_OS";
   public static final String ENV_SYS_OS_LINE_SEPARATOR = "SYS_OS_LINE_SEPARATOR";
   public static final String ENV_SYS_GEMFIRE_DIR = "SYS_GEMFIRE_DIR";
-
   // TODO merge find a better place for these
   // SSL Configuration properties. keystore/truststore type is not include
   public static final String SSL_KEYSTORE = "javax.net.ssl.keyStore";
@@ -138,41 +128,41 @@ public class Gfsh extends JLineShell {
   public static final String SSL_TRUSTSTORE_PASSWORD = "javax.net.ssl.trustStorePassword";
   public static final String SSL_ENABLED_CIPHERS = "javax.rmi.ssl.client.enabledCipherSuites";
   public static final String SSL_ENABLED_PROTOCOLS = "javax.rmi.ssl.client.enabledProtocols";
-
-  protected static PrintStream gfshout = System.out;
-  protected static PrintStream gfsherr = System.err;
+  private static final String DEFAULT_SECONDARY_PROMPT = ">";
+  private static final int DEFAULT_HEIGHT = 100;
+  private static final Object INSTANCE_LOCK = new Object();
+  //////////////////////// Fields for TestableShell Start //////////////////////
+  public static boolean SUPPORT_MUTLIPLESHELL = false;
 
   // private static final String ANIMATION_SLOT = "A"; //see 46072
-
+  protected static PrintStream gfshout = System.out;
+  protected static PrintStream gfsherr = System.err;
+  protected static ThreadLocal<Gfsh> gfshThreadLocal = new ThreadLocal<Gfsh>();
   private static Gfsh instance;
-  private static final Object INSTANCE_LOCK = new Object();
-
+  // This flag is used to restrict column trimming to table only types
+  private static ThreadLocal<Boolean> resultTypeTL = new ThreadLocal<Boolean>();
+  private static String OS = System.getProperty("os.name").toLowerCase();
   private final Map<String, String> env = new TreeMap<String, String>();
   private final List<String> readonlyAppEnv = new ArrayList<String>();
-
   // Map to keep reference to actual user specified Command String
   // Should always have one value at the max
   private final Map<String, String> expandedPropCommandsMap = new HashMap<String, String>();
-
   private final CommandManager commandManager;
   private final ExecutionStrategy executionStrategy;
   private final GfshParser parser;
-  private OperationInvoker operationInvoker;
-  private int lastExecutionStatus;
-  private Thread runner;
-  private boolean debugON;
   private final LogWrapper gfshFileLogger;
   private final GfshConfig gfshConfig;
   private final GfshHistory gfshHistory;
   private final ANSIHandler ansiHandler;
-  private Terminal terminal;
   private final boolean isHeadlessMode;
+  private OperationInvoker operationInvoker;
+  private int lastExecutionStatus;
+  private Thread runner;
+  private boolean debugON;
+  private Terminal terminal;
   private boolean supressScriptCmdOutput;
   private boolean isScriptRunning;
-
   private AbstractSignalNotificationHandler signalHandler;
-  // This flag is used to restrict column trimming to table only types
-  private static ThreadLocal<Boolean> resultTypeTL = new ThreadLocal<Boolean>();
 
   protected Gfsh() throws ClassNotFoundException, IOException {
     this(null);
@@ -271,6 +261,201 @@ public class Gfsh extends JLineShell {
     }
   }
 
+  public static Gfsh getInstance(boolean launchShell, String[] args, GfshConfig gfshConfig)
+      throws ClassNotFoundException, IOException {
+    if (instance == null) {
+      synchronized (INSTANCE_LOCK) {
+        if (instance == null) {
+          instance = new Gfsh(launchShell, args, gfshConfig);
+          instance.executeInitFileIfPresent();
+        }
+      }
+    }
+
+    return instance;
+  }
+
+  public static boolean isInfoResult() {
+    if (resultTypeTL.get() == null) {
+      return false;
+    }
+    return resultTypeTL.get();
+  }
+
+  public static void println() {
+    gfshout.println();
+  }
+
+  public static <T> void println(T toPrint) {
+    gfshout.println(toPrint);
+  }
+
+  public static <T> void print(T toPrint) {
+    gfshout.print(toPrint);
+  }
+
+  public static <T> void printlnErr(T toPrint) {
+    gfsherr.println(toPrint);
+  }
+
+  // See 46369
+  private static String readLine(ConsoleReader reader, String prompt) throws IOException {
+    String earlierLine = reader.getCursorBuffer().toString();
+    String readLine = null;
+    try {
+      readLine = reader.readLine(prompt);
+    } catch (IndexOutOfBoundsException e) {
+      if (earlierLine.length() == 0) {
+        reader.println();
+        readLine = LINE_SEPARATOR;
+        reader.getCursorBuffer().cursor = 0;
+      } else {
+        readLine = readLine(reader, prompt);
+      }
+    }
+    return readLine;
+  }
+
+  //////////////////// JLineShell Class Methods Start //////////////////////////
+  //////////////////////// Implemented Methods ////////////////////////////////
+
+  private static String removeBackslash(String result) {
+    if (result.endsWith(GfshParser.CONTINUATION_CHARACTER)) {
+      result = result.substring(0, result.length() - 1);
+    }
+    return result;
+  }
+
+  public static void redirectInternalJavaLoggers() {
+    // Do we need to this on re-connect?
+    LogManager logManager = LogManager.getLogManager();
+
+    try {
+      Enumeration<String> loggerNames = logManager.getLoggerNames();
+
+      while (loggerNames.hasMoreElements()) {
+        String loggerName = loggerNames.nextElement();
+        if (loggerName.startsWith("java.") || loggerName.startsWith("javax.")) {
+          // System.out.println(loggerName);
+          Logger javaLogger = logManager.getLogger(loggerName);
+          /*
+           * From Java Docs: It is also important to note that the Logger associated with the String
+           * name may be garbage collected at any time if there is no strong reference to the
+           * Logger. The caller of this method must check the return value for null in order to
+           * properly handle the case where the Logger has been garbage collected.
+           */
+          if (javaLogger != null) {
+            LogWrapper.getInstance().setParentFor(javaLogger);
+          }
+        }
+      }
+    } catch (SecurityException e) {
+      // e.printStackTrace();
+      LogWrapper.getInstance().warning(e.getMessage(), e);
+    }
+  }
+
+  public static Gfsh getCurrentInstance() {
+    if (!SUPPORT_MUTLIPLESHELL) {
+      return instance;
+    } else {
+      return gfshThreadLocal.get();
+    }
+  }
+
+  //////////////////////// Overridden Behavior /////////////////////////////////
+
+  private static String extractKey(String input) {
+    return input.substring("${".length(), input.length() - "}".length());
+  }
+
+  public static ConsoleReader getConsoleReader() {
+    Gfsh gfsh = Gfsh.getCurrentInstance();
+    return (gfsh == null ? null : gfsh.reader);
+  }
+
+  /**
+   * Take a string and wrap it into multiple lines separated by CliConstants.LINE_SEPARATOR. Lines
+   * are separated based upon the terminal width, separated on word boundaries and may have extra
+   * spaces added to provide indentation.
+   *
+   * For example: if the terminal width were 5 and the string "123 456789 01234" were passed in with
+   * an indentation level of 2, then the returned string would be:
+   *
+   * <pre>
+   *         123
+   *         45678
+   *         9
+   *         01234
+   * </pre>
+   *
+   * @param string String to wrap (add breakpoints and indent)
+   * @param indentationLevel The number of indentation levels to use.
+   * @return The wrapped string.
+   */
+  public static String wrapText(final String string, final int indentationLevel) {
+    Gfsh gfsh = getCurrentInstance();
+    if (gfsh == null) {
+      return string;
+    }
+
+    final int maxLineLength = gfsh.getTerminalWidth() - 1;
+    final StringBuffer stringBuf = new StringBuffer();
+    int index = 0;
+    int startOfCurrentLine = 0;
+    while (index < string.length()) {
+      // Add the indentation
+      for (int i = 0; i < indentationLevel; i++) {
+        stringBuf.append(LINE_INDENT);
+      }
+      int currentLineLength = LINE_INDENT.length() * indentationLevel;
+
+      // Find the end of a line:
+      // 1. If the end of string is reached
+      // 2. If the width of the terminal has been reached
+      // 3. If a newline character was found in the string
+      while (index < string.length() && currentLineLength < maxLineLength
+          && string.charAt(index) != '\n') {
+        index++;
+        currentLineLength++;
+      }
+
+      // If the line was terminated with a newline character
+      if (index != string.length() && string.charAt(index) == '\n') {
+        stringBuf.append(string.substring(startOfCurrentLine, index));
+        stringBuf.append(LINE_SEPARATOR);
+        index++;
+        startOfCurrentLine = index;
+
+        // If the end of the string was reached or the last character just happened to be a space
+        // character
+      } else if (index == string.length() || string.charAt(index) == ' ') {
+        stringBuf.append(string.substring(startOfCurrentLine, index));
+        if (index != string.length()) {
+          stringBuf.append(LINE_SEPARATOR);
+          index++;
+        }
+
+      } else {
+        final int spaceCharIndex = string.lastIndexOf(" ", index);
+
+        // If no spaces were found then there's no logical wayto split the string
+        if (spaceCharIndex == -1) {
+          stringBuf.append(string.substring(startOfCurrentLine, index)).append(LINE_SEPARATOR);
+
+          // Else split the string cleanly between words
+        } else {
+          stringBuf.append(string.substring(startOfCurrentLine, spaceCharIndex))
+              .append(LINE_SEPARATOR);
+          index = spaceCharIndex + 1;
+        }
+      }
+
+      startOfCurrentLine = index;
+    }
+    return stringBuf.toString();
+  }
+
   /**
    * Initializes default environment variables to default values
    */
@@ -300,20 +485,6 @@ public class Gfsh extends JLineShell {
     env.put(ENV_APP_QUERY_RESULTS_DISPLAY_MODE, DEFAULT_APP_QUERY_RESULTS_DISPLAY_MODE);
     env.put(ENV_APP_QUIET_EXECUTION, String.valueOf(DEFAULT_APP_QUIET_EXECUTION));
     env.put(ENV_APP_RESULT_VIEWER, String.valueOf(DEFAULT_APP_RESULT_VIEWER));
-  }
-
-  public static Gfsh getInstance(boolean launchShell, String[] args, GfshConfig gfshConfig)
-      throws ClassNotFoundException, IOException {
-    if (instance == null) {
-      synchronized (INSTANCE_LOCK) {
-        if (instance == null) {
-          instance = new Gfsh(launchShell, args, gfshConfig);
-          instance.executeInitFileIfPresent();
-        }
-      }
-    }
-
-    return instance;
   }
 
   public AbstractSignalNotificationHandler getSignalHandler() {
@@ -384,8 +555,6 @@ public class Gfsh extends JLineShell {
 
   }
 
-  //////////////////// JLineShell Class Methods Start //////////////////////////
-  //////////////////////// Implemented Methods ////////////////////////////////
   /**
    * See findResources in {@link AbstractShell}
    */
@@ -412,11 +581,10 @@ public class Gfsh extends JLineShell {
    * @return Parser used by Gfsh
    */
   @Override
-  protected Parser getParser() {
+  public Parser getParser() {
     return parser;
   }
 
-  //////////////////////// Overridden Behavior /////////////////////////////////
   /**
    * Executes the given command string. We have over-ridden the behavior to extend the original
    * implementation to store the 'last command execution status'.
@@ -476,6 +644,15 @@ public class Gfsh extends JLineShell {
   public void add(final Converter<?> converter) {
     commandManager.add(converter);
   }
+
+  // causes instability on MacOS See #46072
+  // public void flashMessage(String message) {
+  // if (reader != null) {
+  // flash(Level.FINE, message, ANIMATION_SLOT);
+  // }
+  // }
+  /////// Save multiple-line commands as single line in history - ends /////////
+  ///////////////////// JLineShell Class Methods End //////////////////////////
 
   @Override
   public void printBannerAndWelcome() {
@@ -584,14 +761,6 @@ public class Gfsh extends JLineShell {
       return false;
   }
 
-  public static boolean isInfoResult() {
-    if (resultTypeTL.get() == null)
-      return false;
-    return resultTypeTL.get();
-  }
-
-  private static String OS = System.getProperty("os.name").toLowerCase();
-
   private boolean isUnix() {
     return !(OS.indexOf("win") >= 0);
   }
@@ -631,15 +800,6 @@ public class Gfsh extends JLineShell {
     return getVersion();
   }
 
-  // causes instability on MacOS See #46072
-  // public void flashMessage(String message) {
-  // if (reader != null) {
-  // flash(Level.FINE, message, ANIMATION_SLOT);
-  // }
-  // }
-  /////// Save multiple-line commands as single line in history - ends /////////
-  ///////////////////// JLineShell Class Methods End //////////////////////////
-
   public int getTerminalHeight() {
     return terminal != null ? terminal.getHeight() : DEFAULT_HEIGHT;
   }
@@ -656,22 +816,6 @@ public class Gfsh extends JLineShell {
     }
 
     return DEFAULT_WIDTH;
-  }
-
-  public static void println() {
-    gfshout.println();
-  }
-
-  public static <T> void println(T toPrint) {
-    gfshout.println(toPrint);
-  }
-
-  public static <T> void print(T toPrint) {
-    gfshout.print(toPrint);
-  }
-
-  public static <T> void printlnErr(T toPrint) {
-    gfsherr.println(toPrint);
   }
 
   /**
@@ -801,7 +945,7 @@ public class Gfsh extends JLineShell {
           linesBuffer.append(lineWithoutComments);
           linesBufferString = linesBuffer.toString();
           // NOTE: Similar code is in promptLoop()
-          if (!linesBufferString.endsWith(SyntaxConstants.CONTINUATION_CHARACTER)) { // see 45893
+          if (!linesBufferString.endsWith(GfshParser.CONTINUATION_CHARACTER)) { // see 45893
             // String command = null;
 
 
@@ -855,6 +999,9 @@ public class Gfsh extends JLineShell {
 
     return result;
   }
+  ///////////////// Providing Multiple-line support ends //////////////////////
+
+  /////////////// For setting shell environment properties END /////////////////
 
   /////////////// For setting shell environment properties START ///////////////
   public String setEnvProperty(String propertyName, String propertyValue) {
@@ -877,6 +1024,7 @@ public class Gfsh extends JLineShell {
     map.putAll(env);
     return map;
   }
+  //////////////////////// OperationInvoker code END //////////////////////////
 
   @Override
   public void setPromptPath(String currentContext) {
@@ -889,6 +1037,7 @@ public class Gfsh extends JLineShell {
     // System.out.println(env.get(CliConstants.ENV_APP_QUIET_EXECUTION));
     return Boolean.parseBoolean(env.get(ENV_APP_QUIET_EXECUTION));
   }
+  //////////////////////// Fields for TestableShell End ////////////////////////
 
   ////////////////// Providing Multiple-line support starts ///////////////////
   @Override
@@ -899,7 +1048,7 @@ public class Gfsh extends JLineShell {
       gfshHistory.setAutoFlush(false);
       // NOTE: Similar code is in executeScript()
       while (exitShellRequest == null && (line = readLine(reader, prompt)) != null) {
-        if (!line.endsWith(SyntaxConstants.CONTINUATION_CHARACTER)) { // see 45893
+        if (!line.endsWith(GfshParser.CONTINUATION_CHARACTER)) { // see 45893
           List<String> commandList = MultiCommandHelper.getMultipleCommands(line);
           for (String cmdLet : commandList) {
             String trimmedCommand = cmdLet.trim();
@@ -927,37 +1076,9 @@ public class Gfsh extends JLineShell {
     setShellStatus(Status.SHUTTING_DOWN);
   }
 
-  // See 46369
-  private static String readLine(ConsoleReader reader, String prompt) throws IOException {
-    String earlierLine = reader.getCursorBuffer().toString();
-    String readLine = null;
-    try {
-      readLine = reader.readLine(prompt);
-    } catch (IndexOutOfBoundsException e) {
-      if (earlierLine.length() == 0) {
-        reader.println();
-        readLine = LINE_SEPARATOR;
-        reader.getCursorBuffer().cursor = 0;
-      } else {
-        readLine = readLine(reader, prompt);
-      }
-    }
-    return readLine;
-  }
-
-  private static String removeBackslash(String result) {
-    if (result.endsWith(SyntaxConstants.CONTINUATION_CHARACTER)) {
-      result = result.substring(0, result.length() - 1);
-    }
-    return result;
-  }
-
   String getDefaultSecondaryPrompt() {
     return ansiHandler.decorateString(DEFAULT_SECONDARY_PROMPT, ANSIStyle.YELLOW);
   }
-  ///////////////// Providing Multiple-line support ends //////////////////////
-
-  /////////////// For setting shell environment properties END /////////////////
 
   /////////////////////// OperationInvoker code START //////////////////////////
   public boolean isConnectedAndReady() {
@@ -977,64 +1098,9 @@ public class Gfsh extends JLineShell {
   public void setOperationInvoker(final OperationInvoker operationInvoker) {
     this.operationInvoker = operationInvoker;
   }
-  //////////////////////// OperationInvoker code END //////////////////////////
-
-  //////////////////////// Fields for TestableShell Start //////////////////////
-  public static boolean SUPPORT_MUTLIPLESHELL = false;
-  protected static ThreadLocal<Gfsh> gfshThreadLocal = new ThreadLocal<Gfsh>();
-  //////////////////////// Fields for TestableShell End ////////////////////////
-
-  public static void redirectInternalJavaLoggers() {
-    // Do we need to this on re-connect?
-    LogManager logManager = LogManager.getLogManager();
-
-    try {
-      Enumeration<String> loggerNames = logManager.getLoggerNames();
-
-      while (loggerNames.hasMoreElements()) {
-        String loggerName = loggerNames.nextElement();
-        if (loggerName.startsWith("java.") || loggerName.startsWith("javax.")) {
-          // System.out.println(loggerName);
-          Logger javaLogger = logManager.getLogger(loggerName);
-          /*
-           * From Java Docs: It is also important to note that the Logger associated with the String
-           * name may be garbage collected at any time if there is no strong reference to the
-           * Logger. The caller of this method must check the return value for null in order to
-           * properly handle the case where the Logger has been garbage collected.
-           */
-          if (javaLogger != null) {
-            LogWrapper.getInstance().setParentFor(javaLogger);
-          }
-        }
-      }
-    } catch (SecurityException e) {
-      // e.printStackTrace();
-      LogWrapper.getInstance().warning(e.getMessage(), e);
-    }
-  }
-
-  public static Gfsh getCurrentInstance() {
-    if (!SUPPORT_MUTLIPLESHELL) {
-      return instance;
-    } else {
-      return gfshThreadLocal.get();
-    }
-  }
-
-  public String obtainHelp(String userInput, Set<String> requiredCommandNames) {
-    return parser.obtainHelp(userInput, requiredCommandNames);
-  }
-
-  public List<String> obtainHelpCommandNames(String userInput) {
-    return parser.obtainHelpCommandNames(userInput);
-  }
 
   public GfshConfig getGfshConfig() {
     return this.gfshConfig;
-  }
-
-  public List<String> getCommandNames(String matchingWith) {
-    return parser.getCommandNames(matchingWith);
   }
 
   @Override
@@ -1078,7 +1144,7 @@ public class Gfsh extends JLineShell {
       // contextPath = "." + CliConstants.DEFAULT_APP_CONTEXT_PATH;
     }
 
-    defaultPrompt = MessageFormat.format(defaultPrompt, new Object[] {clusterString, contextPath});
+    defaultPrompt = MessageFormat.format(defaultPrompt, clusterString, contextPath);
 
     return ansiHandler.decorateString(defaultPrompt, ANSIStyle.YELLOW);
   }
@@ -1120,97 +1186,6 @@ public class Gfsh extends JLineShell {
       output = output.replace(foundInLine, envProperty);
     }
     return output;
-  }
-
-  private static String extractKey(String input) {
-    return input.substring("${".length(), input.length() - "}".length());
-  }
-
-  public static ConsoleReader getConsoleReader() {
-    Gfsh gfsh = Gfsh.getCurrentInstance();
-    return (gfsh == null ? null : gfsh.reader);
-  }
-
-  /**
-   * Take a string and wrap it into multiple lines separated by CliConstants.LINE_SEPARATOR. Lines
-   * are separated based upon the terminal width, separated on word boundaries and may have extra
-   * spaces added to provide indentation.
-   *
-   * For example: if the terminal width were 5 and the string "123 456789 01234" were passed in with
-   * an indentation level of 2, then the returned string would be:
-   * 
-   * <pre>
-   *         123
-   *         45678
-   *         9
-   *         01234
-   * </pre>
-   * 
-   * @param string String to wrap (add breakpoints and indent)
-   * @param indentationLevel The number of indentation levels to use.
-   * @return The wrapped string.
-   */
-  public static String wrapText(final String string, final int indentationLevel) {
-    Gfsh gfsh = getCurrentInstance();
-    if (gfsh == null) {
-      return string;
-    }
-
-    final int maxLineLength = gfsh.getTerminalWidth() - 1;
-    final StringBuffer stringBuf = new StringBuffer();
-    int index = 0;
-    int startOfCurrentLine = 0;
-    while (index < string.length()) {
-      // Add the indentation
-      for (int i = 0; i < indentationLevel; i++) {
-        stringBuf.append(LINE_INDENT);
-      }
-      int currentLineLength = LINE_INDENT.length() * indentationLevel;
-
-      // Find the end of a line:
-      // 1. If the end of string is reached
-      // 2. If the width of the terminal has been reached
-      // 3. If a newline character was found in the string
-      while (index < string.length() && currentLineLength < maxLineLength
-          && string.charAt(index) != '\n') {
-        index++;
-        currentLineLength++;
-      }
-
-      // If the line was terminated with a newline character
-      if (index != string.length() && string.charAt(index) == '\n') {
-        stringBuf.append(string.substring(startOfCurrentLine, index));
-        stringBuf.append(LINE_SEPARATOR);
-        index++;
-        startOfCurrentLine = index;
-
-        // If the end of the string was reached or the last character just happened to be a space
-        // character
-      } else if (index == string.length() || string.charAt(index) == ' ') {
-        stringBuf.append(string.substring(startOfCurrentLine, index));
-        if (index != string.length()) {
-          stringBuf.append(LINE_SEPARATOR);
-          index++;
-        }
-
-      } else {
-        final int spaceCharIndex = string.lastIndexOf(" ", index);
-
-        // If no spaces were found then there's no logical wayto split the string
-        if (spaceCharIndex == -1) {
-          stringBuf.append(string.substring(startOfCurrentLine, index)).append(LINE_SEPARATOR);
-
-          // Else split the string cleanly between words
-        } else {
-          stringBuf.append(string.substring(startOfCurrentLine, spaceCharIndex))
-              .append(LINE_SEPARATOR);
-          index = spaceCharIndex + 1;
-        }
-      }
-
-      startOfCurrentLine = index;
-    }
-    return stringBuf.toString();
   }
 
   // // for testing only

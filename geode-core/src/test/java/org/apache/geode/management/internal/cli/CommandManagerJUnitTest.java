@@ -14,27 +14,17 @@
  */
 package org.apache.geode.management.internal.cli;
 
-import static org.junit.Assert.*;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.geode.management.cli.CliMetaData;
 import org.apache.geode.management.cli.ConverterHint;
 import org.apache.geode.management.cli.Result;
-import org.apache.geode.management.internal.cli.annotation.CliArgument;
-import org.apache.geode.management.internal.cli.parser.Argument;
-import org.apache.geode.management.internal.cli.parser.AvailabilityTarget;
-import org.apache.geode.management.internal.cli.parser.CommandTarget;
-import org.apache.geode.management.internal.cli.parser.Option;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.security.ResourcePermission.Operation;
 import org.apache.geode.security.ResourcePermission.Resource;
 import org.apache.geode.test.junit.categories.UnitTest;
-
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,6 +35,8 @@ import org.springframework.shell.core.MethodTarget;
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
+
+import java.util.List;
 
 /**
  * CommandManagerTest - Includes tests to check the CommandManager functions
@@ -106,7 +98,7 @@ public class CommandManagerJUnitTest {
   public void testCommandManagerLoadCommands() throws Exception {
     CommandManager commandManager = CommandManager.getInstance(true);
     assertNotNull(commandManager);
-    assertNotSame(0, commandManager.getCommands().size());
+    assertNotSame(0, commandManager.getCommandMarkers().size());
   }
 
   /**
@@ -116,106 +108,6 @@ public class CommandManagerJUnitTest {
   public void testCommandManagerInstance() throws Exception {
     CommandManager commandManager = CommandManager.getInstance(true);
     assertNotNull(commandManager);
-  }
-
-  /**
-   * tests createOption method for creating option
-   */
-  @Test
-  public void testCommandManagerCreateOption() throws Exception {
-    CommandManager commandManager = CommandManager.getInstance(true);
-    assertNotNull(commandManager);
-
-    Method method = Commands.class.getMethod(COMMAND1_NAME, String.class, String.class,
-        String.class, String.class, String.class);
-
-    Annotation[][] annotations = method.getParameterAnnotations();
-    Class<?>[] parameterTypes = method.getParameterTypes();
-    List<String> optionNames = new ArrayList<String>();
-    optionNames.add(OPTION1_NAME);
-    optionNames.add(OPTION2_NAME);
-    optionNames.add(OPTION3_NAME);
-
-    int parameterNo = 0;
-    for (int i = 0; i < annotations.length; i++) {
-      Annotation[] annotation = annotations[i];
-      for (Annotation ann : annotation) {
-        if (ann instanceof CliOption) {
-          Option createdOption =
-              commandManager.createOption((CliOption) ann, parameterTypes[i], parameterNo);
-          assertTrue(optionNames.contains(createdOption.getLongOption()));
-          assertEquals(((CliOption) ann).help(), createdOption.getHelp());
-          if (((CliOption) ann).specifiedDefaultValue() != null
-              && ((CliOption) ann).specifiedDefaultValue().length() > 0) {
-            assertEquals(((CliOption) ann).specifiedDefaultValue().trim(),
-                createdOption.getSpecifiedDefaultValue().trim());
-          }
-          if (((CliOption) ann).unspecifiedDefaultValue() != null
-              && ((CliOption) ann).unspecifiedDefaultValue().length() > 0) {
-            assertEquals(((CliOption) ann).specifiedDefaultValue().trim(),
-                createdOption.getSpecifiedDefaultValue().trim());
-          }
-
-        }
-      }
-    }
-  }
-
-  /**
-   * tests createArgument method for creating argument
-   */
-  @Test
-  public void testCommandManagerCreateArgument() throws Exception {
-    CommandManager commandManager = CommandManager.getInstance(true);
-    assertNotNull(commandManager);
-
-    Method method = Commands.class.getMethod(COMMAND1_NAME, String.class, String.class,
-        String.class, String.class, String.class);
-
-    Annotation[][] annotations = method.getParameterAnnotations();
-    Class<?>[] parameterTypes = method.getParameterTypes();
-    List<String> argumentList = new ArrayList<String>();
-    argumentList.add(ARGUMENT1_NAME);
-    argumentList.add(ARGUMENT2_NAME);
-
-    int parameterNo = 0;
-    for (int i = 0; i < annotations.length; i++) {
-      Annotation[] annotation = annotations[i];
-      for (Annotation ann : annotation) {
-        if (ann instanceof CliArgument) {
-          Argument arg =
-              commandManager.createArgument((CliArgument) ann, parameterTypes[i], parameterNo);
-          assertEquals(true, argumentList.contains(arg.getArgumentName()));
-          assertEquals(((CliArgument) ann).mandatory(), arg.isRequired());
-          assertEquals(((CliArgument) ann).name().trim(), arg.getArgumentName().trim());
-          assertEquals(((CliArgument) ann).argumentContext().trim(), arg.getContext().trim());
-          assertEquals(((CliArgument) ann).help().trim(), arg.getHelp().trim());
-        }
-      }
-    }
-  }
-
-  /**
-   * tests availabilityIndicator for a method
-   */
-  @Test
-  public void testCommandManagerAvailabilityIndicator() throws Exception {
-    CommandManager commandManager = CommandManager.getInstance(true);
-    assertNotNull(commandManager);
-    commandManager.add(Commands.class.newInstance());
-    Map<String, CommandTarget> commands = commandManager.getCommands();
-    for (String commandName : commands.keySet()) {
-      if (commandName.equals(COMMAND1_NAME)) {
-        CommandTarget commandTarget = commands.get(commandName);
-        AvailabilityTarget availabilityIndicator = commandTarget.getAvailabilityIndicator();
-        if (availabilityIndicator == null) {
-          availabilityIndicator = commandManager.getAvailabilityIndicator(COMMAND1_NAME);
-          commandTarget.setAvailabilityIndicator(availabilityIndicator);
-        }
-        assertEquals(true, commandTarget.isAvailable());
-        break;
-      }
-    }
   }
 
   /**
@@ -230,9 +122,9 @@ public class CommandManagerJUnitTest {
 
     // see META-INF/services/org.springframework.shell.core.CommandMarker service loader file.
     assertTrue("Should find listed plugin.",
-        commandManager.getCommands().containsKey("mock plugin command"));
+        commandManager.getCommandMarkers().contains("mock plugin command"));
     assertTrue("Should not find unlisted plugin.",
-        !commandManager.getCommands().containsKey("mock plugin command unlisted"));
+        !commandManager.getCommandMarkers().contains("mock plugin command unlisted"));
   }
 
   /**
@@ -244,9 +136,9 @@ public class CommandManagerJUnitTest {
     @CliMetaData(shellOnly = true, relatedTopic = {"relatedTopicOfCommand1"})
     @ResourceOperation(resource = Resource.CLUSTER, operation = Operation.READ)
     public static String command1(
-        @CliArgument(name = ARGUMENT1_NAME, argumentContext = ARGUMENT1_CONTEXT,
+        @CliOption(key = ARGUMENT1_NAME, optionContext = ARGUMENT1_CONTEXT,
             help = ARGUMENT1_HELP, mandatory = true) String argument1,
-        @CliArgument(name = ARGUMENT2_NAME, argumentContext = ARGUMENT2_CONTEXT,
+        @CliOption(key = ARGUMENT2_NAME, optionContext = ARGUMENT2_CONTEXT,
             help = ARGUMENT2_HELP, mandatory = false,
             unspecifiedDefaultValue = ARGUMENT2_UNSPECIFIED_DEFAULT_VALUE,
             systemProvided = false) String argument2,
@@ -282,8 +174,8 @@ public class CommandManagerJUnitTest {
 
     @CliCommand(value = {"testMultiWordArg"})
     @ResourceOperation(resource = Resource.CLUSTER, operation = Operation.READ)
-    public static Result testMultiWordArg(@CliArgument(name = "arg1") String arg1,
-        @CliArgument(name = "arg2") String arg2) {
+    public static Result testMultiWordArg(@CliOption(key = "arg1") String arg1,
+                                          @CliOption(key = "arg2") String arg2) {
       return null;
     }
 
@@ -300,10 +192,7 @@ public class CommandManagerJUnitTest {
 
     @Override
     public boolean supports(Class<?> type, String optionContext) {
-      if (type.isAssignableFrom(String.class)) {
-        return true;
-      }
-      return false;
+      return type.isAssignableFrom(String.class);
     }
 
     @Override

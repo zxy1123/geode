@@ -14,16 +14,19 @@
  */
 package org.apache.geode.management.internal.cli;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.geode.management.cli.CliMetaData;
+import org.apache.geode.management.internal.cli.shell.GfshExecutionStrategy;
+import org.apache.geode.management.internal.cli.shell.OperationInvoker;
+import org.springframework.shell.core.annotation.CliCommand;
+import org.springframework.shell.core.annotation.CliOption;
+import org.springframework.shell.event.ParseResult;
+
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.springframework.shell.event.ParseResult;
-
-import org.apache.geode.management.cli.CliMetaData;
-import org.apache.geode.management.internal.cli.shell.GfshExecutionStrategy;
-import org.apache.geode.management.internal.cli.shell.OperationInvoker;
 
 /**
  * Immutable representation of the outcome of parsing a given shell line. * Extends
@@ -41,7 +44,7 @@ import org.apache.geode.management.internal.cli.shell.OperationInvoker;
 public class GfshParseResult extends ParseResult {
   private String userInput;
   private String commandName;
-  private Map<String, String> paramValueStringMap;
+  private Map<String, String> paramValueStringMap = new HashMap<>();
 
   /**
    * Creates a GfshParseResult instance to represent parsing outcome.
@@ -52,12 +55,34 @@ public class GfshParseResult extends ParseResult {
    * @param userInput user specified commands string
    */
   protected GfshParseResult(final Method method, final Object instance, final Object[] arguments,
-      final String userInput, final String commandName,
-      final Map<String, String> parametersAsString) {
+                            final String userInput) {
     super(method, instance, arguments);
-    this.userInput = userInput;
-    this.commandName = commandName;
-    this.paramValueStringMap = new HashMap<String, String>(parametersAsString);
+    this.userInput = userInput.trim();
+
+    CliCommand cliCommand = method.getAnnotation(CliCommand.class);
+    commandName = cliCommand.value()[0];
+
+    Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+    if (arguments == null) {
+      return;
+    }
+
+    for (int i = 0; i < arguments.length; i++) {
+      Object argument = arguments[i];
+      if (argument == null) {
+        continue;
+      }
+
+      CliOption cliOption = getCliOption(parameterAnnotations, i);
+
+      String argumentAsString;
+      if (argument instanceof Object[]) {
+        argumentAsString = StringUtils.join((Object[]) argument, ",");
+      } else {
+        argumentAsString = argument.toString();
+      }
+      paramValueStringMap.put(cliOption.key()[0], argumentAsString);
+    }
   }
 
   /**
@@ -67,7 +92,6 @@ public class GfshParseResult extends ParseResult {
     return userInput;
   }
 
-
   /**
    * @return the unmodifiable paramValueStringMap
    */
@@ -75,18 +99,17 @@ public class GfshParseResult extends ParseResult {
     return Collections.unmodifiableMap(paramValueStringMap);
   }
 
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder();
-    builder.append(GfshParseResult.class.getSimpleName());
-    builder.append(" [method=").append(getMethod());
-    builder.append(", instance=").append(getInstance());
-    builder.append(", arguments=").append(CliUtil.arrayToString(getArguments()));
-    builder.append("]");
-    return builder.toString();
-  }
-
   public String getCommandName() {
     return commandName;
+  }
+
+  private CliOption getCliOption(Annotation[][] parameterAnnotations, int index) {
+    Annotation[] annotations = parameterAnnotations[index];
+    for (Annotation annotation : annotations) {
+      if (annotation instanceof CliOption) {
+        return (CliOption) annotation;
+      }
+    }
+    return null;
   }
 }
