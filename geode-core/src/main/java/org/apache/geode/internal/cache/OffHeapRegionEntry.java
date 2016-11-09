@@ -15,14 +15,15 @@
 
 package org.apache.geode.internal.cache;
 
-import org.apache.geode.internal.offheap.Releasable;
+import org.apache.geode.internal.offheap.OffHeapRegionEntryHelper;
+import org.apache.geode.internal.offheap.annotations.Released;
 
 /**
  * Any RegionEntry that is stored off heap must implement this interface.
  * 
  *
  */
-public interface OffHeapRegionEntry extends RegionEntry, Releasable {
+public interface OffHeapRegionEntry extends RegionEntry {
   /**
    * OFF_HEAP_FIELD_READER
    * 
@@ -38,4 +39,10 @@ public interface OffHeapRegionEntry extends RegionEntry, Releasable {
    * @return newAddr OFF_HEAP_ADDRESS
    */
   public boolean setAddress(long expectedAddr, long newAddr);
+  
+  @Override
+  @Released
+  default public void release() {
+    OffHeapRegionEntryHelper.releaseEntry(this);
+  }
 }

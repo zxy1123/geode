@@ -580,19 +580,14 @@ public abstract class AbstractDiskRegion implements DiskRegionView {
     if (isReadyForRecovery()) {
       ds.updateDiskRegion(this);
       this.entriesMapIncompatible = false;
-      if (this.entries != null) {
+      if (this.entries != null && region.getOffHeap()) {
         CustomEntryConcurrentHashMap<Object, Object> other =
             ((AbstractRegionMap) this.entries)._getMap();
         Iterator<Map.Entry<Object, Object>> it = other.entrySetWithReusableEntries().iterator();
         while (it.hasNext()) {
           Map.Entry<Object, Object> me = it.next();
-          RegionEntry oldRe = (RegionEntry) me.getValue();
-          if (oldRe instanceof OffHeapRegionEntry) {
-            ((OffHeapRegionEntry) oldRe).release();
-          } else {
-            // no need to keep iterating; they are all either off heap or on heap.
-            break;
-          }
+          OffHeapRegionEntry oldRe = (OffHeapRegionEntry) me.getValue();
+          oldRe.release();
         }
       }
       this.entries = null;

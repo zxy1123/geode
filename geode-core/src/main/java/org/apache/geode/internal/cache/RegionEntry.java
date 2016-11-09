@@ -29,6 +29,7 @@ import org.apache.geode.internal.cache.lru.NewLRUClockHand;
 import org.apache.geode.internal.cache.versions.VersionSource;
 import org.apache.geode.internal.cache.versions.VersionStamp;
 import org.apache.geode.internal.cache.versions.VersionTag;
+import org.apache.geode.internal.offheap.Releasable;
 import org.apache.geode.internal.offheap.StoredObject;
 import org.apache.geode.internal.offheap.annotations.Released;
 import org.apache.geode.internal.offheap.annotations.Retained;
@@ -51,7 +52,7 @@ import org.apache.geode.internal.offheap.annotations.Unretained;
  *        volatile long id; DiskStatsLRUEntry extends StatsLRUEntry private volatile long id;
  *
  */
-public interface RegionEntry {
+public interface RegionEntry extends Releasable {
   // Our RegionEntry does not need to keep a reference to the key.
   // It is being referenced by the Map.Entry whose value field
   // references this RegionEntry.
@@ -459,4 +460,10 @@ public interface RegionEntry {
   @Retained(ABSTRACT_REGION_ENTRY_PREPARE_VALUE_FOR_CACHE)
   public Object prepareValueForCache(RegionEntryContext r, Object val, EntryEventImpl event,
       boolean isEntryUpdate);
+  
+  @Override
+  default public void release() {
+    // nothing needed by default
+  }
+
 }
