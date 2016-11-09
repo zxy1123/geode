@@ -140,12 +140,6 @@ public class VMThinDiskRegionEntryOffHeapStringKey2 extends VMThinDiskRegionEntr
   }
 
   @Override
-  @Released
-  public void release() {
-    OffHeapRegionEntryHelper.releaseEntry(this);
-  }
-
-  @Override
   public void returnToPool() {
     // Deadcoded for now; never was working
     // if (this instanceof VMThinRegionEntryLongKey) {

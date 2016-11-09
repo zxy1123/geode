@@ -229,14 +229,6 @@ public class LEAF_CLASS extends PARENT_CLASS {
   }
   
   @Override
-#ifdef OFFHEAP
-  @Released
-#endif
-  public void release() {
-    OffHeapRegionEntryHelper.releaseEntry(this);
-  }
-  
-  @Override
   public void returnToPool() {
     // Deadcoded for now; never was working
 //    if (this instanceof VMThinRegionEntryLongKey) {

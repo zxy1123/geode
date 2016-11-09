@@ -133,12 +133,6 @@ public class VersionedStatsRegionEntryOffHeapStringKey1 extends VersionedStatsRe
   }
 
   @Override
-  @Released
-  public void release() {
-    OffHeapRegionEntryHelper.releaseEntry(this);
-  }
-
-  @Override
   public void returnToPool() {
     // Deadcoded for now; never was working
     // if (this instanceof VMThinRegionEntryLongKey) {

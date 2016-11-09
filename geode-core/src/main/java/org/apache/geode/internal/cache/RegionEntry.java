@@ -460,7 +460,7 @@ public interface RegionEntry extends Releasable {
   @Retained(ABSTRACT_REGION_ENTRY_PREPARE_VALUE_FOR_CACHE)
   public Object prepareValueForCache(RegionEntryContext r, Object val, EntryEventImpl event,
       boolean isEntryUpdate);
-  
+
   @Override
   default public void release() {
     // nothing needed by default

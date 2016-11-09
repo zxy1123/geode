@@ -39,7 +39,7 @@ public interface OffHeapRegionEntry extends RegionEntry {
    * @return newAddr OFF_HEAP_ADDRESS
    */
   public boolean setAddress(long expectedAddr, long newAddr);
-  
+
   @Override
   @Released
   default public void release() {
