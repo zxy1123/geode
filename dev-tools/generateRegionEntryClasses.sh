@@ -1,7 +1,13 @@
 #!/bin/bash
-# This script should only be run from the top level build directory (i.e. the one that contains build.xml).
-# It reads LeafRegionEntry.cpp, preprocesses it and generates all the leaf classes that subclass AbstractRegionEntry.
-# It executes cpp. It has been tested with gnu's cpp on linux and the mac.
+# This script should only be run from the top level build directory 
+# (the one that contains the "dev-tools" subdirectory).
+# It reads LeafRegionEntry.cpp, preprocesses it and generates all the leaf
+# class source files that subclass AbstractRegionEntry.
+# It executes cpp. It has been tested with gnu's cpp on linux.
+# After using it to generate new java files, make sure and
+# run 'gradle spotlessApply' to format these generated files.
+# Then use 'git diff' to validate the changes you made to the
+# generated java files before committing them.
 
 SRCDIR=geode-core/src/main/java/org/apache/geode/internal/cache
 SRCFILE=$SRCDIR/LeafRegionEntry.cpp
@@ -42,3 +48,4 @@ do
     done
   done
 done
+echo now run \'./gradle spotlessApply\' to format the generated files

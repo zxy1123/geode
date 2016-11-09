@@ -13,6 +13,7 @@
  * the License.
  */
 package org.apache.geode.internal.cache;
+
 // DO NOT modify this class. It was generated from LeafRegionEntry.cpp
 #if defined(KEY_OBJECT)
 #define KEY_TYPE Object
@@ -80,10 +81,8 @@ import org.apache.geode.internal.util.concurrent.CustomEntryConcurrentHashMap.Ha
 // key string2: KEY_STRING2
 
 /**
- * Do not modify this class. It was generated.
- * Instead modify LeafRegionEntry.cpp and then run
- * bin/generateRegionEntryClasses.sh from the directory
- * that contains your build.xml.
+ * Do not modify this class. It was generated. Instead modify LeafRegionEntry.cpp and then run
+ * ./dev-tools/generateRegionEntryClasses.sh (it must be run from the top level directory).
  */
 public class LEAF_CLASS extends PARENT_CLASS {
   public LEAF_CLASS  (RegionEntryContext context, KEY_TYPE key, 
@@ -334,7 +333,7 @@ public class LEAF_CLASS extends PARENT_CLASS {
   /**
    * DiskId
    * 
-   * @since 5.1
+   * @since GemFire 5.1
    */
   protected DiskId id;//= new DiskId();
   public DiskId getDiskId() {
@@ -641,17 +640,17 @@ public class LEAF_CLASS extends PARENT_CLASS {
 
   @Override
   public void processVersionTag(EntryEvent cacheEvent) {
-    // this keeps Eclipse happy.  without it the sender chain becomes confused
+    // this keeps Eclipse happy. without it the sender chain becomes confused
     // while browsing this code
     super.processVersionTag(cacheEvent);
   }
 
-  /** get rvv internal high byte.  Used by region entries for transferring to storage */
+  /** get rvv internal high byte. Used by region entries for transferring to storage */
   public short getRegionVersionHighBytes() {
     return this.regionVersionHighBytes;
   }
   
-  /** get rvv internal low bytes.  Used by region entries for transferring to storage */
+  /** get rvv internal low bytes. Used by region entries for transferring to storage */
   public int getRegionVersionLowBytes() {
     return this.regionVersionLowBytes;
   }
@@ -705,8 +704,9 @@ public class LEAF_CLASS extends PARENT_CLASS {
   @Override
   public boolean isKeyEqual(Object k) {
     if (k instanceof UUID) {
-      UUID uuid = (UUID)k;
-      return uuid.getLeastSignificantBits() == this.keyLeastSigBits && uuid.getMostSignificantBits() == this.keyMostSigBits;
+      UUID uuid = (UUID) k;
+      return uuid.getLeastSignificantBits() == this.keyLeastSigBits
+          && uuid.getMostSignificantBits() == this.keyMostSigBits;
     }
     return false;
   }
