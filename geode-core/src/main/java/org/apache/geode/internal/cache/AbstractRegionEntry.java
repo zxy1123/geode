@@ -452,7 +452,7 @@ public abstract class AbstractRegionEntry implements RegionEntry, HashEntry<Obje
   public void releaseOffHeapRefIfRegionBeingClosedOrDestroyed(RegionEntryContext context,
       Object ref) {
     if (isOffHeapReference(ref) && isThisRegionBeingClosedOrDestroyed(context)) {
-      ((OffHeapRegionEntry) this).release();
+      release();
     }
   }
 
@@ -462,8 +462,8 @@ public abstract class AbstractRegionEntry implements RegionEntry, HashEntry<Obje
   }
 
   private boolean isOffHeapReference(Object ref) {
-    return ref != Token.REMOVED_PHASE1 && this instanceof OffHeapRegionEntry
-        && ref instanceof StoredObject && ((StoredObject) ref).hasRefCount();
+    return ref != Token.REMOVED_PHASE1 && ref instanceof StoredObject
+        && ((StoredObject) ref).hasRefCount();
   }
 
   /**
@@ -1180,8 +1180,6 @@ public abstract class AbstractRegionEntry implements RegionEntry, HashEntry<Obje
     if (v instanceof DiskEntry.RecoveredEntry)
       return false; // The disk layer has special logic that ends up storing the nested value in the
                     // RecoveredEntry off heap
-    if (!(e instanceof OffHeapRegionEntry))
-      return false;
     // TODO should we check for deltas here or is that a user error?
     return true;
   }

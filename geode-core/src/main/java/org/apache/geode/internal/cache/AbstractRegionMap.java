@@ -234,14 +234,14 @@ public abstract class AbstractRegionMap implements RegionMap {
 
   public final RegionEntry putEntryIfAbsent(Object key, RegionEntry re) {
     RegionEntry oldRe = (RegionEntry) _getMap().putIfAbsent(key, re);
-    if (oldRe == null && (re instanceof OffHeapRegionEntry) && _isOwnerALocalRegion()
+    if (oldRe == null && _isOwnerALocalRegion() && _getOwner().getOffHeap()
         && _getOwner().isThisRegionBeingClosedOrDestroyed()) {
       // prevent orphan during concurrent destroy (#48068)
       Object v = re._getValue();
       if (v != Token.REMOVED_PHASE1 && v != Token.REMOVED_PHASE2 && v instanceof StoredObject
           && ((StoredObject) v).hasRefCount()) {
         if (_getMap().remove(key, re)) {
-          ((OffHeapRegionEntry) re).release();
+          re.release();
         }
       }
     }
@@ -573,9 +573,7 @@ public abstract class AbstractRegionMap implements RegionMap {
           lruEntryUpdate(newRe);
         } finally {
           OffHeapHelper.release(value);
-          if (oldRe instanceof OffHeapRegionEntry) {
-            ((OffHeapRegionEntry) oldRe).release();
-          }
+          oldRe.release();
         }
         lruUpdateCallback();
       }
@@ -647,10 +645,7 @@ public abstract class AbstractRegionMap implements RegionMap {
            * and throw an exception.
            */
           else {
-            if (newRe instanceof OffHeapRegionEntry) {
-              ((OffHeapRegionEntry) newRe).release();
-            }
-
+            newRe.release();
             throw new IllegalStateException(
                 "Could not recover entry for key " + key + ".  The entry already exists!");
           }
@@ -2632,9 +2627,7 @@ public abstract class AbstractRegionMap implements RegionMap {
     retVal = getEntryFactory().createEntry((RegionEntryContext) ownerRegion, key, value);
     RegionEntry oldRe = putEntryIfAbsent(key, retVal);
     if (oldRe != null) {
-      if (retVal instanceof OffHeapRegionEntry) {
-        ((OffHeapRegionEntry) retVal).release();
-      }
+      retVal.release();
       return oldRe;
     }
     return retVal;

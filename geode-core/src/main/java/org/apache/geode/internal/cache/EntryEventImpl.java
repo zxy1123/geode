@@ -1630,7 +1630,7 @@ public class EntryEventImpl
       reentry.setValueWithTombstoneCheck(v, this); // already called prepareValueForCache
       success = true;
     } finally {
-      if (!success && reentry instanceof OffHeapRegionEntry && v instanceof StoredObject) {
+      if (!success && owner.getOffHeap() && v instanceof StoredObject) {
         OffHeapRegionEntryHelper.releaseEntry((OffHeapRegionEntry) reentry, (StoredObject) v);
       }
     }
