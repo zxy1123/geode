@@ -40,3 +40,10 @@ Known Limitations
     Support for this may be added with a new version of this script that operates
     outside of GemFire and works at the operating system level or as this feature
     is implemented in gfsh.
+
+
+File log_collection_utility.html.md.erb
+=======================================
+This file contains the markdown documentation for the utility.  It is included
+here so that the documentation is available if/when the utility is added
+to a release.
