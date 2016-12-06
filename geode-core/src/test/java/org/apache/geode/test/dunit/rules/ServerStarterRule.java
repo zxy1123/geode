@@ -66,10 +66,12 @@ public class ServerStarterRule extends ExternalResource implements Serializable 
     if (!properties.containsKey(NAME)) {
       properties.setProperty(NAME, this.getClass().getName());
     }
-    if (locatorPort > 0) {
-      properties.setProperty(LOCATORS, "localhost[" + locatorPort + "]");
-    } else {
-      properties.setProperty(LOCATORS, "");
+    if(!properties.containsKey(LOCATORS)) {
+      if (locatorPort > 0) {
+        properties.setProperty(LOCATORS, "localhost[" + locatorPort + "]");
+      } else {
+        properties.setProperty(LOCATORS, "");
+      }
     }
     if (properties.containsKey(JMX_MANAGER_PORT)) {
       int jmxPort = Integer.parseInt(properties.getProperty(JMX_MANAGER_PORT));

@@ -58,7 +58,7 @@ public class SecurityClusterConfigDUnitTest extends JUnit4DistributedTestCase {
     props.setProperty(JMX_MANAGER_START, "false");
     props.setProperty(JMX_MANAGER_PORT, 0 + "");
     props.setProperty(SECURITY_POST_PROCESSOR, PDXPostProcessor.class.getName());
-    lsRule.getLocatorVM(0, props);
+    lsRule.startLocatorVM(0, props);
   }
 
   @Test

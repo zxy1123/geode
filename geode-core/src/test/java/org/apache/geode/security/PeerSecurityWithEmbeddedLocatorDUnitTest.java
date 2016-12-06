@@ -47,13 +47,13 @@ public class PeerSecurityWithEmbeddedLocatorDUnitTest extends JUnit4DistributedT
     Properties server0Props = new Properties();
     server0Props.setProperty(SECURITY_MANAGER, SimpleTestSecurityManager.class.getName());
     server0Props.setProperty("start-locator", "localhost[" + locatorPort + "]");
-    lsRule.getServerVM(0, server0Props);
+    lsRule.startServerVM(0, server0Props);
 
 
     Properties server1Props = new Properties();
     server1Props.setProperty("security-username", "cluster");
     server1Props.setProperty("security-password", "cluster");
-    lsRule.getServerVM(1, server1Props, locatorPort);
+    lsRule.startServerVM(1, server1Props, locatorPort);
 
     Properties server2Props = new Properties();
     server2Props.setProperty("security-username", "user");
@@ -75,13 +75,13 @@ public class PeerSecurityWithEmbeddedLocatorDUnitTest extends JUnit4DistributedT
     Properties server0Props = new Properties();
     server0Props.setProperty(SECURITY_PEER_AUTHENTICATOR, DummyAuthenticator.class.getName());
     server0Props.setProperty("start-locator", "localhost[" + locatorPort + "]");
-    lsRule.getServerVM(0, server0Props);
+    lsRule.startServerVM(0, server0Props);
 
 
     Properties server1Props = new Properties();
     server1Props.setProperty("security-username", "user");
     server1Props.setProperty("security-password", "user");
-    lsRule.getServerVM(1, server1Props, locatorPort);
+    lsRule.startServerVM(1, server1Props, locatorPort);
 
     Properties server2Props = new Properties();
     server2Props.setProperty("security-username", "bogus");

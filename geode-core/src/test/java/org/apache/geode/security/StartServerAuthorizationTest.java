@@ -15,22 +15,21 @@
 
 package org.apache.geode.security;
 
-import static org.apache.geode.distributed.ConfigurationProperties.*;
-import static org.assertj.core.api.Assertions.*;
+import static org.apache.geode.distributed.ConfigurationProperties.SECURITY_MANAGER;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Properties;
-
+import org.apache.geode.test.dunit.VM;
+import org.apache.geode.test.dunit.internal.JUnit4DistributedTestCase;
+import org.apache.geode.test.dunit.rules.LocatorServerStartupRule;
 import org.apache.geode.test.dunit.rules.ServerStarterRule;
+import org.apache.geode.test.junit.categories.DistributedTest;
+import org.apache.geode.test.junit.categories.SecurityTest;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.geode.test.dunit.VM;
-import org.apache.geode.test.dunit.internal.JUnit4DistributedTestCase;
-import org.apache.geode.test.dunit.rules.LocatorServerStartupRule;
-import org.apache.geode.test.junit.categories.DistributedTest;
-import org.apache.geode.test.junit.categories.SecurityTest;
+import java.util.Properties;
 
 @Category({DistributedTest.class, SecurityTest.class})
 public class StartServerAuthorizationTest extends JUnit4DistributedTestCase {
@@ -42,7 +41,7 @@ public class StartServerAuthorizationTest extends JUnit4DistributedTestCase {
   public void before() throws Exception {
     Properties props = new Properties();
     props.setProperty(SECURITY_MANAGER, SimpleTestSecurityManager.class.getName());
-    lsRule.getLocatorVM(0, props);
+    lsRule.startLocatorVM(0, props);
   }
 
   @Test
@@ -88,7 +87,7 @@ public class StartServerAuthorizationTest extends JUnit4DistributedTestCase {
     props.setProperty("security-username", "cluster");
     props.setProperty("security-password", "cluster");
 
-    lsRule.getServerVM(1, props);
+    lsRule.startServerVM(1, props);
   }
 
 }

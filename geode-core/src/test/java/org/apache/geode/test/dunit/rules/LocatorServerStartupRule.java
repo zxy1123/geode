@@ -21,67 +21,84 @@ import static org.apache.geode.test.dunit.Host.getHost;
 import org.apache.geode.test.dunit.Host;
 import org.apache.geode.test.dunit.Invoke;
 import org.apache.geode.test.dunit.VM;
+import org.apache.geode.test.junit.rules.serializable.SerializableTemporaryFolder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.rules.ExternalResource;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Properties;
 
 
 /**
- * this rule can help you start up locator/server in different VMs you can multiple locators/servers
+ * this rule can help you start up locator/server in different VMs you can multiple members/servers
  * combination
  */
 public class LocatorServerStartupRule extends ExternalResource implements Serializable {
 
-  // these are only avaialbe in each VM
+  // these are only availabe in each VM
   public static ServerStarterRule serverStarter;
   public static LocatorStarterRule locatorStarter;
+
+  // these are available in test vm
   public int[] ports = new int[4];
+  public File[] workingDirs = new File[4];
   private Host host = getHost(0);
 
+  private TemporaryFolder temporaryFolder = new SerializableTemporaryFolder();
+
   @Before
-  public void before() {
-    after();
+  public void before() throws IOException {
+    temporaryFolder.create();
+    Invoke.invokeInEveryVM("Stop each VM", () -> stop());
   }
 
   @After
   public void after() {
-    stop();
+    temporaryFolder.delete();
     Invoke.invokeInEveryVM("Stop each VM", () -> stop());
   }
 
-  /**
-   * Returns getHost(0).getVM(0) as a locator instance with the given configuration properties.
-   * 
-   * @param locatorProperties
-   *
-   * @return VM locator vm
-   *
-   * @throws IOException
-   */
-  public VM getLocatorVM(int index, Properties locatorProperties) throws IOException {
+    /**
+     * Returns getHost(0).getVM(0) as a locator instance with the given configuration properties.
+     *
+     * @param locatorProperties
+     *
+     * @return VM locator vm
+     *
+     * @throws IOException
+     */
+  public VM startLocatorVM(int index, Properties locatorProperties) throws IOException {
+    String name = "locator-"+index;
+    File workingDir = new File(temporaryFolder.getRoot(), name);
+    if(!workingDir.exists()) {
+      temporaryFolder.newFolder(name);
+    }
     VM locatorVM = host.getVM(index);
-    locatorProperties.setProperty(NAME, "locator-" + index);
+    locatorProperties.setProperty(NAME, name);
     int locatorPort = locatorVM.invoke(() -> {
+      System.setProperty("user.dir", workingDir.getCanonicalPath());
       locatorStarter = new LocatorStarterRule(locatorProperties);
       locatorStarter.startLocator();
       return locatorStarter.locator.getPort();
     });
     ports[index] = locatorPort;
+    workingDirs[index] = workingDir;
     return locatorVM;
   }
 
   /**
    * starts a cache server that does not connect to a locator
-   * 
+   *
    * @return VM node vm
    */
 
-  public VM getServerVM(int index, Properties properties) {
-    return getServerVM(index, properties, 0);
+  public VM startServerVM(int index, Properties properties) throws IOException {
+    return startServerVM(index, properties, 0);
+
   }
 
   /**
@@ -92,15 +109,22 @@ public class LocatorServerStartupRule extends ExternalResource implements Serial
    * @param locatorPort
    * @return
    */
-  public VM getServerVM(int index, Properties properties, int locatorPort) {
+  public VM startServerVM(int index, Properties properties, int locatorPort) throws IOException {
+    String name = "server-"+index;
     VM nodeVM = getNodeVM(index);
-    properties.setProperty(NAME, "server-" + index);
+    File workingDir = new File(temporaryFolder.getRoot(), name);
+    if(!workingDir.exists()) {
+      temporaryFolder.newFolder(name);
+    }
+    properties.setProperty(NAME, name);
     int port = nodeVM.invoke(() -> {
+      System.setProperty("user.dir", workingDir.getCanonicalPath());
       serverStarter = new ServerStarterRule(properties);
       serverStarter.startServer(locatorPort);
       return serverStarter.server.getPort();
     });
     ports[index] = port;
+    workingDirs[index] = workingDir;
     return nodeVM;
   }
 
@@ -118,6 +142,14 @@ public class LocatorServerStartupRule extends ExternalResource implements Serial
 
   public int getPort(int index) {
     return ports[index];
+  }
+
+  public TemporaryFolder getRootFolder(){
+    return temporaryFolder;
+  }
+
+  public File getWorkingDir(int index) {
+    return workingDirs[index];
   }
 
 

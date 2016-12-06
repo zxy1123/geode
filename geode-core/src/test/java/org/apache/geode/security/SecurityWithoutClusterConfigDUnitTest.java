@@ -51,7 +51,7 @@ public class SecurityWithoutClusterConfigDUnitTest extends JUnit4DistributedTest
     props.setProperty(SECURITY_MANAGER, SimpleTestSecurityManager.class.getName());
     props.setProperty(SECURITY_POST_PROCESSOR, PDXPostProcessor.class.getName());
     props.setProperty(ENABLE_CLUSTER_CONFIGURATION, "false");
-    lsRule.getLocatorVM(0, props);
+    lsRule.startLocatorVM(0, props);
   }
 
   @Test

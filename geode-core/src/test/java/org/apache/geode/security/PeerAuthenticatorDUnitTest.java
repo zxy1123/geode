@@ -42,7 +42,7 @@ public class PeerAuthenticatorDUnitTest extends JUnit4DistributedTestCase {
   public void before() throws Exception {
     Properties props = new Properties();
     props.setProperty(SECURITY_PEER_AUTHENTICATOR, DummyAuthenticator.class.getName());
-    lsRule.getLocatorVM(0, props);
+    lsRule.startLocatorVM(0, props);
   }
 
   @Test
@@ -52,7 +52,7 @@ public class PeerAuthenticatorDUnitTest extends JUnit4DistributedTestCase {
     Properties server1Props = new Properties();
     server1Props.setProperty("security-username", "user");
     server1Props.setProperty("security-password", "user");
-    lsRule.getServerVM(1, server1Props, locatorPort);
+    lsRule.startServerVM(1, server1Props, locatorPort);
 
 
     Properties server2Props = new Properties();

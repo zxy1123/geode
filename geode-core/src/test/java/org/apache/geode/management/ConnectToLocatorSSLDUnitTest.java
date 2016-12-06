@@ -83,7 +83,7 @@ public class ConnectToLocatorSSLDUnitTest extends JUnit4DistributedTestCase {
   }
 
   public void setUpLocatorAndConnect(Properties securityProps) throws Exception {
-    lsRule.getLocatorVM(0, securityProps);
+    lsRule.startLocatorVM(0, securityProps);
 
     // saving the securityProps to a file
     OutputStream out = new FileOutputStream(securityPropsFile);

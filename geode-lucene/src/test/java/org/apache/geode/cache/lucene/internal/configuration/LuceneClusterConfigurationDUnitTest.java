@@ -234,7 +234,7 @@ public class LuceneClusterConfigurationDUnitTest extends CliCommandTestBase {
     if (addGroup) {
       nodeProperties.setProperty(GROUPS, groupName);
     }
-    return ls.getServerVM(vmIndex, nodeProperties, ls.getPort(0));
+    return ls.startServerVM(vmIndex, nodeProperties, ls.getPort(0));
   }
 
   private VM startLocatorWithClusterConfigurationEnabled() throws Exception {
@@ -258,7 +258,7 @@ public class LuceneClusterConfigurationDUnitTest extends CliCommandTestBase {
     locatorProps.setProperty(JMX_MANAGER_PORT, String.valueOf(jmxPort));
     locatorProps.setProperty(HTTP_SERVICE_PORT, String.valueOf(httpPort));
     locatorProps.setProperty(CLUSTER_CONFIGURATION_DIR, dir.getCanonicalPath());
-    return ls.getLocatorVM(0, locatorProps);
+    return ls.startLocatorVM(0, locatorProps);
   }
 
   private void createLuceneIndexUsingGfsh(boolean addGroup) throws Exception {

@@ -50,7 +50,7 @@ public class ClusterConfigWithoutSecurityDUnitTest extends JUnit4DistributedTest
         .addIgnoredException(LocalizedStrings.GEMFIRE_CACHE_SECURITY_MISCONFIGURATION.toString());
     IgnoredException
         .addIgnoredException(LocalizedStrings.GEMFIRE_CACHE_SECURITY_MISCONFIGURATION_2.toString());
-    lsRule.getLocatorVM(0, new Properties());
+    lsRule.startLocatorVM(0, new Properties());
   }
 
   @After
