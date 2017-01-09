@@ -868,7 +868,7 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
             }
 
             locatorState = LocatorState.fromJson(locatorProxy.status());
-            locatorProxy.shutDownMember();
+            locatorProxy.shutDownMember(true);
           } else {
             return ResultBuilder.createUserErrorResult(CliStrings.format(
                 CliStrings.STOP_LOCATOR__NO_LOCATOR_FOUND_FOR_MEMBER_ERROR_MESSAGE, member));
@@ -1987,7 +1987,7 @@ public class LauncherLifecycleCommands extends AbstractCommandsSupport {
             }
 
             serverState = ServerState.fromJson(serverProxy.status());
-            serverProxy.shutDownMember();
+            serverProxy.shutDownMember(true);
           } else {
             return ResultBuilder.createUserErrorResult(CliStrings
                 .format(CliStrings.STOP_SERVER__NO_SERVER_FOUND_FOR_MEMBER_ERROR_MESSAGE, member));

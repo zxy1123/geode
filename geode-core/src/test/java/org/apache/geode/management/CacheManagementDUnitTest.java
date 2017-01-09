@@ -119,6 +119,8 @@ public class CacheManagementDUnitTest extends ManagementTestBase {
       vm.invoke(() -> CacheManagementDUnitTest.fetchOSMetrics());
 
       vm.invoke(() -> CacheManagementDUnitTest.shutDownMember());
+
+      vm.invoke(() -> assertTrue(CacheManagementDUnitTest.shutDownMember(true)));
     }
 
     VM managingNode = getManagingNode();
@@ -576,6 +578,11 @@ public class CacheManagementDUnitTest extends ManagementTestBase {
   public static void shutDownMember() {
     MemberMXBean bean = getManagementService().getMemberMXBean();
     bean.shutDownMember();
+  }
+
+  public static boolean shutDownMember(boolean wait) {
+    MemberMXBean bean = getManagementService().getMemberMXBean();
+    return bean.shutDownMember(wait);
   }
 
   public static void assertExpectedMembers(int expectedMemberCount) {

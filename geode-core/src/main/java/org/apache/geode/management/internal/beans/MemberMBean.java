@@ -424,8 +424,12 @@ public class MemberMBean extends NotificationBroadcasterSupport implements Membe
 
   @Override
   public void shutDownMember() {
-    bridge.shutDownMember();
+    bridge.shutDownMember(false);
+  }
 
+  @Override
+  public boolean shutDownMember(boolean waitForResult) {
+    return bridge.shutDownMember(waitForResult);
   }
 
   @Override

@@ -52,6 +52,7 @@ public class MemberMBeanSecurityJUnitTest {
   @ConnectionConfiguration(user = "super-user", password = "1234567")
   public void testAllAccess() throws Exception {
     bean.shutDownMember();
+    bean.shutDownMember(false);
     bean.compactAllDiskStores();
     bean.createManager();
     bean.fetchJvmThreads();
@@ -72,6 +73,7 @@ public class MemberMBeanSecurityJUnitTest {
     assertThatThrownBy(() -> bean.compactAllDiskStores())
         .hasMessageContaining(TestCommand.dataManage.toString());
     bean.shutDownMember();
+    bean.shutDownMember(false);
     bean.createManager();
     bean.fetchJvmThreads();
     bean.getName();
@@ -90,6 +92,8 @@ public class MemberMBeanSecurityJUnitTest {
     bean.compactAllDiskStores();
     assertThatThrownBy(() -> bean.shutDownMember())
         .hasMessageContaining(TestCommand.clusterManage.toString());
+    assertThatThrownBy(() -> bean.shutDownMember(false))
+        .hasMessageContaining(TestCommand.clusterManage.toString());
     assertThatThrownBy(() -> bean.createManager())
         .hasMessageContaining(TestCommand.clusterManage.toString());
     bean.showJVMMetrics();
@@ -100,6 +104,8 @@ public class MemberMBeanSecurityJUnitTest {
   @ConnectionConfiguration(user = "data-user", password = "1234567")
   public void testDataUser() throws Exception {
     assertThatThrownBy(() -> bean.shutDownMember())
+        .hasMessageContaining(TestCommand.clusterManage.toString());
+    assertThatThrownBy(() -> bean.shutDownMember(false))
         .hasMessageContaining(TestCommand.clusterManage.toString());
     assertThatThrownBy(() -> bean.createManager())
         .hasMessageContaining(TestCommand.clusterManage.toString());

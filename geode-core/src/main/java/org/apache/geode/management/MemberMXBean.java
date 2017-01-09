@@ -177,6 +177,15 @@ public interface MemberMXBean {
   public void shutDownMember();
 
   /**
+   * Shuts down the member, optionally waiting until the shutdown is complete.
+   *
+   * @param waitForResult true if the call will wait until the shutdown is complete
+   * @return true if the shutdown succeeded
+   */
+  @ResourceOperation(resource = Resource.CLUSTER, operation = Operation.MANAGE)
+  public boolean shutDownMember(boolean waitForResult);
+
+  /**
    * Returns JVM metrics.
    */
   public JVMMetrics showJVMMetrics();
