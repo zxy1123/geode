@@ -21,7 +21,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.apache.geode.internal.cache.BucketRegion;
 import org.apache.geode.internal.cache.PartitionedRegion;
 import org.apache.geode.test.junit.categories.IntegrationTest;
 import org.apache.geode.test.junit.categories.UnitTest;
@@ -33,12 +32,14 @@ import org.mockito.Mock;
 @Category(UnitTest.class)
 public class BucketTargetingMapTest {
 
-  private BucketRegion region;
+  private PartitionedRegion region;
 
   @Before
   public void initMocks() {
-    region = mock(BucketRegion.class);
+    region = mock(PartitionedRegion.class);
     final BucketTargetingResolver resolver = new BucketTargetingResolver();
+    when(region.getPartitionResolver()).thenReturn(resolver);
+    when(region.getTotalNumberOfBuckets()).thenReturn(5);
   }
 
   @Test

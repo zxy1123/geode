@@ -241,9 +241,9 @@ public class PartitionedRepositoryManagerJUnitTest {
   protected void checkRepository(IndexRepositoryImpl repo0, int bucketId) {
     IndexWriter writer0 = repo0.getWriter();
     RegionDirectory dir0 = (RegionDirectory) writer0.getDirectory();
-    assertEquals(new BucketTargetingMap(fileBuckets.get(bucketId), bucketId),
+    assertEquals(new BucketTargetingMap(fileRegion, bucketId),
         dir0.getFileSystem().getFileRegion());
-    assertEquals(new BucketTargetingMap(chunkBuckets.get(bucketId), bucketId),
+    assertEquals(new BucketTargetingMap(chunkRegion, bucketId),
         dir0.getFileSystem().getChunkRegion());
     assertEquals(serializer, repo0.getSerializer());
   }
@@ -253,9 +253,7 @@ public class PartitionedRepositoryManagerJUnitTest {
     BucketRegion fileBucket = Mockito.mock(BucketRegion.class);
     // Allowing the fileBucket to behave like a map so that the IndexWriter operations don't fail
     Fakes.addMapBehavior(fileBucket);
-    when(fileBucket.getFullPath()).thenReturn("File" + id);
     BucketRegion chunkBucket = Mockito.mock(BucketRegion.class);
-    when(chunkBucket.getFullPath()).thenReturn("Chunk" + id);
     when(mockBucket.getId()).thenReturn(id);
     when(userRegion.getBucketRegion(eq(id), eq(null))).thenReturn(mockBucket);
     when(userDataStore.getLocalBucketById(eq(id))).thenReturn(mockBucket);

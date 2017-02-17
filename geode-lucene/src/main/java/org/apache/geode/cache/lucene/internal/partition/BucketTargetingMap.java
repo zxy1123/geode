@@ -17,7 +17,6 @@ package org.apache.geode.cache.lucene.internal.partition;
 import org.apache.geode.cache.EntryExistsException;
 import org.apache.geode.cache.EntryNotFoundException;
 import org.apache.geode.cache.Region;
-import org.apache.geode.internal.cache.BucketRegion;
 import org.apache.geode.internal.cache.LocalDataSet;
 import org.apache.geode.internal.cache.PartitionedRegion;
 
@@ -30,9 +29,9 @@ public class BucketTargetingMap<K, V> extends AbstractMap<K, V> {
   private final Region<K, V> region;
   public Object callbackArg;
 
-  public BucketTargetingMap(BucketRegion region, int bucketId) {
+  public BucketTargetingMap(PartitionedRegion region, int bucketId) {
     this.callbackArg = bucketId;
-    this.region = region;
+    this.region = new LocalDataSet(region, Collections.singleton(bucketId));
   }
 
   @Override

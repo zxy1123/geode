@@ -80,8 +80,8 @@ public class IndexRepositoryFactory {
 
     final IndexRepository repo;
     try {
-      RegionDirectory dir = new RegionDirectory(getBucketTargetingMap(fileBucket, bucketId),
-          getBucketTargetingMap(chunkBucket, bucketId), indexForPR.getFileSystemStats());
+      RegionDirectory dir = new RegionDirectory(getBucketTargetingMap(fileRegion, bucketId),
+          getBucketTargetingMap(chunkRegion, bucketId), indexForPR.getFileSystemStats());
       IndexWriterConfig config = new IndexWriterConfig(indexForPR.getAnalyzer());
       IndexWriter writer = new IndexWriter(dir, config);
       repo = new IndexRepositoryImpl(fileBucket, writer, serializer, indexForPR.getIndexStats(),
@@ -100,7 +100,7 @@ public class IndexRepositoryFactory {
 
   }
 
-  private Map getBucketTargetingMap(BucketRegion region, int bucketId) {
+  private Map getBucketTargetingMap(PartitionedRegion region, int bucketId) {
     return new BucketTargetingMap(region, bucketId);
   }
 
