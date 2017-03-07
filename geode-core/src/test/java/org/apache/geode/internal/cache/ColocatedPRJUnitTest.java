@@ -32,14 +32,16 @@ public class ColocatedPRJUnitTest {
   @SuppressWarnings("rawtypes")
   @Test
   public void destroyColocatedPRCheckForLeak() {
-    PartitionedRegion parent = (PartitionedRegion) PartitionedRegionTestHelper.createPartionedRegion("PARENT");
+    PartitionedRegion parent =
+        (PartitionedRegion) PartitionedRegionTestHelper.createPartionedRegion("PARENT");
     List<PartitionedRegion> colocatedList = parent.getColocatedByList();
     assertEquals(0, colocatedList.size());
-    PartitionAttributes PRatts = new PartitionAttributesFactory().setColocatedWith("/PARENT").create();
-    PartitionedRegion child = (PartitionedRegion) PartitionedRegionTestHelper.createPartionedRegion("CHILD", PRatts);
+    PartitionAttributes PRatts =
+        new PartitionAttributesFactory().setColocatedWith("/PARENT").create();
+    PartitionedRegion child =
+        (PartitionedRegion) PartitionedRegionTestHelper.createPartionedRegion("CHILD", PRatts);
     assertTrue(colocatedList.contains(child));
     child.destroyRegion();
     assertFalse(colocatedList.contains(child));
   }
 }
- 

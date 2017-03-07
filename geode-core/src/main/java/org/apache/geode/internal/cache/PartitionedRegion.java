@@ -600,7 +600,8 @@ public class PartitionedRegion extends LocalRegion
 
   private byte fixedPASet;
 
-  private final List<PartitionedRegion> colocatedByList = new CopyOnWriteArrayList<PartitionedRegion>();
+  private final List<PartitionedRegion> colocatedByList =
+      new CopyOnWriteArrayList<PartitionedRegion>();
 
   private final PartitionListener[] partitionListeners;
 
