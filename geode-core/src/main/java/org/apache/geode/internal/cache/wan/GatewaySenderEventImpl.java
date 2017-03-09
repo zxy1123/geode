@@ -289,7 +289,7 @@ public class GatewaySenderEventImpl
     // Initialize the creation timestamp
     this.creationTime = System.currentTimeMillis();
 
-    if (event.getVersionTag() != null) {
+    if (event.getVersionTag() != null && event.getVersionTag().hasValidVersion()) {
       this.versionTimeStamp = event.getVersionTag().getVersionTimeStamp();
     }
 
@@ -1207,7 +1207,7 @@ public class GatewaySenderEventImpl
 
   @Override
   @Released(OffHeapIdentifier.GATEWAY_SENDER_EVENT_IMPL_VALUE)
-  public void release() {
+  public synchronized void release() {
     @Released(OffHeapIdentifier.GATEWAY_SENDER_EVENT_IMPL_VALUE)
     Object vo = this.valueObj;
     if (OffHeapHelper.releaseAndTrackOwner(vo, this)) {

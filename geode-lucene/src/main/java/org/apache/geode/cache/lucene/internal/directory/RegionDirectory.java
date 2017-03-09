@@ -15,13 +15,10 @@
 
 package org.apache.geode.cache.lucene.internal.directory;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
-
+import org.apache.geode.cache.lucene.internal.filesystem.ChunkKey;
+import org.apache.geode.cache.lucene.internal.filesystem.File;
+import org.apache.geode.cache.lucene.internal.filesystem.FileSystem;
+import org.apache.geode.cache.lucene.internal.filesystem.FileSystemStats;
 import org.apache.lucene.store.BaseDirectory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
@@ -29,10 +26,12 @@ import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.OutputStreamIndexOutput;
 import org.apache.lucene.store.SingleInstanceLockFactory;
 
-import org.apache.geode.cache.lucene.internal.filesystem.ChunkKey;
-import org.apache.geode.cache.lucene.internal.filesystem.File;
-import org.apache.geode.cache.lucene.internal.filesystem.FileSystem;
-import org.apache.geode.cache.lucene.internal.filesystem.FileSystemStats;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * An implementation of Directory that stores data in geode regions.
@@ -48,8 +47,8 @@ public class RegionDirectory extends BaseDirectory {
    * Create a region directory with a given file and chunk region. These regions may be bucket
    * regions or they may be replicated regions.
    */
-  public RegionDirectory(ConcurrentMap<String, File> fileRegion,
-      ConcurrentMap<ChunkKey, byte[]> chunkRegion, FileSystemStats stats) {
+  public RegionDirectory(Map<String, File> fileRegion, Map<ChunkKey, byte[]> chunkRegion,
+      FileSystemStats stats) {
     super(new SingleInstanceLockFactory());
     fs = new FileSystem(fileRegion, chunkRegion, stats);
   }
@@ -99,7 +98,13 @@ public class RegionDirectory extends BaseDirectory {
   }
 
   @Override
-  public void renameFile(String source, String dest) throws IOException {
+  public void syncMetaData() throws IOException {
+    ensureOpen();
+    // Region does not need to sync to disk
+  }
+
+  @Override
+  public void rename(String source, String dest) throws IOException {
     ensureOpen();
     fs.renameFile(source, dest);
   }
@@ -108,7 +113,6 @@ public class RegionDirectory extends BaseDirectory {
   public IndexInput openInput(String name, IOContext context) throws IOException {
     ensureOpen();
     final File file = fs.getFile(name);
-
     return new FileIndexInput(name, file);
   }
 

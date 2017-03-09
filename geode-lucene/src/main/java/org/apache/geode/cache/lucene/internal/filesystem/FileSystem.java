@@ -15,9 +15,14 @@
 
 package org.apache.geode.cache.lucene.internal.filesystem;
 
+import org.apache.geode.cache.Region;
+import org.apache.geode.internal.logging.LogService;
+import org.apache.logging.log4j.Logger;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -32,9 +37,10 @@ import java.util.concurrent.ConcurrentMap;
  *
  */
 public class FileSystem {
-  // private final Cache cache;
-  private final ConcurrentMap<String, File> fileRegion;
-  private final ConcurrentMap<ChunkKey, byte[]> chunkRegion;
+  private static final Logger logger = LogService.getLogger();
+
+  private final Map<String, File> fileRegion;
+  private final Map<ChunkKey, byte[]> chunkRegion;
 
   static final int CHUNK_SIZE = 1024 * 1024; // 1 MB
   private final FileSystemStats stats;
@@ -49,8 +55,8 @@ public class FileSystem {
    * @param fileRegion the region to store metadata about the files
    * @param chunkRegion the region to store actual file data.
    */
-  public FileSystem(ConcurrentMap<String, File> fileRegion,
-      ConcurrentMap<ChunkKey, byte[]> chunkRegion, FileSystemStats stats) {
+  public FileSystem(Map<String, File> fileRegion, Map<ChunkKey, byte[]> chunkRegion,
+      FileSystemStats stats) {
     this.fileRegion = fileRegion;
     this.chunkRegion = chunkRegion;
     this.stats = stats;
@@ -63,6 +69,16 @@ public class FileSystem {
   public File createFile(final String name) throws IOException {
     // TODO lock region ?
     final File file = new File(this, name);
+    if (null != fileRegion.putIfAbsent(name, file)) {
+      throw new IOException("File exists.");
+    }
+    stats.incFileCreates(1);
+    // TODO unlock region ?
+    return file;
+  }
+
+  public File putIfAbsentFile(String name, File file) throws IOException {
+    // TODO lock region ?
     if (null != fileRegion.putIfAbsent(name, file)) {
       throw new IOException("File exists.");
     }
@@ -100,42 +116,43 @@ public class FileSystem {
       throw new FileNotFoundException(name);
     }
 
-    // TODO consider removeAll with all ChunkKeys listed.
-    final ChunkKey key = new ChunkKey(file.id, 0);
-    while (true) {
-      // TODO consider mutable ChunkKey
-      if (null == chunkRegion.remove(key)) {
-        // no more chunks
-        break;
+    if (file.possiblyRenamed == false) {
+      // TODO consider removeAll with all ChunkKeys listed.
+      final ChunkKey key = new ChunkKey(file.id, 0);
+      while (true) {
+        // TODO consider mutable ChunkKey
+        if (null == chunkRegion.remove(key)) {
+          // no more chunks
+          break;
+        }
+        key.chunkId++;
       }
-      key.chunkId++;
     }
-
     stats.incFileDeletes(1);
   }
 
   public void renameFile(String source, String dest) throws IOException {
+
     final File sourceFile = fileRegion.get(source);
     if (null == sourceFile) {
       throw new FileNotFoundException(source);
     }
 
-    final File destFile = createFile(dest);
-
+    final File destFile = new File(this, dest);
     destFile.chunks = sourceFile.chunks;
     destFile.created = sourceFile.created;
     destFile.length = sourceFile.length;
     destFile.modified = sourceFile.modified;
     destFile.id = sourceFile.id;
-    updateFile(destFile);
-
+    sourceFile.possiblyRenamed = true;
     // TODO - What is the state of the system if
     // things crash in the middle of moving this file?
     // Seems like we will have two files pointing
     // at the same data
+    updateFile(sourceFile);
+    putIfAbsentFile(dest, destFile);
 
     fileRegion.remove(source);
-
     stats.incFileRenames(1);
   }
 
@@ -149,12 +166,16 @@ public class FileSystem {
         chunkRegion.remove(key);
         key.chunkId++;
       }
-
       return null;
     }
 
     final byte[] chunk = chunkRegion.get(key);
-    stats.incReadBytes(chunk.length);
+    if (chunk != null) {
+      stats.incReadBytes(chunk.length);
+    } else {
+      logger.debug("Chunk was null for file:" + file.getName() + " file id: " + key.getFileId()
+          + " chunkKey:" + key.chunkId);
+    }
     return chunk;
   }
 
@@ -168,11 +189,11 @@ public class FileSystem {
     fileRegion.put(file.getName(), file);
   }
 
-  public ConcurrentMap<String, File> getFileRegion() {
+  public Map<String, File> getFileRegion() {
     return fileRegion;
   }
 
-  public ConcurrentMap<ChunkKey, byte[]> getChunkRegion() {
+  public Map<ChunkKey, byte[]> getChunkRegion() {
     return chunkRegion;
   }
 

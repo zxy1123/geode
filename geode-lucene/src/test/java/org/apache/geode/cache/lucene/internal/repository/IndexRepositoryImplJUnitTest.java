@@ -27,6 +27,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.IntSupplier;
 
+import org.apache.geode.distributed.DistributedLockService;
+import org.apache.geode.internal.cache.BucketAdvisor;
+import org.apache.geode.internal.cache.BucketRegion;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -75,10 +78,16 @@ public class IndexRepositoryImplJUnitTest {
     String[] indexedFields = new String[] {"s", "i", "l", "d", "f", "s2", "missing"};
     mapper = new HeterogeneousLuceneSerializer(indexedFields);
     region = Mockito.mock(Region.class);
-    userRegion = Mockito.mock(Region.class);
+    userRegion = Mockito.mock(BucketRegion.class);
+    BucketAdvisor bucketAdvisor = Mockito.mock(BucketAdvisor.class);
+    Mockito.when(bucketAdvisor.isPrimary()).thenReturn(true);
+    Mockito.when(((BucketRegion) userRegion).getBucketAdvisor()).thenReturn(bucketAdvisor);
+
+    Mockito.when(((BucketRegion) userRegion).getBucketAdvisor().isPrimary()).thenReturn(true);
     stats = Mockito.mock(LuceneIndexStats.class);
     Mockito.when(userRegion.isDestroyed()).thenReturn(false);
-    repo = new IndexRepositoryImpl(region, writer, mapper, stats, userRegion);
+    repo = new IndexRepositoryImpl(region, writer, mapper, stats, userRegion,
+        mock(DistributedLockService.class), "lockName");
   }
 
   @Test
@@ -153,8 +162,8 @@ public class IndexRepositoryImplJUnitTest {
         new Type2("Portland Cream doughnut", 1, 2L, 3.0, 4.0f, "Captain my Captain doughnut"));
     repo.commit();
     checkQuery("Cream", "s", "key2", "key4");
-    verify(stats, times(1)).startQuery();
-    verify(stats, times(1)).endQuery(anyLong(), eq(2));
+    verify(stats, times(1)).startRepositoryQuery();
+    verify(stats, times(1)).endRepositoryQuery(anyLong(), eq(2));
   }
 
   @Test

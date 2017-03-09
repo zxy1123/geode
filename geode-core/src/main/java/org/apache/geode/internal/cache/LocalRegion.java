@@ -88,6 +88,7 @@ import org.apache.geode.cache.query.IndexType;
 import org.apache.geode.cache.query.MultiIndexCreationException;
 import org.apache.geode.cache.query.NameResolutionException;
 import org.apache.geode.cache.query.QueryException;
+import org.apache.geode.cache.query.QueryInvalidException;
 import org.apache.geode.cache.query.QueryInvocationTargetException;
 import org.apache.geode.cache.query.QueryService;
 import org.apache.geode.cache.query.SelectResults;
@@ -620,8 +621,9 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
     this.isUsedForParallelGatewaySenderQueue =
         internalRegionArgs.isUsedForParallelGatewaySenderQueue();
     this.serialGatewaySender = internalRegionArgs.getSerialGatewaySender();
-    this.cacheServiceProfiles = internalRegionArgs.getCacheServiceProfiles() == null ? null
-        : Collections.unmodifiableMap(internalRegionArgs.getCacheServiceProfiles());
+    this.cacheServiceProfiles =
+        internalRegionArgs.getCacheServiceProfiles() == null ? Collections.emptyMap()
+            : Collections.unmodifiableMap(internalRegionArgs.getCacheServiceProfiles());
 
     if (!isUsedForMetaRegion && !isUsedForPartitionedRegionAdmin
         && !isUsedForPartitionedRegionBucket && !isUsedForSerialGatewaySenderQueue
@@ -1018,7 +1020,7 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
     return newRegion;
   }
 
-  public final void create(Object key, Object value, Object aCallbackArgument)
+  public void create(Object key, Object value, Object aCallbackArgument)
       throws TimeoutException, EntryExistsException, CacheWriterException {
     long startPut = CachePerfStats.getStatTime();
     @Released
@@ -10897,22 +10899,8 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
       String queryString = null;
 
       // Trim whitespace
-      predicate = predicate.trim();
+      queryString = constructRegionQueryString(predicate.trim());
 
-      // Compare the query patterns to the 'predicate'. If one matches,
-      // send it as is to the server
-      boolean matches = false;
-      for (int i = 0; i < QUERY_PATTERNS.length; i++) {
-        if (QUERY_PATTERNS[i].matcher(predicate).matches()) {
-          matches = true;
-          break;
-        }
-      }
-      if (matches) {
-        queryString = predicate;
-      } else {
-        queryString = "select * from " + getFullPath() + " this where " + predicate;
-      }
       try {
         results = getServerProxy().query(queryString, null);
       } catch (Exception e) {
@@ -10923,12 +10911,40 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
         throw new QueryInvocationTargetException(e.getMessage(), cause);
       }
     } else {
+      Object[] params = new Object[0];
       QueryService qs = getGemFireCache().getLocalQueryService();
-      String queryStr = "select * from " + getFullPath() + " this where " + predicate;
+      String queryStr = constructRegionQueryString(predicate.trim());
       DefaultQuery query = (DefaultQuery) qs.newQuery(queryStr);
-      results = (SelectResults) query.execute(new Object[0]);
+      if (query.getRegionsInQuery(params).size() != 1) {
+        throw new QueryInvalidException(
+            "Prevent multiple region query from being executed through region.query()");
+      }
+      results = (SelectResults) query.execute(params);
     }
     return results;
+  }
+
+  private String constructRegionQueryString(final String predicate) throws QueryInvalidException {
+    final String queryString;// Compare the query patterns to the 'predicate'. If one matches,
+    // send it as is to the server
+    boolean matches = false;
+    for (int i = 0; i < QUERY_PATTERNS.length; i++) {
+      if (QUERY_PATTERNS[i].matcher(predicate).matches()) {
+        if (!predicate.contains(getName())) {
+          throw new QueryInvalidException(
+              "Should not execute region.query with a different region in the from clause: "
+                  + getName() + " was not present in:" + predicate);
+        }
+        matches = true;
+        break;
+      }
+    }
+    if (matches) {
+      queryString = predicate;
+    } else {
+      queryString = "select * from " + getFullPath() + " this where " + predicate;
+    }
+    return queryString;
   }
 
   /**

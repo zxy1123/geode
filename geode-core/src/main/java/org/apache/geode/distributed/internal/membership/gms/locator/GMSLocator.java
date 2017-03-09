@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.geode.InternalGemFireException;
 
+import org.apache.geode.distributed.internal.ClusterConfigurationService;
 import org.apache.logging.log4j.Logger;
 
 import org.apache.geode.DataSerializer;
@@ -41,7 +42,6 @@ import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.distributed.DistributedSystem;
 import org.apache.geode.distributed.internal.InternalDistributedSystem;
 import org.apache.geode.distributed.internal.LocatorStats;
-import org.apache.geode.distributed.internal.SharedConfiguration;
 import org.apache.geode.distributed.internal.membership.InternalDistributedMember;
 import org.apache.geode.distributed.internal.membership.MembershipManager;
 import org.apache.geode.distributed.internal.membership.NetView;
@@ -56,7 +56,6 @@ import org.apache.geode.distributed.internal.tcpserver.TcpServer;
 import org.apache.geode.internal.Version;
 import org.apache.geode.internal.VersionedObjectInput;
 import org.apache.geode.internal.logging.LogService;
-import org.apache.geode.internal.net.*;
 
 import static org.apache.geode.internal.i18n.LocalizedStrings.LOCATOR_UNABLE_TO_RECOVER_VIEW;
 
@@ -113,9 +112,11 @@ public class GMSLocator implements Locator, NetLocator {
   @Override
   public synchronized boolean setMembershipManager(MembershipManager mgr) {
     if (services == null || services.isStopped()) {
-      logger.info("Peer locator is connecting to local membership services");
       services = ((GMSMembershipManager) mgr).getServices();
       localAddress = services.getMessenger().getMemberID();
+      assert localAddress != null : "member address should have been established";
+      logger.info("Peer locator is connecting to local membership services with ID {}",
+          localAddress);
       services.setLocator(this);
       NetView newView = services.getJoinLeave().getView();
       if (newView != null) {
@@ -143,7 +144,7 @@ public class GMSLocator implements Locator, NetLocator {
     }
     if (services == null) {
       try {
-        wait(2000);
+        wait(10000);
       } catch (InterruptedException e) {
       }
     }
@@ -178,20 +179,29 @@ public class GMSLocator implements Locator, NetLocator {
       }
     } else if (request instanceof FindCoordinatorRequest) {
       findServices();
+
       FindCoordinatorRequest findRequest = (FindCoordinatorRequest) request;
       if (!findRequest.getDHAlgo().equals(securityUDPDHAlgo)) {
         return new FindCoordinatorResponse(
             "Rejecting findCoordinatorRequest, as member not configured same udp security("
                 + findRequest.getDHAlgo() + " )as locator (" + securityUDPDHAlgo + ")");
       }
+
       if (services != null) {
         services.getMessenger().setPublicKey(findRequest.getMyPublicKey(),
             findRequest.getMemberID());
       } else {
-        // GMSEncrypt.registerMember(findRequest.getMyPublicKey(), findRequest.getMemberID());
-        registerMbrVsPK.put(new InternalDistributedMemberWrapper(findRequest.getMemberID()),
-            findRequest.getMyPublicKey());
+        // GMSEncrypt.registerMember(findRequest.getMyPublicKey(),
+        // findRequest.getMemberID());
+        if (findRequest.getMyPublicKey() != null) {
+          registerMbrVsPK.put(new InternalDistributedMemberWrapper(findRequest.getMemberID()),
+              findRequest.getMyPublicKey());
+        }
+        logger.debug("Rejecting a request to find the coordinator - membership services are"
+            + " still initializing");
+        return null;
       }
+
       if (findRequest.getMemberID() != null) {
         InternalDistributedMember coord = null;
 
@@ -199,6 +209,10 @@ public class GMSLocator implements Locator, NetLocator {
         // which may be more up-to-date than the one known by the membership manager
         if (view == null) {
           findServices();
+          if (services == null) {
+            // we must know this process's identity in order to respond
+            return null;
+          }
         }
 
         boolean fromView = false;
@@ -235,9 +249,7 @@ public class GMSLocator implements Locator, NetLocator {
           }
           synchronized (registrants) {
             registrants.add(findRequest.getMemberID());
-            if (services != null) {
-              coord = services.getJoinLeave().getMemberID();
-            }
+            coord = services.getJoinLeave().getMemberID();
             for (InternalDistributedMember mbr : registrants) {
               if (mbr != coord && (coord == null || mbr.compareTo(coord) < 0)) {
                 if (!rejections.contains(mbr) && (mbr.getNetMember().preferredForCoordinator()
@@ -256,12 +268,7 @@ public class GMSLocator implements Locator, NetLocator {
             coordPk = (byte[]) view.getPublicKey(coord);
           }
           if (coordPk == null) {
-            if (services != null) {
-              coordPk = services.getMessenger().getPublicKey(coord);
-            } else {
-              // coordPk = GMSEncrypt.getRegisteredPublicKey(coord);
-              coordPk = registerMbrVsPK.get(new InternalDistributedMemberWrapper(coord));
-            }
+            coordPk = services.getMessenger().getPublicKey(coord);
           }
           response = new FindCoordinatorResponse(coord, localAddress, fromView, view,
               new HashSet<InternalDistributedMember>(registrants),
@@ -337,7 +344,7 @@ public class GMSLocator implements Locator, NetLocator {
 
   @Override
   public void restarting(DistributedSystem ds, GemFireCache cache,
-      SharedConfiguration sharedConfig) {
+      ClusterConfigurationService sharedConfig) {
     setMembershipManager(((InternalDistributedSystem) ds).getDM().getMembershipManager());
   }
 
@@ -378,6 +385,7 @@ public class GMSLocator implements Locator, NetLocator {
 
   /* package */ boolean recoverFromFile(File file) throws InternalGemFireException {
     if (!file.exists()) {
+      logger.info("recovery file not found: " + file.getAbsolutePath());
       return false;
     }
 

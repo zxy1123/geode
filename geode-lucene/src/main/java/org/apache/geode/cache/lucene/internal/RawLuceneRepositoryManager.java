@@ -28,15 +28,29 @@ public class RawLuceneRepositoryManager extends AbstractPartitionedRepositoryMan
     super(index, serializer);
   }
 
-  public void close() {
-    for (IndexRepository repo : indexRepositories.values()) {
-      repo.cleanup();
+  @Override
+  protected IndexRepository getRepository(Integer bucketId) throws BucketNotFoundException {
+    IndexRepository repo = indexRepositories.get(bucketId);
+    if (repo != null && !repo.isClosed()) {
+      return repo;
     }
+
+    try {
+      repo = computeRepository(bucketId, this.serializer, this.index, this.userRegion, repo);
+      return repo;
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    throw new BucketNotFoundException(
+        "Colocated index buckets not found for bucket id " + bucketId);
   }
 
   @Override
-  public IndexRepository createOneIndexRepository(Integer bucketId, LuceneSerializer serializer,
-      LuceneIndexImpl index, PartitionedRegion userRegion) throws IOException {
-    return indexRepositoryFactory.createIndexRepository(bucketId, serializer, index, userRegion);
+  public IndexRepository computeRepository(Integer bucketId, LuceneSerializer serializer,
+      LuceneIndexImpl index, PartitionedRegion userRegion, IndexRepository oldRepository)
+      throws IOException {
+    return indexRepositoryFactory.computeIndexRepository(bucketId, serializer, index, userRegion,
+        oldRepository);
   }
 }

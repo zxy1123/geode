@@ -24,23 +24,17 @@
  */
 package org.apache.geode.cache.query.functional;
 
-import static org.apache.geode.distributed.ConfigurationProperties.*;
-import static org.junit.Assert.*;
+import static org.apache.geode.distributed.ConfigurationProperties.CACHE_XML_FILE;
+import static org.apache.geode.distributed.ConfigurationProperties.ENABLE_TIME_STATISTICS;
+import static org.apache.geode.distributed.ConfigurationProperties.MCAST_PORT;
+import static org.apache.geode.distributed.ConfigurationProperties.NAME;
+import static org.apache.geode.distributed.ConfigurationProperties.STATISTIC_SAMPLING_ENABLED;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Properties;
-import java.util.Set;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
+import org.apache.commons.io.FileUtils;
 import org.apache.geode.cache.AttributesFactory;
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.CacheFactory;
@@ -55,7 +49,6 @@ import org.apache.geode.cache.query.Query;
 import org.apache.geode.cache.query.QueryInvalidException;
 import org.apache.geode.cache.query.QueryService;
 import org.apache.geode.cache.query.SelectResults;
-import org.apache.geode.cache.query.Utils;
 import org.apache.geode.cache.query.data.ComparableWrapper;
 import org.apache.geode.cache.query.data.Portfolio;
 import org.apache.geode.cache.query.internal.DefaultQueryService;
@@ -71,9 +64,21 @@ import org.apache.geode.cache.query.types.ObjectType;
 import org.apache.geode.cache.query.types.StructType;
 import org.apache.geode.distributed.DistributedSystem;
 import org.apache.geode.distributed.internal.InternalDistributedSystem;
-import org.apache.geode.internal.FileUtil;
 import org.apache.geode.internal.cache.LocalRegion;
 import org.apache.geode.test.junit.categories.IntegrationTest;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Properties;
+import java.util.Set;
 
 @Category(IntegrationTest.class)
 public class IndexCreationJUnitTest {
@@ -317,14 +322,8 @@ public class IndexCreationJUnitTest {
       QueryObserverHolder.setInstance(observer);
       r[i][0] = (SelectResults) q.execute(params);
 
-      if (!observer.isIndexesUsed) {
-        CacheUtils.log("NO INDEX USED");
-      }
-      CacheUtils.log(Utils.printResult(r[i][0]));
       resType1 = (r[i][0]).getCollectionType().getElementType();
       resSize1 = ((r[i][0]).size());
-      CacheUtils.log("Result Type= " + resType1);
-      CacheUtils.log("Result Size= " + resSize1);
       set1 = ((r[i][0]).asSet());
       // Iterator iter=set1.iterator();
     }
@@ -342,12 +341,9 @@ public class IndexCreationJUnitTest {
       QueryObserverImpl observer2 = new QueryObserverImpl();
       QueryObserverHolder.setInstance(observer2);
       r[i][1] = (SelectResults) q.execute(params);
-      if (observer2.isIndexesUsed) {
-        CacheUtils.log("YES INDEX IS USED!");
-      } else {
+      if (!observer2.isIndexesUsed) {
         fail("FAILED: Index NOT Used");
       }
-      CacheUtils.log(Utils.printResult(r[i][1]));
       resType2 = (r[i][1]).getCollectionType().getElementType();
       resSize2 = ((r[i][1]).size());
       set2 = ((r[i][1]).asSet());
@@ -824,7 +820,7 @@ public class IndexCreationJUnitTest {
           .execute();
       assertEquals("OQL index results did not match", 1, results.size());
       ds.disconnect();
-      FileUtil.delete(file);
+      FileUtils.deleteDirectory(file);
     }
   }
 
@@ -854,7 +850,7 @@ public class IndexCreationJUnitTest {
         .newQuery("<trace>SELECT * FROM " + localRegion.getFullPath() + " Where ID > 0").execute();
     assertEquals("OQL index results did not match", 99, results.size());
     ds.disconnect();
-    FileUtil.delete(file);
+    FileUtils.deleteDirectory(file);
   }
 
   @Test
@@ -885,7 +881,7 @@ public class IndexCreationJUnitTest {
         .execute();
     assertEquals("OQL index results did not match", 50, results.size());
     ds.disconnect();
-    FileUtil.delete(file);
+    FileUtils.deleteDirectory(file);
   }
 
   @Test
@@ -963,7 +959,7 @@ public class IndexCreationJUnitTest {
           .execute();
       assertEquals("OQL index results did not match", 1, results.size());
       ds.disconnect();
-      FileUtil.delete(file);
+      FileUtils.deleteDirectory(file);
     }
   }
 

@@ -14,14 +14,34 @@
  */
 package org.apache.geode.internal.cache;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import org.apache.commons.io.FileUtils;
 import org.apache.geode.CancelException;
 import org.apache.geode.DataSerializer;
 import org.apache.geode.SerializationException;
-import org.apache.geode.cache.*;
+import org.apache.geode.cache.CacheClosedException;
+import org.apache.geode.cache.CacheWriterException;
+import org.apache.geode.cache.DiskAccessException;
+import org.apache.geode.cache.EntryDestroyedException;
+import org.apache.geode.cache.EntryEvent;
+import org.apache.geode.cache.EntryNotFoundException;
+import org.apache.geode.cache.RegionDestroyedException;
+import org.apache.geode.cache.TimeoutException;
+import org.apache.geode.cache.UnsupportedVersionException;
 import org.apache.geode.distributed.OplogCancelledException;
 import org.apache.geode.distributed.internal.DM;
 import org.apache.geode.distributed.internal.DistributionConfig;
-import org.apache.geode.internal.*;
+import org.apache.geode.internal.Assert;
+import org.apache.geode.internal.ByteArrayDataInput;
+import org.apache.geode.internal.HeapDataOutputStream;
+import org.apache.geode.internal.InternalDataSerializer;
+import org.apache.geode.internal.InternalStatisticsDisabledException;
+import org.apache.geode.internal.Sendable;
+import org.apache.geode.internal.Version;
 import org.apache.geode.internal.cache.DiskEntry.Helper.Flushable;
 import org.apache.geode.internal.cache.DiskEntry.Helper.ValueWrapper;
 import org.apache.geode.internal.cache.DiskInitFile.DiskRegionFlag;
@@ -30,8 +50,19 @@ import org.apache.geode.internal.cache.DiskStoreImpl.OplogEntryIdSet;
 import org.apache.geode.internal.cache.DistributedRegion.DiskPosition;
 import org.apache.geode.internal.cache.lru.EnableLRU;
 import org.apache.geode.internal.cache.lru.NewLRUClockHand;
-import org.apache.geode.internal.cache.persistence.*;
-import org.apache.geode.internal.cache.versions.*;
+import org.apache.geode.internal.cache.persistence.BytesAndBits;
+import org.apache.geode.internal.cache.persistence.DiskRecoveryStore;
+import org.apache.geode.internal.cache.persistence.DiskRegionView;
+import org.apache.geode.internal.cache.persistence.DiskStoreID;
+import org.apache.geode.internal.cache.persistence.UninterruptibleFileChannel;
+import org.apache.geode.internal.cache.persistence.UninterruptibleRandomAccessFile;
+import org.apache.geode.internal.cache.versions.CompactVersionHolder;
+import org.apache.geode.internal.cache.versions.RegionVersionHolder;
+import org.apache.geode.internal.cache.versions.RegionVersionVector;
+import org.apache.geode.internal.cache.versions.VersionHolder;
+import org.apache.geode.internal.cache.versions.VersionSource;
+import org.apache.geode.internal.cache.versions.VersionStamp;
+import org.apache.geode.internal.cache.versions.VersionTag;
 import org.apache.geode.internal.i18n.LocalizedStrings;
 import org.apache.geode.internal.logging.LogService;
 import org.apache.geode.internal.logging.log4j.LocalizedMessage;
@@ -47,18 +78,35 @@ import org.apache.geode.internal.util.BlobHelper;
 import org.apache.geode.internal.util.IOUtils;
 import org.apache.geode.internal.util.TransformUtils;
 import org.apache.geode.pdx.internal.PdxWriterImpl;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.apache.logging.log4j.Logger;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.SyncFailedException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1174,7 +1222,7 @@ public final class Oplog implements CompactableOplog, Flushable {
    * @return a map of baslineline oplog files to copy. May be empty if total current set for this
    *         oplog does not match the baseline.
    */
-  Map<File, File> mapBaseline(List<File> baselineOplogFiles) {
+  Map<File, File> mapBaseline(Collection<File> baselineOplogFiles) {
     // Map of baseline oplog file name to oplog file
     Map<String, File> baselineOplogMap =
         TransformUtils.transformAndMap(baselineOplogFiles, TransformUtils.fileNameTransformer);
@@ -2421,6 +2469,24 @@ public final class Oplog implements CompactableOplog, Flushable {
   }
 
   /**
+   * Returns true if the values for the given disk recovery store should be recovered.
+   */
+  private boolean recoverLruValue(DiskRecoveryStore drs) {
+    if (isLruValueRecoveryDisabled(drs)) {
+      return false;
+    } else if (drs.lruLimitExceeded()) {
+      this.stats.incRecoveredValuesSkippedDueToLRU();
+      return false;
+    }
+    return true;
+  }
+
+  private boolean isLruValueRecoveryDisabled(DiskRecoveryStore store) {
+    return !store.getDiskStore().isOffline() && !getParent().RECOVER_LRU_VALUES
+        && !store.getEvictionAttributes().getAlgorithm().isNone();
+  }
+
+  /**
    * Reads an oplog entry of type Create
    * 
    * @param dis DataInputStream from which the oplog is being read
@@ -2465,10 +2531,10 @@ public final class Oplog implements CompactableOplog, Flushable {
         this.stats.incRecoveryRecordsSkipped();
         incSkipped();
       }
-    } else if (recoverValue && drs.lruLimitExceeded() && !getParent().isOfflineCompacting()) {
-      this.stats.incRecoveredValuesSkippedDueToLRU();
-      recoverValue = false;
+    } else if (recoverValue && !getParent().isOfflineCompacting()) {
+      recoverValue = recoverLruValue(drs);
     }
+
     CompactionRecord p2cr = null;
     long crOffset;
     if (EntryBits.isAnyInvalid(userBits) || EntryBits.isTombstone(userBits)) {
@@ -2659,9 +2725,8 @@ public final class Oplog implements CompactableOplog, Flushable {
         incSkipped();
         this.stats.incRecoveryRecordsSkipped();
       }
-    } else if (recoverValue && drs.lruLimitExceeded() && !getParent().isOfflineCompacting()) {
-      this.stats.incRecoveredValuesSkippedDueToLRU();
-      recoverValue = false;
+    } else if (recoverValue && !getParent().isOfflineCompacting()) {
+      recoverValue = recoverLruValue(drs);
     }
 
     byte[] objValue = null;
@@ -2884,9 +2949,8 @@ public final class Oplog implements CompactableOplog, Flushable {
         incSkipped();
         this.stats.incRecoveryRecordsSkipped();
       }
-    } else if (recoverValue && drs.lruLimitExceeded() && !getParent().isOfflineCompacting()) {
-      this.stats.incRecoveredValuesSkippedDueToLRU();
-      recoverValue = false;
+    } else if (recoverValue && !getParent().isOfflineCompacting()) {
+      recoverValue = recoverLruValue(drs);
     }
 
     byte[] objValue = null;
@@ -5168,6 +5232,8 @@ public final class Oplog implements CompactableOplog, Flushable {
     // flush(olf, true);
   }
 
+  private static final int MAX_CHANNEL_RETRIES = 5;
+
   private final void flush(OplogFile olf, boolean doSync) throws IOException {
     try {
       synchronized (this.lock/* olf */) {
@@ -5178,8 +5244,31 @@ public final class Oplog implements CompactableOplog, Flushable {
         if (bb != null && bb.position() != 0) {
           bb.flip();
           int flushed = 0;
+          int numChannelRetries = 0;
           do {
-            flushed += olf.channel.write(bb);
+            int channelBytesWritten = 0;
+            final int bbStartPos = bb.position();
+            final long channelStartPos = olf.channel.position();
+            // differentiate between bytes written on this channel.write() iteration and the
+            // total number of bytes written to the channel on this call
+            channelBytesWritten = olf.channel.write(bb);
+            // Expect channelBytesWritten and the changes in pp.position() and channel.position() to
+            // be the same. If they are not, then the channel.write() silently failed. The following
+            // retry separates spurious failures from permanent channel failures.
+            if (channelBytesWritten != bb.position() - bbStartPos) {
+              if (numChannelRetries++ < MAX_CHANNEL_RETRIES) {
+                // Reset the ByteBuffer position, but take into account anything that did get
+                // written to the channel
+                channelBytesWritten = (int) (olf.channel.position() - channelStartPos);
+                bb.position(bbStartPos + channelBytesWritten);
+              } else {
+                throw new IOException("Failed to write Oplog entry to" + olf.f.getName() + ": "
+                    + "channel.write() returned " + channelBytesWritten + ", "
+                    + "change in channel position = " + (olf.channel.position() - channelStartPos)
+                    + ", " + "change in source buffer position = " + (bb.position() - bbStartPos));
+              }
+            }
+            flushed += channelBytesWritten;
           } while (bb.hasRemaining());
           // update bytesFlushed after entire writeBuffer is flushed to fix bug
           // 41201
@@ -5715,14 +5804,18 @@ public final class Oplog implements CompactableOplog, Flushable {
   }
 
   public void copyTo(File targetDir) throws IOException {
-    if (this.crf.f != null) { // fixes bug 43951
-      FileUtil.copy(this.crf.f, targetDir);
+    if (this.crf.f != null && this.crf.f.exists()) {
+      FileUtils.copyFileToDirectory(this.crf.f, targetDir);
     }
-    FileUtil.copy(this.drf.f, targetDir);
+    if (this.drf.f.exists()) {
+      FileUtils.copyFileToDirectory(this.drf.f, targetDir);
+    }
 
     // this krf existence check fixes 45089
     if (getParent().getDiskInitFile().hasKrf(this.oplogId)) {
-      FileUtil.copy(this.getKrfFile(), targetDir);
+      if (this.getKrfFile().exists()) {
+        FileUtils.copyFileToDirectory(this.getKrfFile(), targetDir);
+      }
     }
   }
 
@@ -5745,7 +5838,7 @@ public final class Oplog implements CompactableOplog, Flushable {
         return;
       if (!olf.f.exists())
         return;
-      assert olf.RAFClosed == true;
+      assert olf.RAFClosed;
       if (!olf.RAFClosed || olf.raf != null) {
         try {
           olf.raf.close();
@@ -6176,15 +6269,13 @@ public final class Oplog implements CompactableOplog, Flushable {
 
     HashMap<Long, DiskRegionInfo> targetRegions = new HashMap<Long, DiskRegionInfo>(this.regionMap);
     synchronized (diskRecoveryStores) {
-      // Don't bother to include any stores that have reached the lru limit
       Iterator<DiskRecoveryStore> itr = diskRecoveryStores.values().iterator();
       while (itr.hasNext()) {
         DiskRecoveryStore store = itr.next();
-        if (store.lruLimitExceeded()) {
+        if (isLruValueRecoveryDisabled(store) || store.lruLimitExceeded()) {
           itr.remove();
         }
       }
-
       // Get the a sorted list of live entries from the target regions
       targetRegions.keySet().retainAll(diskRecoveryStores.keySet());
     }
@@ -6364,6 +6455,18 @@ public final class Oplog implements CompactableOplog, Flushable {
   @Override
   public String toString() {
     return "oplog#" + getOplogId() /* + "DEBUG" + System.identityHashCode(this) */;
+  }
+
+  /**
+   * Method to be used only for testing
+   * 
+   * @param ch Object to replace the channel in the Oplog.crf
+   * @return original channel object
+   */
+  UninterruptibleFileChannel testSetCrfChannel(UninterruptibleFileChannel ch) {
+    UninterruptibleFileChannel chPrev = this.crf.channel;
+    this.crf.channel = ch;
+    return chPrev;
   }
 
   // //////// Methods used during recovery //////////////

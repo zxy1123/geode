@@ -52,8 +52,7 @@ public class Invoke {
     for (int hostIndex = 0; hostIndex < Host.getHostCount(); hostIndex++) {
       Host host = Host.getHost(hostIndex);
 
-      for (int vmIndex = 0; vmIndex < host.getVMCount(); vmIndex++) {
-        VM vm = host.getVM(vmIndex);
+      for (VM vm : host.getAllVMs()) {
         if (name != null)
           vm.invoke(name, runnable);
         else
@@ -74,8 +73,7 @@ public class Invoke {
     for (int hostIndex = 0; hostIndex < Host.getHostCount(); hostIndex++) {
       Host host = Host.getHost(hostIndex);
 
-      for (int vmIndex = 0; vmIndex < host.getVMCount(); vmIndex++) {
-        VM vm = host.getVM(vmIndex);
+      for (VM vm : host.getAllVMs()) {
         vm.invoke(targetClass, targetMethod);
       }
     }
@@ -93,8 +91,7 @@ public class Invoke {
     for (int hostIndex = 0; hostIndex < Host.getHostCount(); hostIndex++) {
       Host host = Host.getHost(hostIndex);
 
-      for (int vmIndex = 0; vmIndex < host.getVMCount(); vmIndex++) {
-        VM vm = host.getVM(vmIndex);
+      for (VM vm : host.getAllVMs()) {
         vm.invoke(targetClass, targetMethod, methodArgs);
       }
     }
@@ -116,8 +113,7 @@ public class Invoke {
     Map<VM, T> ret = new HashMap<VM, T>();
     for (int h = 0; h < Host.getHostCount(); h++) {
       Host host = Host.getHost(h);
-      for (int v = 0; v < host.getVMCount(); v++) {
-        VM vm = host.getVM(v);
+      for (VM vm : host.getAllVMs()) {
         if (name != null)
           ret.put(vm, vm.invoke(name, callable));
         else
@@ -132,7 +128,7 @@ public class Invoke {
   }
 
   /**
-   * @deprecated Please use {@link com.jayway.awaitility.Awaitility} with
+   * @deprecated Please use {@link org.awaitility.Awaitility} with
    *             {@link #invokeInEveryVM(SerializableCallableIF)} instead.
    */
   public static void invokeRepeatingIfNecessary(final VM vm, final RepeatableRunnable runnable) {
@@ -140,7 +136,7 @@ public class Invoke {
   }
 
   /**
-   * @deprecated Please use {@link com.jayway.awaitility.Awaitility} with
+   * @deprecated Please use {@link org.awaitility.Awaitility} with
    *             {@link #invokeInEveryVM(SerializableCallableIF)} instead.
    */
   public static void invokeRepeatingIfNecessary(final VM vm, final RepeatableRunnable runnable,
@@ -149,7 +145,7 @@ public class Invoke {
   }
 
   /**
-   * @deprecated Please use {@link com.jayway.awaitility.Awaitility} with
+   * @deprecated Please use {@link org.awaitility.Awaitility} with
    *             {@link #invokeInEveryVM(SerializableCallableIF)} instead.
    */
   public static void invokeInEveryVMRepeatingIfNecessary(final RepeatableRunnable runnable) {
@@ -161,7 +157,7 @@ public class Invoke {
    * <code>run()</code> throws an assertion failure, its execution is repeated, until no assertion
    * failure occurs or <code>repeatTimeoutMs</code> milliseconds have passed.
    * 
-   * @deprecated Please use {@link com.jayway.awaitility.Awaitility} with
+   * @deprecated Please use {@link org.awaitility.Awaitility} with
    *             {@link #invokeInEveryVM(SerializableCallableIF)} instead.
    */
   public static void invokeInEveryVMRepeatingIfNecessary(final RepeatableRunnable runnable,

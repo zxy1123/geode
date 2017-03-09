@@ -18,9 +18,7 @@ package org.apache.geode.cache.lucene.internal.filesystem;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.nio.file.Files;
 import java.util.UUID;
 
@@ -43,6 +41,7 @@ public class File implements DataSerializableFixedID {
   long created = System.currentTimeMillis();
   long modified = created;
   UUID id = UUID.randomUUID();
+  boolean possiblyRenamed = false;
 
   /**
    * Constructor for serialization only
@@ -132,6 +131,7 @@ public class File implements DataSerializableFixedID {
     out.writeLong(modified);
     out.writeLong(id.getMostSignificantBits());
     out.writeLong(id.getLeastSignificantBits());
+    out.writeBoolean(possiblyRenamed);
   }
 
   @Override
@@ -144,6 +144,7 @@ public class File implements DataSerializableFixedID {
     long high = in.readLong();
     long low = in.readLong();
     id = new UUID(high, low);
+    possiblyRenamed = in.readBoolean();
   }
 
 

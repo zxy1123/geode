@@ -305,6 +305,7 @@ public abstract class BaseCommand implements Command {
       }
     }
     servConn.setFlagProcessMessagesAsFalse();
+    servConn.setClientDisconnectedException(eof);
   }
 
   private static void handleInterruptedIOException(Message msg, ServerConnection servConn,
@@ -317,6 +318,7 @@ public abstract class BaseCommand implements Command {
       }
     }
     servConn.setFlagProcessMessagesAsFalse();
+    servConn.setClientDisconnectedException(e);
   }
 
   private static void handleIOException(Message msg, ServerConnection servConn, Exception e) {
@@ -339,6 +341,7 @@ public abstract class BaseCommand implements Command {
       }
     }
     servConn.setFlagProcessMessagesAsFalse();
+    servConn.setClientDisconnectedException(e);
   }
 
   private static void handleShutdownException(Message msg, ServerConnection servConn, Exception e) {
@@ -359,6 +362,7 @@ public abstract class BaseCommand implements Command {
       }
     }
     servConn.setFlagProcessMessagesAsFalse();
+    servConn.setClientDisconnectedException(e);
   }
 
   // Handle GemfireSecurityExceptions separately since the connection should not
@@ -499,6 +503,7 @@ public abstract class BaseCommand implements Command {
       }
     } finally {
       servConn.setFlagProcessMessagesAsFalse();
+      servConn.setClientDisconnectedException(th);
     }
   }
 
@@ -1069,7 +1074,7 @@ public abstract class BaseCommand implements Command {
 
     if (region != null) {
       if (region.containsKey(entryKey) || region.containsTombstone(entryKey)) {
-        VersionTagHolder versionHolder = new VersionTagHolder();
+        VersionTagHolder versionHolder = createVersionTagHolder();
         ClientProxyMembershipID id = servConn == null ? null : servConn.getProxyID();
         // From Get70.getValueAndIsObject()
         Object data = region.get(entryKey, null, true, true, true, id, versionHolder, true);
@@ -1156,7 +1161,7 @@ public abstract class BaseCommand implements Command {
       }
 
       for (Object key : region.keySet(true)) {
-        VersionTagHolder versionHolder = new VersionTagHolder();
+        VersionTagHolder versionHolder = createVersionTagHolder();
         if (keyPattern != null) {
           if (!(key instanceof String)) {
             // key is not a String, cannot apply regex to this entry
@@ -1258,12 +1263,10 @@ public abstract class BaseCommand implements Command {
   public static void appendNewRegisterInterestResponseChunkFromLocal(LocalRegion region,
       VersionedObjectList values, Object riKeys, Set keySet, ServerConnection servConn)
       throws IOException {
-    Object key = null;
-    VersionTagHolder versionHolder = null;
     ClientProxyMembershipID requestingClient = servConn == null ? null : servConn.getProxyID();
     for (Iterator it = keySet.iterator(); it.hasNext();) {
-      key = it.next();
-      versionHolder = new VersionTagHolder();
+      Object key = it.next();
+      VersionTagHolder versionHolder = createVersionTagHolder();
 
       Object value = region.get(key, null, true, true, true, requestingClient, versionHolder, true);
 
@@ -1449,7 +1452,7 @@ public abstract class BaseCommand implements Command {
       for (Iterator it = keyList.iterator(); it.hasNext();) {
         Object key = it.next();
         if (region.containsKey(key) || region.containsTombstone(key)) {
-          VersionTagHolder versionHolder = new VersionTagHolder();
+          VersionTagHolder versionHolder = createVersionTagHolder();
 
           ClientProxyMembershipID id = servConn == null ? null : servConn.getProxyID();
           data = region.get(key, null, true, true, true, id, versionHolder, true);
@@ -1468,6 +1471,12 @@ public abstract class BaseCommand implements Command {
     // Send the last chunk (the only chunk for individual and list keys)
     // always send it back, even if the list is of zero size.
     sendNewRegisterInterestResponseChunk(region, keyList, values, true, servConn);
+  }
+
+  private static VersionTagHolder createVersionTagHolder() {
+    VersionTagHolder versionHolder = new VersionTagHolder();
+    versionHolder.setOperation(Operation.GET_FOR_REGISTER_INTEREST);
+    return versionHolder;
   }
 
   /**

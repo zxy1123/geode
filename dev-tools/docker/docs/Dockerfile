@@ -15,9 +15,9 @@
 # limitations under the License.
 
 FROM ruby:2.3.0
-MAINTAINER Geode Community <dev@geode.incubator.apache.org>
+MAINTAINER Geode Community <dev@geode.apache.org>
 
-LABEL Vendor="Apache Geode (incubating)"
+LABEL Vendor="Apache Geode"
 LABEL version=unstable
 
 ADD Gemfile Gemfile

@@ -3947,7 +3947,7 @@ public class InitialImageOperation {
     }
   }
 
-  public static abstract class GIITestHook implements Runnable {
+  public static abstract class GIITestHook implements Runnable, Serializable {
     final private GIITestHookType type;
     final private String region_name;
     volatile public boolean isRunning;
@@ -4004,11 +4004,22 @@ public class InitialImageOperation {
   private static GIITestHook internalAfterSavedRVVEnd;
 
   public enum GIITestHookType {
-    BeforeGetInitialImage, BeforeRequestRVV, AfterRequestRVV, AfterCalculatedUnfinishedOps, BeforeSavedReceivedRVV, AfterSavedReceivedRVV, AfterSentRequestImage,
+    BeforeGetInitialImage,
+    BeforeRequestRVV,
+    AfterRequestRVV,
+    AfterCalculatedUnfinishedOps,
+    BeforeSavedReceivedRVV,
+    AfterSavedReceivedRVV,
+    AfterSentRequestImage,
 
-    AfterReceivedRequestImage, DuringPackingImage, AfterSentImageReply,
+    AfterReceivedRequestImage,
+    DuringPackingImage,
+    AfterSentImageReply,
 
-    AfterReceivedImageReply, DuringApplyDelta, BeforeCleanExpiredTombstones, AfterSavedRVVEnd
+    AfterReceivedImageReply,
+    DuringApplyDelta,
+    BeforeCleanExpiredTombstones,
+    AfterSavedRVVEnd
   }
 
   public static GIITestHook getGIITestHookForCheckingPurpose(final GIITestHookType type) {

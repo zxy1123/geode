@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
@@ -880,7 +881,7 @@ public class TCPConduit implements Runnable {
   /**
    * gets the address of this conduit's ServerSocket endpoint
    */
-  public InetSocketAddress getId() {
+  public InetSocketAddress getSocketId() {
     return id;
   }
 
@@ -892,34 +893,14 @@ public class TCPConduit implements Runnable {
   }
 
   /**
-   * Gets the local java groups address that identifies this conduit
+   * Gets the local member ID that identifies this conduit
    */
-  public InternalDistributedMember getLocalAddress() {
+  public InternalDistributedMember getMemberId() {
     return this.localAddr;
   }
 
-  /**
-   * gets the requested port that this TCPConduit bound to. This could be zero if a wildcard bind
-   * was done
-   */
-  public int getBindPort() {
-    return port;
-  }
-
-
-  /**
-   * gets the channel that is used to process non-DistributedMember messages
-   */
-  public DirectChannel getDirectChannel() {
-    return directChannel;
-  }
-
-  public void setLocalAddr(InternalDistributedMember addr) {
+  public void setMemberId(InternalDistributedMember addr) {
     localAddr = addr;
-  }
-
-  public InternalDistributedMember getLocalAddr() {
-    return localAddr;
   }
 
   /**

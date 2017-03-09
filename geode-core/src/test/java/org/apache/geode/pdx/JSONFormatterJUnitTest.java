@@ -18,10 +18,12 @@ import static org.apache.geode.distributed.ConfigurationProperties.*;
 import static org.junit.Assert.*;
 
 import java.text.SimpleDateFormat;
+import java.util.List;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.geode.test.junit.categories.FlakyTest;
 import org.apache.geode.test.junit.categories.SerializationTest;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,6 +41,8 @@ import org.apache.geode.cache.RegionAttributes;
 import org.apache.geode.cache.server.CacheServer;
 import org.apache.geode.internal.Assert;
 import org.apache.geode.internal.cache.GemFireCacheImpl;
+import org.apache.geode.pdx.internal.PdxInstanceImpl;
+import org.apache.geode.pdx.internal.PeerTypeRegistration;
 import org.apache.geode.test.junit.categories.IntegrationTest;
 
 @Category({IntegrationTest.class, SerializationTest.class})
@@ -51,12 +55,6 @@ public class JSONFormatterJUnitTest {
   public void setUp() throws Exception {
     this.c = (GemFireCacheImpl) new CacheFactory().set(MCAST_PORT, "0").setPdxReadSerialized(true)
         .create();
-
-    // start cache-server
-    CacheServer server = c.addCacheServer();
-    final int serverPort = 40405;
-    server.setPort(serverPort);
-    server.start();
 
     // Create region, primitiveKVStore
     final AttributesFactory<Object, Object> af1 = new AttributesFactory<Object, Object>();
@@ -117,6 +115,7 @@ public class JSONFormatterJUnitTest {
       String json;
       try {
         json = objectMapper.writeValueAsString(expectedTestObject);
+
         String jsonWithClassType = expectedTestObject.addClassTypeToJson(json);
 
         // 3. Get PdxInstance from the Json String and Validate pi.getObject() API.
@@ -128,6 +127,7 @@ public class JSONFormatterJUnitTest {
         // and hence actualPI.equals(expectedPI) will returns false.
 
         Object actualTestObject = actualPI.getObject();
+
         if (actualTestObject instanceof TestObjectForJSONFormatter) {
           boolean isObjectEqual = actualTestObject.equals(expectedTestObject);
           Assert.assertTrue(isObjectEqual,
@@ -142,6 +142,47 @@ public class JSONFormatterJUnitTest {
       }
     } else {
       fail("receivedObject is expected to be of type PdxInstance");
+    }
+  }
+
+  // Testcase-2: validate Json->PdxInstance-->Java conversion
+  private void verifyJsonToPdxInstanceConversionWithJSONFormatter() {
+    TestObjectForJSONFormatter expectedTestObject = new TestObjectForJSONFormatter();
+    expectedTestObject.defaultInitialization();
+    Cache c = CacheFactory.getAnyInstance();
+    Region region = c.getRegion("primitiveKVStore");
+
+    // 1.gets pdxInstance using R.put() and R.get()
+    region.put("501", expectedTestObject);
+    Object receivedObject = region.get("501");
+    assertEquals("receivedObject is expected to be of type PdxInstance", PdxInstanceImpl.class,
+        receivedObject.getClass());
+
+    PdxInstance expectedPI = (PdxInstance) receivedObject;
+
+    String json;
+    try {
+      json = JSONFormatter.toJSON(expectedPI);
+
+      String jsonWithClassType = expectedTestObject.addClassTypeToJson(json);
+
+      // 3. Get PdxInstance from the Json String and Validate pi.getObject() API.
+      PdxInstance actualPI = JSONFormatter.fromJSON(jsonWithClassType);
+      // Note: expectedPI will contains those fields that are part of toData()
+      // expectedPI.className = "org.apache.geode.pdx.TestObjectForJSONFormatter"
+      // actualPI will contains all the fields that are member of the class.
+      // actualPI..className = __GEMFIRE_JSON
+      // and hence actualPI.equals(expectedPI) will returns false.
+
+      Object actualTestObject = actualPI.getObject();
+
+      assertEquals("receivedObject is expected to be of type PdxInstance",
+          TestObjectForJSONFormatter.class, actualTestObject.getClass());
+
+      assertEquals("actualTestObject and expectedTestObject should be equal", expectedTestObject,
+          actualTestObject);
+    } catch (JSONException e) {
+      fail("JSONException occurred:" + e.getMessage());
     }
   }
 
@@ -205,6 +246,82 @@ public class JSONFormatterJUnitTest {
   public void testJSONFormatterAPIs() {
     ValidatePdxInstanceToJsonConversion();
     verifyJsonToPdxInstanceConversion();
+    verifyJsonToPdxInstanceConversionWithJSONFormatter();
+  }
+
+  /**
+   * this test validates json document, where field has value and null Then it verifies we create
+   * only one pdx type id for that
+   */
+  @Test
+  public void testJSONStringAsPdxObject() {
+
+    Cache c = CacheFactory.getAnyInstance();
+
+    int pdxTypes = 0;
+
+    if (c.getRegion(PeerTypeRegistration.REGION_FULL_PATH) != null) {
+      pdxTypes = c.getRegion(PeerTypeRegistration.REGION_FULL_PATH).keys().size();
+    }
+
+    Region region = c.getRegion("primitiveKVStore");
+
+    String js = "{name:\"ValueExist\", age:14}";
+
+    region.put(1, JSONFormatter.fromJSON(js));
+
+    String js2 = "{name:null, age:14}";
+
+    region.put(2, JSONFormatter.fromJSON(js2));
+
+    assertEquals(pdxTypes + 1, c.getRegion(PeerTypeRegistration.REGION_FULL_PATH).keys().size());
+  }
+
+  @Test
+  public void testJSONStringSortedFields() {
+
+    try {
+      System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, "true");
+
+      Cache c = CacheFactory.getAnyInstance();
+
+      Region region = c.getRegion("primitiveKVStore");
+
+      String js = "{b:\"b\", age:14, c:\"c' go\", bb:23}";
+
+      region.put(1, JSONFormatter.fromJSON(js));
+
+      PdxInstance ret = (PdxInstance) region.get(1);
+      List<String> fieldNames = ret.getFieldNames();
+
+      assertEquals("There should be four fields", 4, fieldNames.size());
+
+      boolean sorted = true;
+      for (int i = 0; i < fieldNames.size() - 1; i++) {
+        if (fieldNames.get(i).compareTo(fieldNames.get(i + 1)) >= 0) {
+          sorted = false;
+        }
+      }
+
+      assertTrue("Json fields should be sorted", sorted);
+
+      // Now do put with another jsonstring with same fields but different order
+      // then verify we don't create another pdxtype
+
+      int pdxTypes = 0;
+
+      if (c.getRegion(PeerTypeRegistration.REGION_FULL_PATH) != null) {
+        pdxTypes = c.getRegion(PeerTypeRegistration.REGION_FULL_PATH).keys().size();
+      }
+
+      String js2 = "{c:\"c' go\", bb:23, b:\"b\", age:14 }";
+      region.put(2, JSONFormatter.fromJSON(js2));
+
+      assertEquals(pdxTypes, c.getRegion(PeerTypeRegistration.REGION_FULL_PATH).keys().size());
+
+    } finally {
+      System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, "false");
+    }
   }
 }
 

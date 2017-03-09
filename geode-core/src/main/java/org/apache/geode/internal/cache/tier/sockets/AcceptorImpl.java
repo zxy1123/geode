@@ -206,7 +206,7 @@ public class AcceptorImpl extends Acceptor implements Runnable {
   public final AtomicInteger clientServerCnxCount = new AtomicInteger();
 
   /** Has this acceptor been shut down */
-  private volatile boolean shutdown = false;
+  private volatile boolean shutdownStarted = false;
 
   /** The thread that runs the acceptor */
   private Thread thread = null;
@@ -1523,93 +1523,104 @@ public class AcceptorImpl extends Acceptor implements Runnable {
 
   @Override
   public boolean isRunning() {
-    return !this.shutdown;
+    return !this.shutdownStarted;
   }
 
   @Override
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
-      justification = "Allow this thread to die")
   public void close() {
-    if (!isRunning()) {
-      return;
-    }
-
     try {
       synchronized (syncLock) {
-        this.shutdown = true;
+        if (!isRunning()) {
+          return;
+        }
+        this.shutdownStarted = true;
         logger.info(LocalizedMessage.create(
             LocalizedStrings.AcceptorImpl_CACHE_SERVER_ON_PORT_0_IS_SHUTTING_DOWN, this.localPort));
         if (this.thread != null) {
           this.thread.interrupt();
         }
-        this.serverSock.close();
-        crHelper.setShutdown(true); // set this before shutting down the pool
-        if (isSelector()) {
-          this.hsTimer.cancel();
-          if (this.tmpSel != null) {
-            try {
-              this.tmpSel.close();
-            } catch (IOException ignore) {
-            }
-          }
-          try {
-            wakeupSelector();
-            this.selector.close();
-          } catch (IOException ignore) {
-          }
-          if (this.selectorThread != null) {
-            this.selectorThread.interrupt();
-          }
-          this.commBufferQueue.clear();
+        try {
+          this.serverSock.close();
+        } catch (IOException ignore) {
         }
+
+        crHelper.setShutdown(true); // set this before shutting down the pool
+        shutdownSelectorIfIsSelector();
         ClientHealthMonitor.shutdownInstance();
         shutdownSCs();
         this.clientNotifier.shutdown(this.acceptorId);
-        this.pool.shutdown();
-        if (!this.pool.awaitTermination(PoolImpl.SHUTDOWN_TIMEOUT, TimeUnit.MILLISECONDS)) {
-          logger.warn(LocalizedMessage
-              .create(LocalizedStrings.PoolImpl_TIMEOUT_WAITING_FOR_BACKGROUND_TASKS_TO_COMPLETE));
-          this.pool.shutdownNow();
-        }
-        this.hsPool.shutdownNow();
+        shutdownPools();
         this.stats.close();
-        GemFireCacheImpl myCache = (GemFireCacheImpl) cache;
-        if (!myCache.forcedDisconnect()) {
-          Set<PartitionedRegion> prs = myCache.getPartitionedRegions();
-          for (PartitionedRegion pr : prs) {
-            Map<Integer, BucketAdvisor.BucketProfile> profiles =
-                new HashMap<Integer, BucketAdvisor.BucketProfile>();
-            // get all local real bucket advisors
-            Map<Integer, BucketAdvisor> advisors = pr.getRegionAdvisor().getAllBucketAdvisors();
-            for (Map.Entry<Integer, BucketAdvisor> entry : advisors.entrySet()) {
-              BucketAdvisor advisor = entry.getValue();
-              BucketProfile bp = (BucketProfile) advisor.createProfile();
-              advisor.updateServerBucketProfile(bp);
-              profiles.put(entry.getKey(), bp);
-            }
-            Set receipients = new HashSet();
-            receipients = pr.getRegionAdvisor().adviseAllPRNodes();
-            // send it to all in one messgae
-            ReplyProcessor21 reply = AllBucketProfilesUpdateMessage.send(receipients,
-                pr.getDistributionManager(), pr.getPRId(), profiles, true);
-            if (reply != null) {
-              reply.waitForRepliesUninterruptibly();
-            }
-
-            if (logger.isDebugEnabled()) {
-              logger.debug("sending messages to all peers for removing this server..");
-            }
-          }
-        }
-
+        notifyCacheMembersOfClose();
       } // synchronized
-    } catch (InterruptedException e) {
-      if (!this.shutdown) { // GEODE-1103: expect an interrupt during shutdown
-        logger.warn(LocalizedMessage.create(LocalizedStrings.AcceptorImpl_UNEXPECTED), e);
-      }
-    } catch (Exception e) {/* ignore */
+    } catch (RuntimeException e) {/* ignore and log */
       logger.warn(LocalizedMessage.create(LocalizedStrings.AcceptorImpl_UNEXPECTED), e);
     }
+  }
+
+  private void notifyCacheMembersOfClose() {
+    GemFireCacheImpl myCache = (GemFireCacheImpl) cache;
+    if (!myCache.forcedDisconnect()) {
+      for (PartitionedRegion pr : myCache.getPartitionedRegions()) {
+        Map<Integer, BucketAdvisor.BucketProfile> profiles = new HashMap<>();
+        // get all local real bucket advisors
+        Map<Integer, BucketAdvisor> advisors = pr.getRegionAdvisor().getAllBucketAdvisors();
+        for (Map.Entry<Integer, BucketAdvisor> entry : advisors.entrySet()) {
+          BucketAdvisor advisor = entry.getValue();
+          BucketProfile bp = (BucketProfile) advisor.createProfile();
+          advisor.updateServerBucketProfile(bp);
+          profiles.put(entry.getKey(), bp);
+        }
+
+        Set recipients = pr.getRegionAdvisor().adviseAllPRNodes();
+        // send it to all in one message
+        ReplyProcessor21 reply = AllBucketProfilesUpdateMessage.send(recipients,
+            pr.getDistributionManager(), pr.getPRId(), profiles, true);
+        if (reply != null) {
+          reply.waitForRepliesUninterruptibly();
+        }
+
+        if (logger.isDebugEnabled()) {
+          logger.debug("sending messages to all peers for removing this server..");
+        }
+      }
+    }
+  }
+
+  private void shutdownSelectorIfIsSelector() {
+    if (isSelector()) {
+      this.hsTimer.cancel();
+      if (this.tmpSel != null) {
+        try {
+          this.tmpSel.close();
+        } catch (IOException ignore) {
+        }
+      }
+      try {
+        wakeupSelector();
+        this.selector.close();
+      } catch (IOException ignore) {
+      }
+      if (this.selectorThread != null) {
+        this.selectorThread.interrupt();
+      }
+      this.commBufferQueue.clear();
+    }
+  }
+
+  private void shutdownPools() {
+    this.pool.shutdown();
+    try {
+      if (!this.pool.awaitTermination(PoolImpl.SHUTDOWN_TIMEOUT, TimeUnit.MILLISECONDS)) {
+        logger.warn(LocalizedMessage
+            .create(LocalizedStrings.PoolImpl_TIMEOUT_WAITING_FOR_BACKGROUND_TASKS_TO_COMPLETE));
+        this.pool.shutdownNow();
+      }
+    } catch (InterruptedException ignore) {
+      Thread.currentThread().interrupt();
+      this.pool.shutdownNow();
+    }
+    this.hsPool.shutdownNow();
   }
 
   private void shutdownSCs() {
@@ -1622,36 +1633,13 @@ public class AcceptorImpl extends Acceptor implements Runnable {
     }
   }
 
+  public boolean isShutdownProperly() {
+    return !isRunning() && !thread.isAlive()
+        && (selectorThread == null || !selectorThread.isAlive())
+        && (pool == null || pool.isShutdown()) && (hsPool == null || hsPool.isShutdown())
+        && (selector == null || !selector.isOpen()) && (tmpSel == null || !tmpSel.isOpen());
+  }
 
-  // protected InetAddress getBindAddress() {
-  // return this.bindAddress;
-  // }
-
-  // /**
-  // * Calculates the bind address based on gemfire.properties.
-  // * Returns null if no bind address is configured.
-  // * @since GemFire 5.7
-  // */
-  // public static InetAddress calcBindAddress(Cache cache) throws IOException {
-  // InternalDistributedSystem system = (InternalDistributedSystem)cache
-  // .getDistributedSystem();
-  // DistributionConfig config = system.getConfig();
-  // InetAddress address = null;
-
-  // // Get the server-bind-address. If it is not null, use it.
-  // // If it is null, get the bind-address. If it is not null, use it.
-  // // Otherwise set default.
-  // String serverBindAddress = config.getServerBindAddress();
-  // if (serverBindAddress != null && serverBindAddress.length() > 0) {
-  // address = InetAddress.getByName(serverBindAddress);
-  // } else {
-  // String bindAddress = config.getBindAddress();
-  // if (bindAddress != null && bindAddress.length() > 0) {
-  // address = InetAddress.getByName(bindAddress);
-  // }
-  // }
-  // return address;
-  // }
   /**
    * @param bindName the ip address or host name that this acceptor should bind to. If null or ""
    *        then calculate it.

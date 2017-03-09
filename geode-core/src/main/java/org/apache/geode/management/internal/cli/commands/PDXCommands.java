@@ -14,14 +14,6 @@
  */
 package org.apache.geode.management.internal.cli.commands;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.apache.geode.internal.cache.CacheConfig;
 import org.apache.geode.internal.cache.DiskStoreImpl;
 import org.apache.geode.internal.cache.xmlcache.CacheCreation;
@@ -33,7 +25,6 @@ import org.apache.geode.management.internal.cli.CliUtil;
 import org.apache.geode.management.internal.cli.i18n.CliStrings;
 import org.apache.geode.management.internal.cli.result.InfoResultData;
 import org.apache.geode.management.internal.cli.result.ResultBuilder;
-import org.apache.geode.management.internal.configuration.SharedConfigurationWriter;
 import org.apache.geode.management.internal.configuration.domain.XmlEntity;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.pdx.ReflectionBasedAutoSerializer;
@@ -41,16 +32,23 @@ import org.apache.geode.pdx.internal.EnumInfo;
 import org.apache.geode.pdx.internal.PdxType;
 import org.apache.geode.security.ResourcePermission.Operation;
 import org.apache.geode.security.ResourcePermission.Resource;
-
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.Collection;
 
 public class PDXCommands extends AbstractCommandsSupport {
 
 
   @CliCommand(value = CliStrings.CONFIGURE_PDX, help = CliStrings.CONFIGURE_PDX__HELP)
-  @CliMetaData(relatedTopic = CliStrings.TOPIC_GEODE_REGION, writesToSharedConfiguration = true)
+  @CliMetaData(relatedTopic = CliStrings.TOPIC_GEODE_REGION)
   @ResourceOperation(resource = Resource.DATA, operation = Operation.MANAGE)
   public Result configurePDX(@CliOption(key = CliStrings.CONFIGURE_PDX__READ__SERIALIZED,
       unspecifiedDefaultValue = CliMetaData.ANNOTATION_NULL_VALUE,
@@ -86,7 +84,7 @@ public class PDXCommands extends AbstractCommandsSupport {
           && (patterns != null && patterns.length > 0)) {
         return ResultBuilder.createUserErrorResult(CliStrings.CONFIGURE_PDX__ERROR__MESSAGE);
       }
-      if (CliUtil.getAllNormalMembers(CliUtil.getCacheIfExists()).isEmpty()) {
+      if (!CliUtil.getAllNormalMembers(CliUtil.getCacheIfExists()).isEmpty()) {
         ird.addLine(CliStrings.CONFIGURE_PDX__NORMAL__MEMBERS__WARNING);
       }
       // Set persistent and the disk-store
@@ -149,12 +147,10 @@ public class PDXCommands extends AbstractCommandsSupport {
       XmlEntity xmlEntity =
           XmlEntity.builder().withType(CacheXml.PDX).withConfig(xmlDefinition).build();
 
-
-      SharedConfigurationWriter scWriter = new SharedConfigurationWriter();
-      boolean commandPersisted = scWriter.addXmlEntity(xmlEntity, null);
-
       result = ResultBuilder.buildResult(ird);
-      result.setCommandPersisted(commandPersisted);
+      persistClusterConfiguration(result,
+          () -> getSharedConfiguration().addXmlEntity(xmlEntity, null));
+
     } catch (Exception e) {
       return ResultBuilder.createGemFireErrorResult(e.getMessage());
     }

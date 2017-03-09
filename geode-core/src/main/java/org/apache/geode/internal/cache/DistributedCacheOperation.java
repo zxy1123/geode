@@ -365,13 +365,7 @@ public abstract class DistributedCacheOperation {
         if (!reliableOp || region.isNoDistributionOk()) {
           // nothing needs be done in this case
         } else {
-          // create the message so it can be passed to
-          // handleReliableDistribution
-          // for queuing
-          CacheOperationMessage msg = createMessage();
-          initMessage(msg, null);
-          msg.setRecipients(recipients); // it is going to no one
-          region.handleReliableDistribution(msg, Collections.EMPTY_SET);
+          region.handleReliableDistribution(Collections.EMPTY_SET);
         }
 
         /** compute local client routing before waiting for an ack only for a bucket */
@@ -625,7 +619,7 @@ public abstract class DistributedCacheOperation {
           if (departedMembers != null) {
             successfulRecips.removeAll(departedMembers);
           }
-          region.handleReliableDistribution(msg, successfulRecips);
+          region.handleReliableDistribution(successfulRecips);
         }
       }
 
@@ -864,7 +858,7 @@ public abstract class DistributedCacheOperation {
   }
 
   public static abstract class CacheOperationMessage extends SerialDistributionMessage
-      implements MessageWithReply, DirectReplyMessage, ReliableDistributionData, OldValueImporter {
+      implements MessageWithReply, DirectReplyMessage, OldValueImporter {
 
     protected final static short POSSIBLE_DUPLICATE_MASK = POS_DUP;
     protected final static short OLD_VALUE_MASK = DistributionMessage.UNRESERVED_FLAGS_START;
@@ -954,6 +948,10 @@ public abstract class DistributedCacheOperation {
 
     public void setInhibitNotificationsBit(boolean inhibit) {
       this.inhibitAllNotifications = inhibit;
+    }
+
+    public String getRegionPath() {
+      return this.regionPath;
     }
 
     /**
@@ -1478,21 +1476,6 @@ public abstract class DistributedCacheOperation {
       return this.directAck;
     }
 
-    // ////////////////////////////////////////////////////////////////////
-    // ReliableDistributionData methods
-    // ////////////////////////////////////////////////////////////////////
-
-    public int getOperationCount() {
-      return 1;
-    }
-
-    public List getOperations() {
-      byte noDeserialize = DistributedCacheOperation.DESERIALIZATION_POLICY_NONE;
-      QueuedOperation qOp =
-          new QueuedOperation(getOperation(), null, null, null, noDeserialize, this.callbackArg);
-      return Collections.singletonList(qOp);
-    }
-
     public void setSendDelta(boolean sendDelta) {
       this.sendDelta = sendDelta;
     }
@@ -1610,5 +1593,4 @@ public abstract class DistributedCacheOperation {
     }
 
   }
-
 }

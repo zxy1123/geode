@@ -14,17 +14,37 @@
  */
 package org.apache.geode.management.internal.cli.i18n;
 
-import static org.apache.geode.distributed.ConfigurationProperties.*;
-
-import java.text.MessageFormat;
+import static org.apache.geode.distributed.ConfigurationProperties.ARCHIVE_DISK_SPACE_LIMIT;
+import static org.apache.geode.distributed.ConfigurationProperties.ARCHIVE_FILE_SIZE_LIMIT;
+import static org.apache.geode.distributed.ConfigurationProperties.CACHE_XML_FILE;
+import static org.apache.geode.distributed.ConfigurationProperties.DURABLE_CLIENT_ID;
+import static org.apache.geode.distributed.ConfigurationProperties.ENABLE_CLUSTER_CONFIGURATION;
+import static org.apache.geode.distributed.ConfigurationProperties.ENABLE_TIME_STATISTICS;
+import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER;
+import static org.apache.geode.distributed.ConfigurationProperties.LOCATORS;
+import static org.apache.geode.distributed.ConfigurationProperties.LOG_DISK_SPACE_LIMIT;
+import static org.apache.geode.distributed.ConfigurationProperties.LOG_FILE_SIZE_LIMIT;
+import static org.apache.geode.distributed.ConfigurationProperties.LOG_LEVEL;
+import static org.apache.geode.distributed.ConfigurationProperties.MCAST_ADDRESS;
+import static org.apache.geode.distributed.ConfigurationProperties.MCAST_PORT;
+import static org.apache.geode.distributed.ConfigurationProperties.MEMCACHED_BIND_ADDRESS;
+import static org.apache.geode.distributed.ConfigurationProperties.MEMCACHED_PORT;
+import static org.apache.geode.distributed.ConfigurationProperties.MEMCACHED_PROTOCOL;
+import static org.apache.geode.distributed.ConfigurationProperties.SERVER_BIND_ADDRESS;
+import static org.apache.geode.distributed.ConfigurationProperties.SOCKET_BUFFER_SIZE;
+import static org.apache.geode.distributed.ConfigurationProperties.STATISTIC_ARCHIVE_FILE;
+import static org.apache.geode.distributed.ConfigurationProperties.STATISTIC_SAMPLE_RATE;
+import static org.apache.geode.distributed.ConfigurationProperties.USE_CLUSTER_CONFIGURATION;
 
 import org.apache.geode.cache.PartitionAttributesFactory;
 import org.apache.geode.cache.server.CacheServer;
 import org.apache.geode.distributed.ConfigurationProperties;
+import org.apache.geode.distributed.internal.ClusterConfigurationService;
 import org.apache.geode.distributed.internal.DistributionConfig;
-import org.apache.geode.distributed.internal.SharedConfiguration;
 import org.apache.geode.internal.cache.xmlcache.CacheXml;
 import org.apache.geode.management.internal.cli.shell.Gfsh;
+
+import java.text.MessageFormat;
 
 /**
  * - * Contains 'String' constants used as key to the Localized strings to be used in classes under
@@ -134,12 +154,12 @@ public class CliStrings {
       "No caching members for group {0} could be found.  Please verify the group and try again.";
   public static final String NO_MEMBERS_FOUND_MESSAGE = "No Members Found";
   public static final String NO_CACHING_MEMBERS_FOUND_MESSAGE = "No caching members found.";
-  public static final String COMMAND_FAILURE_MESSAGE = "Error occured while executing : {0}";
+  public static final String COMMAND_FAILURE_MESSAGE = "Error occurred while executing : {0}";
   public static final String EXCEPTION_CLASS_AND_MESSAGE = "Exception : {0} , Message : {1}";
   public static final String GROUP_EMPTY_ERROR_MESSAGE = "No members found in group : {0}";
   public static final String REGION_NOT_FOUND = "Region : {0} not found";
   public static final String INVALID_REGION_NAME = "Invalid region name";
-  public static final String INVALID_FILE_EXTENTION =
+  public static final String INVALID_FILE_EXTENSION =
       "Invalid file type, the file extension must be \"{0}\"";
   public static final String GEODE_DATA_FILE_EXTENSION = ".gfd";
   public static final String LOCATOR_HEADER = "Locator";
@@ -1371,7 +1391,7 @@ public class CliStrings {
   public static final String EXPORT_LOGS__HELP = "Export the log files for a member or members.";
   public static final String EXPORT_LOGS__DIR = "dir";
   public static final String EXPORT_LOGS__DIR__HELP =
-      "Directory to which log files will be written.";
+      "Local directory to which log files will be written. This is only used when you are exporting logs using http connection. If not specified, user.dir will be used.";
   public static final String EXPORT_LOGS__MEMBER = "member";
   public static final String EXPORT_LOGS__MEMBER__HELP =
       "Name/Id of the member whose log files will be exported.";
@@ -1381,7 +1401,7 @@ public class CliStrings {
   public static final String EXPORT_LOGS__MSG__CANNOT_EXECUTE = "Cannot execute";
   public static final String EXPORT_LOGS__LOGLEVEL = LOG_LEVEL;
   public static final String EXPORT_LOGS__LOGLEVEL__HELP =
-      "Minimum level of log entries to export. Valid values are: none, error, info, config , fine, finer and finest.  The default is \"info\".";
+      "Minimum level of log entries to export. Valid values are: fatal, error, warn, info, debug, trace and all.  The default is \"INFO\".";
   public static final String EXPORT_LOGS__UPTO_LOGLEVEL = "only-log-level";
   public static final String EXPORT_LOGS__UPTO_LOGLEVEL__HELP =
       "Whether to only include those entries that exactly match the --log-level specified.";
@@ -1410,6 +1430,10 @@ public class CliStrings {
       "Groups specified have no members";
   public static final String EXPORT_LOGS__MSG__FAILED_TO_EXPORT_LOG_FILES_FOR_MEMBER_0 =
       "Could not export log files for member {0}";
+  public static final String EXPORT_LOGS__LOGSONLY = "logs-only";
+  public static final String EXPORT_LOGS__STATSONLY = "stats-only";
+  public static final String EXPORT_LOGS__LOGSONLY__HELP = "Whether to only export logs";
+  public static final String EXPORT_LOGS__STATSONLY__HELP = "Whether to only export statistics";
 
   /* export stack-trace command */
   public static final String EXPORT_STACKTRACE = "export stack-traces";
@@ -1427,12 +1451,18 @@ public class CliStrings {
   public static final String EXPORT_STACKTRACE__FILE = "file";
   public static final String EXPORT_STACKTRACE__FILE__HELP =
       "Name of the file to which the stack traces will be written.";
+  public static final String EXPORT_STACKTRACE__FAIL__IF__FILE__PRESENT = "abort-if-file-exists";
+  public static final String EXPORT_STACKTRACE__FAIL__IF__FILE__PRESENT__HELP =
+      "Abort the command if already exists at locator directory";
   public static final String EXPORT_STACKTRACE__MEMBER__NOT__FOUND = "Member not found";
   public static final String EXPORT_STACKTRACE__SUCCESS = "stack-trace(s) exported to file: {0}";
   public static final String EXPORT_STACKTRACE__ERROR = "Error occured while showing stack-traces";
+  public static final String EXPORT_STACKTRACE__ERROR__FILE__PRESENT =
+      "Error occured while exporting stack-traces, file {0} already present";
   public static final String EXPORT_STACKTRACE__HOST = "On host : ";
-  public static final String EXPORT_STACKTRACE__INVALID_FILE_TYPE =
-      "Invalid file extension. File must be a text file (.txt)";
+  public static final String EXPORT_STACKTRACE_WARN_USER =
+      "If file {0} already present at locator directory it will be overwritten, do you want to continue?";
+  public static final String EXPORT_STACKTRACE_MSG_ABORTING = "Aborting export stack-traces";
 
   /* 'gc' command */
   public static final String GC = "gc";
@@ -1882,7 +1912,7 @@ public class CliStrings {
   public static final String REMOVE__ALL__HELP =
       "Clears the region by removing all entries. Partitioned region does not support remove-all";
   public static final String REMOVE__MSG__REGIONNAME_EMPTY = "Region name is either empty or Null";
-  public static final String REMOVE__MSG__KEY_EMPTY = "Key is either empty or Null";
+  public static final String REMOVE__MSG__KEY_EMPTY = "Key is Null";
   public static final String REMOVE__MSG__VALUE_EMPTY = "Value is either empty or Null";
   public static final String REMOVE__MSG__REGION_NOT_FOUND_ON_ALL_MEMBERS =
       "Region <{0}> not found in any of the members";
@@ -2229,6 +2259,24 @@ public class CliStrings {
   public static final String START_GATEWAYSENDER__MEMBER__HELP =
       "Name/Id of the member on which to start the Gateway Sender.";
 
+
+  /* destroy gateway-sender */
+  public static final String DESTROY_GATEWAYSENDER = "destroy gateway-sender";
+  public static final String DESTROY_GATEWAYSENDER__HELP =
+      "Destroy the Gateway Sender on a member or members.";
+  public static final String DESTROY_GATEWAYSENDER__GROUP = "group";
+  public static final String DESTROY_GATEWAYSENDER__GROUP__HELP =
+      "Group(s) of members on which to destroy the Gateway Sender.";
+  public static final String DESTROY_GATEWAYSENDER__MEMBER = "member";
+  public static final String DESTROY_GATEWAYSENDER__MEMBER__HELP =
+      "Name/Id of the member on which to destroy the Gateway Sender.";
+  public static final String DESTROY_GATEWAYSENDER__ID = "id";
+  public static final String DESTROY_GATEWAYSENDER__ID__HELP = "Id of the GatewaySender.";
+  public static final String DESTROY_GATEWAYSENDER__MSG__GATEWAYSENDER_0_DESTROYED_ON_1 =
+      "GatewaySender \"{0}\" destroyed on \"{1}\"";
+
+
+
   /* start gfmon command */
   public static final String START_PULSE = "start pulse";
   public static final String START_PULSE__ERROR =
@@ -2368,10 +2416,16 @@ public class CliStrings {
   public static final String START_LOCATOR__LOAD__SHARED_CONFIGURATION__FROM__FILESYSTEM__HELP =
       "When \" " + START_LOCATOR__LOAD__SHARED_CONFIGURATION__FROM__FILESYSTEM
           + " \" is set to true, the locator loads the cluster configuration from the \""
-          + SharedConfiguration.CLUSTER_CONFIG_ARTIFACTS_DIR_NAME + "\" directory.";
+          + ClusterConfigurationService.CLUSTER_CONFIG_ARTIFACTS_DIR_NAME + "\" directory.";
   public static final String START_LOCATOR__CLUSTER__CONFIG__DIR = "cluster-config-dir";
   public static final String START_LOCATOR__CLUSTER__CONFIG__DIR__HELP =
       "Directory used by the cluster configuration service to store the cluster configuration on the filesystem";
+  public static final String START_LOCATOR__HTTP_SERVICE_PORT = "http-service-port";
+  public static final String START_LOCATOR__HTTP_SERVICE_PORT__HELP =
+      "Port on which HTTP Service will listen on";
+  public static final String START_LOCATOR__HTTP_SERVICE_BIND_ADDRESS = "http-service-bind-address";
+  public static final String START_LOCATOR__HTTP_SERVICE_BIND_ADDRESS__HELP =
+      "The IP address on which the HTTP Service will be bound.  By default, the Server is bound to all local addresses.";
 
   /* 'start manager' command */
   public static final String START_MANAGER = "start manager";
@@ -3025,16 +3079,13 @@ public class CliStrings {
   /***
    * Cluster Configuration commands
    */
-
+  // TODO: Jared - clean up messages
   public static final String EXPORT_SHARED_CONFIG = "export cluster-configuration";
   public static final String EXPORT_SHARED_CONFIG__HELP =
       "Exports the cluster configuration artifacts as a zip file.";
-  public static final String EXPORT_SHARED_CONFIG__DIR = "dir";
-  public static final String EXPORT_SHARED_CONFIG__DIR__HELP =
-      "The directory in which the exported cluster configuration artifacts will be saved";
   public static final String EXPORT_SHARED_CONFIG__FILE = "zip-file-name";
   public static final String EXPORT_SHARED_CONFIG__FILE__HELP =
-      "Name of the zip file containing the exported cluster configuration artifacts";
+      "Path to the zip file containing the exported cluster configuration artifacts";
   public static final String EXPORT_SHARED_CONFIG__MSG__NOT_A_DIRECTORY = "{0} is not a directory.";
   public static final String EXPORT_SHARED_CONFIG__MSG__CANNOT_CREATE_DIR =
       "Directory {0} could not be created.";

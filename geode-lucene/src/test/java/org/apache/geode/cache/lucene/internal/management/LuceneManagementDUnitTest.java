@@ -19,6 +19,8 @@ import org.apache.geode.cache.lucene.LuceneQuery;
 import org.apache.geode.cache.lucene.LuceneQueryException;
 import org.apache.geode.cache.lucene.LuceneService;
 import org.apache.geode.cache.lucene.LuceneServiceProvider;
+import org.apache.geode.cache.lucene.management.LuceneIndexMetrics;
+import org.apache.geode.cache.lucene.management.LuceneServiceMXBean;
 import org.apache.geode.distributed.DistributedMember;
 import org.apache.geode.internal.cache.GemFireCacheImpl;
 import org.apache.geode.management.ManagementTestBase;
@@ -27,7 +29,7 @@ import org.apache.geode.management.internal.MBeanJMXAdapter;
 import org.apache.geode.management.internal.SystemManagementService;
 import org.apache.geode.test.dunit.VM;
 import org.apache.geode.test.junit.categories.DistributedTest;
-import com.jayway.awaitility.Awaitility;
+import org.awaitility.Awaitility;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -125,8 +127,9 @@ public class LuceneManagementDUnitTest extends ManagementTestBase {
     getManagingNode().invoke(() -> waitForMemberProxiesToRefresh(2));
 
     // Verify index metrics
+    int numManagedNodes = getManagedNodeList().size();
     getManagingNode().invoke(() -> verifyMBeanIndexMetricsValues(regionName, indexName, numPuts,
-        113/* 1 query per bucket */, 1/* 1 result */));
+        numManagedNodes/* 1 query per managed node */, 1/* 1 result */));
   }
 
   private static void waitForMemberProxiesToRefresh(int refreshCount) {
@@ -143,13 +146,13 @@ public class LuceneManagementDUnitTest extends ManagementTestBase {
     }
   }
 
-  private static void verifyMBean() {
+  private void verifyMBean() {
     getMBean();
   }
 
-  private static LuceneServiceMXBean getMBean() {
-    ObjectName objectName =
-        MBeanJMXAdapter.getCacheServiceMBeanName(ds.getDistributedMember(), "LuceneService");
+  private LuceneServiceMXBean getMBean() {
+    ObjectName objectName = MBeanJMXAdapter
+        .getCacheServiceMBeanName(getSystem().getDistributedMember(), "LuceneService");
     assertNotNull(getManagementService().getMBeanInstance(objectName, LuceneServiceMXBean.class));
     return getManagementService().getMBeanInstance(objectName, LuceneServiceMXBean.class);
   }
@@ -178,14 +181,14 @@ public class LuceneManagementDUnitTest extends ManagementTestBase {
     createPartitionRegion(vm, regionName);
   }
 
-  private static void createIndexes(String regionName, int numIndexes) {
-    LuceneService luceneService = LuceneServiceProvider.get(cache);
+  private void createIndexes(String regionName, int numIndexes) {
+    LuceneService luceneService = LuceneServiceProvider.get(getCache());
     for (int i = 0; i < numIndexes; i++) {
       luceneService.createIndex(INDEX_NAME + "_" + i, regionName, "field" + i);
     }
   }
 
-  private static void verifyAllMBeanIndexMetrics(String regionName, int numRegionIndexes,
+  private void verifyAllMBeanIndexMetrics(String regionName, int numRegionIndexes,
       int numTotalIndexes) {
     LuceneServiceMXBean mbean = getMBean();
     verifyMBeanIndexMetrics(mbean, regionName, numRegionIndexes, numTotalIndexes);
@@ -210,18 +213,17 @@ public class LuceneManagementDUnitTest extends ManagementTestBase {
     }
   }
 
-  private static void putEntries(String regionName, int numEntries) {
+  private void putEntries(String regionName, int numEntries) {
     for (int i = 0; i < numEntries; i++) {
-      Region region = cache.getRegion(regionName);
+      Region region = getCache().getRegion(regionName);
       String key = String.valueOf(i);
       Object value = new TestObject(key);
       region.put(key, value);
     }
   }
 
-  private static void queryEntries(String regionName, String indexName)
-      throws LuceneQueryException {
-    LuceneService service = LuceneServiceProvider.get(cache);
+  private void queryEntries(String regionName, String indexName) throws LuceneQueryException {
+    LuceneService service = LuceneServiceProvider.get(getCache());
     LuceneQuery query =
         service.createLuceneQueryFactory().create(indexName, regionName, "field0:0", null);
     query.findValues();

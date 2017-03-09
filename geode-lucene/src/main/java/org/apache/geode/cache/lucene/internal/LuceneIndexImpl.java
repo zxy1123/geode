@@ -17,8 +17,8 @@ package org.apache.geode.cache.lucene.internal;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
+import org.apache.geode.internal.cache.extension.Extension;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -30,9 +30,7 @@ import org.apache.geode.cache.Region;
 import org.apache.geode.cache.RegionAttributes;
 import org.apache.geode.cache.asyncqueue.AsyncEventQueue;
 import org.apache.geode.cache.asyncqueue.internal.AsyncEventQueueFactoryImpl;
-import org.apache.geode.cache.lucene.internal.filesystem.ChunkKey;
-import org.apache.geode.cache.lucene.internal.filesystem.File;
-import org.apache.geode.cache.lucene.internal.filesystem.FileSystemStats;
+import org.apache.geode.cache.asyncqueue.internal.AsyncEventQueueImpl;
 import org.apache.geode.cache.lucene.internal.repository.RepositoryManager;
 import org.apache.geode.cache.lucene.internal.xml.LuceneIndexCreation;
 import org.apache.geode.internal.cache.GemFireCacheImpl;
@@ -89,32 +87,6 @@ public abstract class LuceneIndexImpl implements InternalLuceneIndex {
 
   protected void setSearchableFields(String[] fields) {
     searchableFieldNames = fields;
-  }
-
-  @Override
-  public boolean waitUntilFlushed(int maxWaitInMillisecond) {
-    String aeqId = LuceneServiceImpl.getUniqueIndexName(indexName, regionPath);
-    AsyncEventQueue queue = (AsyncEventQueue) cache.getAsyncEventQueue(aeqId);
-    boolean flushed = false;
-    if (queue != null) {
-      long start = System.nanoTime();
-      while (System.nanoTime() - start < TimeUnit.MILLISECONDS.toNanos(maxWaitInMillisecond)) {
-        if (0 == queue.size()) {
-          flushed = true;
-          break;
-        } else {
-          try {
-            Thread.sleep(200);
-          } catch (InterruptedException e) {
-          }
-        }
-      }
-    } else {
-      throw new IllegalArgumentException(
-          "The AEQ does not exist for the index " + indexName + " region " + regionPath);
-    }
-
-    return flushed;
   }
 
   @Override
@@ -182,6 +154,11 @@ public abstract class LuceneIndexImpl implements InternalLuceneIndex {
     AsyncEventQueueFactoryImpl factory =
         (AsyncEventQueueFactoryImpl) cache.createAsyncEventQueueFactory();
     if (dataRegion instanceof PartitionedRegion) {
+      PartitionedRegion pr = (PartitionedRegion) dataRegion;
+      if (pr.getPartitionAttributes().getLocalMaxMemory() == 0) {
+        // accessor will not create AEQ
+        return null;
+      }
       factory.setParallel(true); // parallel AEQ for PR
     } else {
       factory.setParallel(false); // TODO: not sure if serial AEQ working or not
@@ -199,6 +176,9 @@ public abstract class LuceneIndexImpl implements InternalLuceneIndex {
   }
 
   private AsyncEventQueue createAEQ(AsyncEventQueueFactoryImpl factory) {
+    if (factory == null) {
+      return null;
+    }
     LuceneEventListener listener = new LuceneEventListener(repositoryManager);
     String aeqId = LuceneServiceImpl.getUniqueIndexName(getName(), regionPath);
     AsyncEventQueue indexQueue = factory.create(aeqId, listener);
@@ -217,6 +197,27 @@ public abstract class LuceneIndexImpl implements InternalLuceneIndex {
     dataRegion.getExtensionPoint().addExtension(creation);
   }
 
+  public void destroy(boolean initiator) {
+    // Find and delete the appropriate extension
+    Extension extensionToDelete = null;
+    for (Extension extension : getDataRegion().getExtensionPoint().getExtensions()) {
+      LuceneIndexCreation index = (LuceneIndexCreation) extension;
+      if (index.getName().equals(indexName)) {
+        extensionToDelete = extension;
+        break;
+      }
+    }
+    if (extensionToDelete != null) {
+      getDataRegion().getExtensionPoint().removeExtension(extensionToDelete);
+    }
+
+    // Destroy the async event queue
+    destroyAsyncEventQueue();
+
+    // Close the repository manager
+    repositoryManager.close();
+  }
+
   protected <K, V> Region<K, V> createRegion(final String regionName,
       final RegionAttributes<K, V> attributes) {
     // Create InternalRegionArguments to set isUsedForMetaRegion true to suppress xml generation
@@ -233,6 +234,35 @@ public abstract class LuceneIndexImpl implements InternalLuceneIndex {
           LocalizedStrings.GemFireCache_UNEXPECTED_EXCEPTION.toLocalizedString());
       ige.initCause(e);
       throw ige;
+    }
+  }
+
+  private void destroyAsyncEventQueue() {
+    String aeqId = LuceneServiceImpl.getUniqueIndexName(indexName, regionPath);
+
+    // Get the AsyncEventQueue
+    AsyncEventQueueImpl aeq = (AsyncEventQueueImpl) cache.getAsyncEventQueue(aeqId);
+
+    // Stop the AsyncEventQueue (this stops the AsyncEventQueue's underlying GatewaySender)
+    // The AsyncEventQueue can be null in an accessor member
+    if (aeq != null) {
+      aeq.stop();
+    }
+
+    // Remove the id from the dataRegion's AsyncEventQueue ids
+    // Note: The region may already have been destroyed by a remote member
+    Region region = getDataRegion();
+    if (!region.isDestroyed()) {
+      region.getAttributesMutator().removeAsyncEventQueueId(aeqId);
+    }
+
+    // Destroy the aeq (this also removes it from the GemFireCacheImpl)
+    // The AsyncEventQueue can be null in an accessor member
+    if (aeq != null) {
+      aeq.destroy();
+    }
+    if (logger.isDebugEnabled()) {
+      logger.debug("Destroyed aeqId=" + aeqId);
     }
   }
 }

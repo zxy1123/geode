@@ -17,6 +17,7 @@ package org.apache.geode.cache.asyncqueue.internal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.geode.cache.asyncqueue.AsyncEventListener;
 import org.apache.geode.cache.asyncqueue.AsyncEventQueue;
@@ -24,6 +25,7 @@ import org.apache.geode.cache.wan.GatewayEventFilter;
 import org.apache.geode.cache.wan.GatewayEventSubstitutionFilter;
 import org.apache.geode.cache.wan.GatewaySender;
 import org.apache.geode.cache.wan.GatewaySender.OrderPolicy;
+import org.apache.geode.internal.cache.GemFireCacheImpl;
 import org.apache.geode.internal.cache.RegionQueue;
 import org.apache.geode.internal.cache.wan.AbstractGatewaySender;
 import org.apache.geode.internal.cache.wan.AbstractGatewaySenderEventProcessor;
@@ -190,8 +192,16 @@ public class AsyncEventQueueImpl implements AsyncEventQueue {
     return ((AbstractGatewaySender) sender).getIsMetaQueue();
   }
 
+  public void stop() {
+    if (this.sender.isRunning()) {
+      this.sender.stop();
+    }
+  }
+
   public void destroy() {
-    ((AbstractGatewaySender) this.sender).destroy();
+    GemFireCacheImpl gfci = (GemFireCacheImpl) ((AbstractGatewaySender) this.sender).getCache();
+    this.sender.destroy();
+    gfci.removeAsyncEventQueue(this);
   }
 
   public boolean isBucketSorted() {
@@ -201,5 +211,9 @@ public class AsyncEventQueueImpl implements AsyncEventQueue {
 
   public boolean isForwardExpirationDestroy() {
     return ((AbstractGatewaySender) this.sender).isForwardExpirationDestroy();
+  }
+
+  public boolean waitUntilFlushed(long timeout, TimeUnit unit) throws InterruptedException {
+    return ((AbstractGatewaySender) this.sender).waitUntilFlushed(timeout, unit);
   }
 }

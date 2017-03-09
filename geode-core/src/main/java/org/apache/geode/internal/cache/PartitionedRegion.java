@@ -600,7 +600,8 @@ public class PartitionedRegion extends LocalRegion
 
   private byte fixedPASet;
 
-  public List<PartitionedRegion> colocatedByList = new CopyOnWriteArrayList<PartitionedRegion>();
+  private final List<PartitionedRegion> colocatedByList =
+      new CopyOnWriteArrayList<PartitionedRegion>();
 
   private final PartitionListener[] partitionListeners;
 
@@ -670,9 +671,7 @@ public class PartitionedRegion extends LocalRegion
     this.colocatedWithRegion = ColocationHelper.getColocatedRegion(this);
 
     if (colocatedWithRegion != null) {
-      synchronized (colocatedWithRegion.colocatedByList) {
-        colocatedWithRegion.colocatedByList.add(this);
-      }
+      colocatedWithRegion.getColocatedByList().add(this);
     }
 
     if (colocatedWithRegion != null && !internalRegionArgs.isUsedForParallelGatewaySenderQueue()) {
@@ -786,7 +785,7 @@ public class PartitionedRegion extends LocalRegion
     return parallelGatewaySenderIds;
   }
 
-  List<PartitionedRegion> getColocatedByList() {
+  public List<PartitionedRegion> getColocatedByList() {
     return this.colocatedByList;
   }
 
@@ -6099,6 +6098,10 @@ public class PartitionedRegion extends LocalRegion
     return Collections.unmodifiableSet(new PREntriesSet());
   }
 
+  public Set<Region.Entry> entries(Set<Integer> bucketIds) {
+    return new PREntriesSet(bucketIds);
+  }
+
   /**
    * Set view of entries. This currently extends the keySet iterator and performs individual
    * getEntry() operations using the keys
@@ -6162,6 +6165,13 @@ public class PartitionedRegion extends LocalRegion
   public Set keySet(boolean allowTombstones) {
     checkReadiness();
     return Collections.unmodifiableSet(new KeysSet(allowTombstones));
+  }
+
+  /**
+   * Get a keyset of the given buckets
+   */
+  public Set keySet(Set<Integer> bucketSet) {
+    return new KeysSet(bucketSet);
   }
 
   public Set keysWithoutCreatesForTests() {
@@ -7911,6 +7921,9 @@ public class PartitionedRegion extends LocalRegion
         }
       }
     }
+    if (colocatedWithRegion != null) {
+      colocatedWithRegion.getColocatedByList().remove(this);
+    }
 
     RegionLogger.logDestroy(getName(), cache.getMyId(), null, op.isClose());
   }
@@ -8738,7 +8751,7 @@ public class PartitionedRegion extends LocalRegion
 
     // First step is creating all the defined indexes.
     // Do not send the IndexCreationMsg to remote nodes now.
-    throwException =
+    throwException |=
         createEmptyIndexes(indexDefinitions, remotelyOriginated, indexes, exceptionsMap);
 
     // If same indexes are created locally and also being created by a remote index creation msg
@@ -8751,13 +8764,13 @@ public class PartitionedRegion extends LocalRegion
 
     // Second step is iterating over REs and populating all the created indexes
     if (unpopulatedIndexes != null && unpopulatedIndexes.size() > 0) {
-      throwException = populateEmptyIndexes(unpopulatedIndexes, exceptionsMap);
+      throwException |= populateEmptyIndexes(unpopulatedIndexes, exceptionsMap);
     }
 
     // Third step is to send the message to remote nodes
     // Locally originated create index request.
     // Send create request to other PR nodes.
-    throwException =
+    throwException |=
         sendCreateIndexesMessage(remotelyOriginated, indexDefinitions, indexes, exceptionsMap);
 
     // If exception is throw in any of the above steps

@@ -14,7 +14,6 @@
  */
 package org.apache.geode.cache.lucene;
 
-import org.apache.geode.cache.RegionShortcut;
 import org.apache.geode.cache.lucene.test.LuceneTestUtilities;
 import org.apache.geode.test.dunit.SerializableRunnableIF;
 import org.apache.geode.test.junit.categories.DistributedTest;
@@ -42,32 +41,41 @@ import static org.junit.Assert.*;
 @RunWith(JUnitParamsRunner.class)
 public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
 
-  @Override
-  protected void initDataStore(SerializableRunnableIF createIndex) throws Exception {
-    createIndex.run();
-    getCache().createRegionFactory(RegionShortcut.PARTITION).create(REGION_NAME);
+  private final Object[] parametersForMultipleIndexCreates() {
+    Integer[] numIndexes = {1, 2, 10};
+    RegionTestableType[] regionTestTypes = getListOfRegionTestTypes();
+    return parameterCombiner(numIndexes, regionTestTypes);
   }
 
+  protected final Object[] parametersForIndexAndRegions() {
+    Object[] indexCreations = new Object[] {getFieldsIndexWithOneField(),
+        getFieldsIndexWithTwoFields(), get2FieldsIndexes(), getAnalyzersIndexWithOneField(),
+        getAnalyzersIndexWithTwoFields(), getAnalyzersIndexWithNullField1()};
+    RegionTestableType[] regionTestTypes = getListOfRegionTestTypes();
+    return parameterCombiner(indexCreations, regionTestTypes);
+  }
 
   @Test
-  @Parameters({"1", "2", "10"})
-  public void verifyThatIndexObjectsAreListedWhenPresentInTheSystem(int numberOfIndexes) {
+  @Parameters(method = "parametersForMultipleIndexCreates")
+  public void verifyThatIndexObjectsAreListedWhenPresentInTheSystem(int numberOfIndexes,
+      RegionTestableType regionType) {
     SerializableRunnableIF createIndex = getMultipleIndexes(numberOfIndexes);
-    dataStore1.invoke(() -> initDataStore(createIndex));
+    dataStore1.invoke(() -> initDataStore(createIndex, regionType));
     dataStore1.invoke(() -> verifyIndexList(numberOfIndexes));
 
-    dataStore2.invoke(() -> initDataStore(createIndex));
+    dataStore2.invoke(() -> initDataStore(createIndex, regionType));
     dataStore2.invoke(() -> verifyIndexList(numberOfIndexes));
   }
 
   @Test
-  @Parameters({"1", "2", "10"})
-  public void verifyThatIndexObjectIsRetrievedWhenPresentInTheSystem(int numberOfIndexes) {
+  @Parameters(method = "parametersForMultipleIndexCreates")
+  public void verifyThatIndexObjectIsRetrievedWhenPresentInTheSystem(int numberOfIndexes,
+      RegionTestableType regionType) {
     SerializableRunnableIF createIndex = getMultipleIndexes(numberOfIndexes);
-    dataStore1.invoke(() -> initDataStore(createIndex));
+    dataStore1.invoke(() -> initDataStore(createIndex, regionType));
     dataStore1.invoke(() -> verifyIndexes(numberOfIndexes));
 
-    dataStore2.invoke(() -> initDataStore(createIndex));
+    dataStore2.invoke(() -> initDataStore(createIndex, regionType));
     dataStore2.invoke(() -> verifyIndexes(numberOfIndexes));
   }
 
@@ -108,120 +116,136 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
 
 
   @Test
-  public void verifyDifferentFieldsFails() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentFieldsFails(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getFieldsIndexWithOneField();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getFieldsIndexWithTwoFields();
-    dataStore2
-        .invoke(() -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_FIELDS));
+    dataStore2.invoke(
+        () -> initDataStore(createIndex2, regionType, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_FIELDS));
   }
 
   @Test
-  public void verifyDifferentFieldAnalyzerSizesFails1() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentFieldAnalyzerSizesFails1(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getAnalyzersIndexWithTwoFields();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getAnalyzersIndexWithOneField();
-    dataStore2
-        .invoke(() -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_FIELDS_2));
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType,
+        CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_FIELDS_2));
   }
 
   @Test
-  public void verifyDifferentFieldAnalyzerSizesFails2() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentFieldAnalyzerSizesFails2(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getAnalyzersIndexWithOneField();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getAnalyzersIndexWithTwoFields();
-    dataStore2
-        .invoke(() -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_FIELDS));
+    dataStore2.invoke(
+        () -> initDataStore(createIndex2, regionType, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_FIELDS));
   }
 
   @Test
-  public void verifyDifferentFieldAnalyzersFails1() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentFieldAnalyzersFails1(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getAnalyzersIndexWithOneField(StandardAnalyzer.class);
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getAnalyzersIndexWithOneField(KeywordAnalyzer.class);
-    dataStore2.invoke(
-        () -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_ANALYZERS_2));
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType,
+        CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_ANALYZERS_2));
   }
 
   @Test
-  public void verifyDifferentFieldAnalyzersFails2() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentFieldAnalyzersFails2(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getAnalyzersIndexWithNullField1();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getAnalyzersIndexWithNullField2();
-    dataStore2
-        .invoke(() -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_ANALYZERS));
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType,
+        CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_ANALYZERS));
   }
 
   @Test
-  public void verifyDifferentFieldAnalyzersFails3() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentFieldAnalyzersFails3(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getAnalyzersIndexWithNullField2();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getAnalyzersIndexWithNullField1();
-    dataStore2.invoke(() -> initDataStore(createIndex2,
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType,
         LuceneTestUtilities.CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_ANALYZERS_3));
   }
 
   @Test
-  public void verifyDifferentIndexNamesFails() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentIndexNamesFails(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       luceneService.createIndex(INDEX_NAME + "1", REGION_NAME, "field1");
     };
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       luceneService.createIndex(INDEX_NAME + "2", REGION_NAME, "field1");
     };
-    dataStore2
-        .invoke(() -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_NAMES));
+    dataStore2.invoke(
+        () -> initDataStore(createIndex2, regionType, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_NAMES));
   }
 
   @Test
-  public void verifyDifferentIndexesFails1() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentIndexesFails1(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getFieldsIndexWithOneField();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = () -> {
       /* Do nothing */};
-    dataStore2
-        .invoke(() -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_INDEXES_1));
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType,
+        CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_INDEXES_1));
   }
 
+
   @Test
-  public void verifyDifferentIndexesFails2() {
+  @Parameters({"PARTITION"})
+  public void verifyDifferentIndexesFails2(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getFieldsIndexWithOneField();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       luceneService.createIndex(INDEX_NAME, REGION_NAME, "field1");
       luceneService.createIndex(INDEX_NAME + "2", REGION_NAME, "field2");
     };
-    dataStore2
-        .invoke(() -> initDataStore(createIndex2, CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_INDEXES_2));
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType,
+        CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_INDEXES_2));
   }
 
   @Test
-  @Parameters(method = "getIndexes")
-  public void verifySameIndexesSucceeds(SerializableRunnableIF createIndex) {
-    dataStore1.invoke(() -> initDataStore(createIndex));
-    dataStore2.invoke(() -> initDataStore(createIndex));
+  @Parameters({"PARTITION"})
+  public void verifyMemberWithoutIndexCreatedFirstFails(RegionTestableType regionType) {
+    SerializableRunnableIF createIndex1 = () -> {
+      /* Do nothing */};
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
+
+    SerializableRunnableIF createIndex2 = getFieldsIndexWithOneField();
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType,
+        CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_INDEXES_3));
   }
 
-  private final Object[] getIndexes() {
-    return $(new Object[] {getFieldsIndexWithOneField()},
-        new Object[] {getFieldsIndexWithTwoFields()}, new Object[] {get2FieldsIndexes()},
-        new Object[] {getAnalyzersIndexWithOneField()},
-        new Object[] {getAnalyzersIndexWithTwoFields()},
-        new Object[] {getAnalyzersIndexWithNullField1()});
+  @Test
+  @Parameters(method = "parametersForIndexAndRegions")
+  public void verifySameIndexesSucceeds(SerializableRunnableIF createIndex,
+      RegionTestableType regionType) {
+    dataStore1.invoke(() -> initDataStore(createIndex, regionType));
+    dataStore2.invoke(() -> initDataStore(createIndex, regionType));
   }
+
 
   @Test
   @Parameters(method = "getXmlAndExceptionMessages")
@@ -260,7 +284,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
 
 
 
-  private final Object[] getXmlAndExceptionMessages() {
+  protected final Object[] getXmlAndExceptionMessages() {
     return $(
         new Object[] {"verifyDifferentFieldsFails", CANNOT_CREATE_LUCENE_INDEX_DIFFERENT_FIELDS},
         new Object[] {"verifyDifferentFieldAnalyzerSizesFails1",
@@ -283,43 +307,50 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
   }
 
   @Test
-  public void verifyStandardAnalyzerAndNullOnSameFieldPasses() {
+  @Parameters("PARTITION")
+  public void verifyStandardAnalyzerAndNullOnSameFieldPasses(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getAnalyzersIndexWithNullField1();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getAnalyzersIndexWithTwoFields2();
-    dataStore2.invoke(() -> initDataStore(createIndex2));
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType));
   }
 
   @Test
-  public void verifyStandardAnalyzerAndNullOnSameFieldPasses2() {
+  @Parameters("PARTITION")
+  public void verifyStandardAnalyzerAndNullOnSameFieldPasses2(RegionTestableType regionType) {
     SerializableRunnableIF createIndex1 = getAnalyzersIndexWithTwoFields2();
-    dataStore1.invoke(() -> initDataStore(createIndex1));
+    dataStore1.invoke(() -> initDataStore(createIndex1, regionType));
 
     SerializableRunnableIF createIndex2 = getAnalyzersIndexWithNullField1();
-    dataStore2.invoke(() -> initDataStore(createIndex2));
+    dataStore2.invoke(() -> initDataStore(createIndex2, regionType));
   }
 
-  private String getXmlFileForTest(String testName) {
+  protected String getXmlFileForTest(String testName) {
     return TestUtil.getResourcePath(getClass(),
-        getClass().getSimpleName() + "." + testName + ".cache.xml");
+        getClassSimpleName() + "." + testName + ".cache.xml");
   }
 
-  private void initDataStore(SerializableRunnableIF createIndex, String message) throws Exception {
+  protected String getClassSimpleName() {
+    return getClass().getSimpleName();
+  }
+
+  protected void initDataStore(SerializableRunnableIF createIndex, RegionTestableType regionType,
+      String message) throws Exception {
     createIndex.run();
     try {
-      getCache().createRegionFactory(RegionShortcut.PARTITION).create(REGION_NAME);
+      regionType.createDataStore(getCache(), REGION_NAME);
       fail("Should not have been able to create index");
     } catch (IllegalStateException e) {
       assertEquals(message, e.getMessage());
     }
   }
 
-  private void initCache(String cacheXmlFileName) throws FileNotFoundException {
+  protected void initCache(String cacheXmlFileName) throws FileNotFoundException {
     getCache().loadCacheXml(new FileInputStream(cacheXmlFileName));
   }
 
-  private void initCache(String cacheXmlFileName, String message) throws FileNotFoundException {
+  protected void initCache(String cacheXmlFileName, String message) throws FileNotFoundException {
     try {
       getCache().loadCacheXml(new FileInputStream(cacheXmlFileName));
       fail("Should not have been able to create cache");
@@ -328,21 +359,21 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     }
   }
 
-  private SerializableRunnableIF getFieldsIndexWithOneField() {
+  protected SerializableRunnableIF getFieldsIndexWithOneField() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       luceneService.createIndex(INDEX_NAME, REGION_NAME, "field1");
     };
   }
 
-  private SerializableRunnableIF getFieldsIndexWithTwoFields() {
+  protected SerializableRunnableIF getFieldsIndexWithTwoFields() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       luceneService.createIndex(INDEX_NAME, REGION_NAME, "field1", "field2");
     };
   }
 
-  private SerializableRunnableIF get2FieldsIndexes() {
+  protected SerializableRunnableIF get2FieldsIndexes() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       luceneService.createIndex(INDEX_NAME + "_1", REGION_NAME, "field1");
@@ -350,7 +381,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     };
   }
 
-  private SerializableRunnableIF getMultipleIndexes(final int numberOfIndexes) {
+  protected SerializableRunnableIF getMultipleIndexes(final int numberOfIndexes) {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       for (int count = 1; count <= numberOfIndexes; count++) {
@@ -359,13 +390,13 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     };
   }
 
-  private void verifyIndexList(final int expectedSize) {
+  protected void verifyIndexList(final int expectedSize) {
     LuceneService luceneService = LuceneServiceProvider.get(getCache());
     Collection<LuceneIndex> indexList = luceneService.getAllIndexes();
     assertEquals(indexList.size(), expectedSize);
   }
 
-  private void verifyIndexes(final int numberOfIndexes) {
+  protected void verifyIndexes(final int numberOfIndexes) {
     LuceneService luceneService = LuceneServiceProvider.get(getCache());
     for (int count = 1; count <= numberOfIndexes; count++) {
       assertEquals(luceneService.getIndex(INDEX_NAME + "_" + count, REGION_NAME).getName(),
@@ -373,7 +404,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     }
   }
 
-  private SerializableRunnableIF getAnalyzersIndexWithNullField1() {
+  protected SerializableRunnableIF getAnalyzersIndexWithNullField1() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       Map<String, Analyzer> analyzers = new HashMap<>();
@@ -383,7 +414,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     };
   }
 
-  private SerializableRunnableIF getAnalyzersIndexWithNullField2() {
+  protected SerializableRunnableIF getAnalyzersIndexWithNullField2() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       Map<String, Analyzer> analyzers = new HashMap<>();
@@ -393,7 +424,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     };
   }
 
-  private SerializableRunnableIF getAnalyzersIndexWithOneField(
+  protected SerializableRunnableIF getAnalyzersIndexWithOneField(
       Class<? extends Analyzer> analyzerClass) {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
@@ -403,7 +434,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     };
   }
 
-  private SerializableRunnableIF getAnalyzersIndexWithOneField() {
+  protected SerializableRunnableIF getAnalyzersIndexWithOneField() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       Map<String, Analyzer> analyzers = new HashMap<>();
@@ -412,7 +443,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     };
   }
 
-  private SerializableRunnableIF getAnalyzersIndexWithTwoFields() {
+  protected SerializableRunnableIF getAnalyzersIndexWithTwoFields() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       Map<String, Analyzer> analyzers = new HashMap<>();
@@ -422,7 +453,7 @@ public class LuceneIndexCreationDUnitTest extends LuceneDUnitTest {
     };
   }
 
-  private SerializableRunnableIF getAnalyzersIndexWithTwoFields2() {
+  protected SerializableRunnableIF getAnalyzersIndexWithTwoFields2() {
     return () -> {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       Map<String, Analyzer> analyzers = new HashMap<>();

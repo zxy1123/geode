@@ -29,7 +29,6 @@ import org.apache.geode.internal.security.shiro.CustomAuthRealm;
 import org.apache.geode.internal.security.shiro.GeodeAuthenticationToken;
 import org.apache.geode.internal.security.shiro.ShiroPrincipal;
 import org.apache.geode.internal.util.BlobHelper;
-import org.apache.geode.management.internal.security.ResourceConstants;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.security.AuthenticationFailedException;
 import org.apache.geode.security.GemFireSecurityException;
@@ -47,6 +46,8 @@ import org.apache.shiro.config.Ini.Section;
 import org.apache.shiro.config.IniSecurityManagerFactory;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.realm.Realm;
+import org.apache.shiro.session.mgt.DefaultSessionManager;
+import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.subject.support.SubjectThreadState;
 import org.apache.shiro.util.ThreadContext;
@@ -115,19 +116,6 @@ public class IntegratedSecurityService implements SecurityService {
     }
 
     return currentUser;
-  }
-
-  /**
-   * convenient method for testing
-   */
-  public Subject login(String username, String password) {
-    if (StringUtils.isBlank(username) || StringUtils.isBlank(password))
-      return null;
-
-    Properties credentials = new Properties();
-    credentials.setProperty(ResourceConstants.USER_NAME, username);
-    credentials.setProperty(ResourceConstants.PASSWORD, password);
-    return login(credentials);
   }
 
   /**
@@ -420,11 +408,28 @@ public class IntegratedSecurityService implements SecurityService {
 
     this.securityManager = securityManager;
     Realm realm = new CustomAuthRealm(securityManager);
-    org.apache.shiro.mgt.SecurityManager shiroManager = new DefaultSecurityManager(realm);
+    DefaultSecurityManager shiroManager = new DefaultSecurityManager(realm);
     SecurityUtils.setSecurityManager(shiroManager);
+    increaseShiroGlobalSessionTimeout(shiroManager);
+
     isIntegratedSecurity = true;
     isClientAuthenticator = false;
     isPeerAuthenticator = false;
+  }
+
+  private void increaseShiroGlobalSessionTimeout(final DefaultSecurityManager shiroManager) {
+    SessionManager sessionManager = shiroManager.getSessionManager();
+    if (DefaultSessionManager.class.isInstance(sessionManager)) {
+      DefaultSessionManager defaultSessionManager = (DefaultSessionManager) sessionManager;
+      defaultSessionManager.setGlobalSessionTimeout(Long.MAX_VALUE);
+      long value = defaultSessionManager.getGlobalSessionTimeout();
+      if (value != Long.MAX_VALUE) {
+        logger.error("Unable to set Shiro Global Session Timeout. Current value is '{}'.", value);
+      }
+    } else {
+      logger.error("Unable to set Shiro Global Session Timeout. Current SessionManager is '{}'.",
+          sessionManager == null ? "null" : sessionManager.getClass());
+    }
   }
 
   public PostProcessor getPostProcessor() {

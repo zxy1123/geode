@@ -793,7 +793,7 @@ public class DataCommands implements CommandMarker {
 
     if (!filePath.endsWith(CliStrings.GEODE_DATA_FILE_EXTENSION)) {
       return ResultBuilder.createUserErrorResult(CliStrings
-          .format(CliStrings.INVALID_FILE_EXTENTION, CliStrings.GEODE_DATA_FILE_EXTENSION));
+          .format(CliStrings.INVALID_FILE_EXTENSION, CliStrings.GEODE_DATA_FILE_EXTENSION));
     }
     try {
       if (targetMember != null) {
@@ -853,7 +853,7 @@ public class DataCommands implements CommandMarker {
 
       if (!filePath.endsWith(CliStrings.GEODE_DATA_FILE_EXTENSION)) {
         return ResultBuilder.createUserErrorResult(CliStrings
-            .format(CliStrings.INVALID_FILE_EXTENTION, CliStrings.GEODE_DATA_FILE_EXTENSION));
+            .format(CliStrings.INVALID_FILE_EXTENSION, CliStrings.GEODE_DATA_FILE_EXTENSION));
       }
       if (targetMember != null) {
         final String args[] = {regionName, filePath};
@@ -1093,7 +1093,7 @@ public class DataCommands implements CommandMarker {
           null, CliStrings.REMOVE__MSG__REGIONNAME_EMPTY, false));
     }
 
-    if (!removeAllKeys && (key == null || key.isEmpty())) {
+    if (!removeAllKeys && (key == null)) {
       return makePresentationResult(dataResult = DataCommandResult.createRemoveResult(key, null,
           null, CliStrings.REMOVE__MSG__KEY_EMPTY, false));
     }
@@ -1327,7 +1327,7 @@ public class DataCommands implements CommandMarker {
 
     // try with function calls
     if (matchedMembers.size() == 0) {
-      matchedMembers = CliUtil.getMembersForeRegionViaFunction(cache, region);
+      matchedMembers = CliUtil.getMembersForeRegionViaFunction(cache, region, true);
     }
     return matchedMembers;
   }

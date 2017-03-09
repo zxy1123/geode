@@ -34,12 +34,10 @@ import org.apache.geode.management.internal.cli.result.CommandResultException;
 import org.apache.geode.management.internal.cli.result.FileResult;
 import org.apache.geode.management.internal.cli.result.ResultBuilder;
 import org.apache.geode.management.internal.cli.result.TabularResultData;
-import org.apache.geode.management.internal.configuration.SharedConfigurationWriter;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.security.NotAuthorizedException;
 import org.apache.geode.security.ResourcePermission.Operation;
 import org.apache.geode.security.ResourcePermission.Resource;
-import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
@@ -59,7 +57,7 @@ import java.util.Set;
  * @see org.apache.geode.management.internal.cli.commands.AbstractCommandsSupport
  * @since GemFire 7.0
  */
-public final class DeployCommands extends AbstractCommandsSupport implements CommandMarker {
+public final class DeployCommands extends AbstractCommandsSupport {
 
   private final DeployFunction deployFunction = new DeployFunction();
   private final UndeployFunction undeployFunction = new UndeployFunction();
@@ -76,7 +74,7 @@ public final class DeployCommands extends AbstractCommandsSupport implements Com
   @CliCommand(value = {CliStrings.DEPLOY}, help = CliStrings.DEPLOY__HELP)
   @CliMetaData(
       interceptor = "org.apache.geode.management.internal.cli.commands.DeployCommands$Interceptor",
-      relatedTopic = {CliStrings.TOPIC_GEODE_CONFIG}, writesToSharedConfiguration = true)
+      relatedTopic = {CliStrings.TOPIC_GEODE_CONFIG})
   public final Result deploy(
       @CliOption(key = {CliStrings.DEPLOY__GROUP}, help = CliStrings.DEPLOY__GROUP__HELP,
           optionContext = ConverterHint.MEMBERGROUP) @CliMetaData(
@@ -98,54 +96,40 @@ public final class DeployCommands extends AbstractCommandsSupport implements Com
       String[] jarNames = CliUtil.bytesToNames(shellBytesData);
       byte[][] jarBytes = CliUtil.bytesToData(shellBytesData);
 
-      boolean accumulatedData = false;
-
       Set<DistributedMember> targetMembers;
-      try {
-        targetMembers = CliUtil.findAllMatchingMembers(groups, null);
-      } catch (CommandResultException e) {
-        return e.getResult();
-      }
 
-      ResultCollector<?, ?> resultCollector = CliUtil.executeFunction(this.deployFunction,
-          new Object[] {jarNames, jarBytes}, targetMembers);
+      targetMembers = CliUtil.findMembers(groups, null);
 
-      List<CliFunctionResult> results =
-          CliFunctionResult.cleanResults((List<?>) resultCollector.getResult());
+      if (targetMembers.size() > 0) {
+        // this deploys the jars to all the matching servers
+        ResultCollector<?, ?> resultCollector = CliUtil.executeFunction(this.deployFunction,
+            new Object[] {jarNames, jarBytes}, targetMembers);
 
-      for (CliFunctionResult result : results) {
-        if (result.getThrowable() != null) {
-          tabularData.accumulate("Member", result.getMemberIdOrName());
-          tabularData.accumulate("Deployed JAR", "");
-          tabularData.accumulate("Deployed JAR Location",
-              "ERROR: " + result.getThrowable().getClass().getName() + ": "
-                  + result.getThrowable().getMessage());
-          accumulatedData = true;
-          tabularData.setStatus(Status.ERROR);
-        } else {
-          String[] strings = (String[]) result.getSerializables();
-          for (int i = 0; i < strings.length; i += 2) {
+        List<CliFunctionResult> results =
+            CliFunctionResult.cleanResults((List<?>) resultCollector.getResult());
+
+        for (CliFunctionResult result : results) {
+          if (result.getThrowable() != null) {
             tabularData.accumulate("Member", result.getMemberIdOrName());
-            tabularData.accumulate("Deployed JAR", strings[i]);
-            tabularData.accumulate("Deployed JAR Location", strings[i + 1]);
-            accumulatedData = true;
+            tabularData.accumulate("Deployed JAR", "");
+            tabularData.accumulate("Deployed JAR Location",
+                "ERROR: " + result.getThrowable().getClass().getName() + ": "
+                    + result.getThrowable().getMessage());
+            tabularData.setStatus(Status.ERROR);
+          } else {
+            String[] strings = (String[]) result.getSerializables();
+            for (int i = 0; i < strings.length; i += 2) {
+              tabularData.accumulate("Member", result.getMemberIdOrName());
+              tabularData.accumulate("Deployed JAR", strings[i]);
+              tabularData.accumulate("Deployed JAR Location", strings[i + 1]);
+            }
           }
         }
       }
 
-
-
-      if (!accumulatedData) {
-        // This really should never happen since if a JAR file is already deployed a result is
-        // returned indicating that.
-        return ResultBuilder.createInfoResult("Unable to deploy JAR file(s)");
-      }
-
       Result result = ResultBuilder.buildResult(tabularData);
-      if (tabularData.getStatus().equals(Status.OK)) {
-        result.setCommandPersisted(
-            (new SharedConfigurationWriter()).addJars(jarNames, jarBytes, groups));
-      }
+      persistClusterConfiguration(result,
+          () -> getSharedConfiguration().addJarsToThisLocator(jarNames, jarBytes, groups));
       return result;
     } catch (NotAuthorizedException e) {
       // for NotAuthorizedException, will catch this later in the code
@@ -168,7 +152,7 @@ public final class DeployCommands extends AbstractCommandsSupport implements Com
    * @return The result of the attempt to undeploy
    */
   @CliCommand(value = {CliStrings.UNDEPLOY}, help = CliStrings.UNDEPLOY__HELP)
-  @CliMetaData(relatedTopic = {CliStrings.TOPIC_GEODE_CONFIG}, writesToSharedConfiguration = true)
+  @CliMetaData(relatedTopic = {CliStrings.TOPIC_GEODE_CONFIG})
   @ResourceOperation(resource = Resource.DATA, operation = Operation.MANAGE)
   public final Result undeploy(
       @CliOption(key = {CliStrings.UNDEPLOY__GROUP}, help = CliStrings.UNDEPLOY__GROUP__HELP,
@@ -184,7 +168,7 @@ public final class DeployCommands extends AbstractCommandsSupport implements Com
 
       Set<DistributedMember> targetMembers;
       try {
-        targetMembers = CliUtil.findAllMatchingMembers(groups, null);
+        targetMembers = CliUtil.findMembersOrThrow(groups, null);
       } catch (CommandResultException crex) {
         return crex.getResult();
       }
@@ -219,8 +203,8 @@ public final class DeployCommands extends AbstractCommandsSupport implements Com
 
       Result result = ResultBuilder.buildResult(tabularData);
       if (tabularData.getStatus().equals(Status.OK)) {
-        result.setCommandPersisted((new SharedConfigurationWriter())
-            .deleteJars(jars == null ? null : jars.split(","), groups));
+        persistClusterConfiguration(result, () -> getSharedConfiguration()
+            .removeJars(jars == null ? null : jars.split(","), groups));
       }
       return result;
     } catch (VirtualMachineError e) {
@@ -252,7 +236,7 @@ public final class DeployCommands extends AbstractCommandsSupport implements Com
 
       Set<DistributedMember> targetMembers;
       try {
-        targetMembers = CliUtil.findAllMatchingMembers(group, null);
+        targetMembers = CliUtil.findMembersOrThrow(group, null);
       } catch (CommandResultException crex) {
         return crex.getResult();
       }
@@ -355,11 +339,6 @@ public final class DeployCommands extends AbstractCommandsSupport implements Com
       }
 
       return fileResult;
-    }
-
-    @Override
-    public Result postExecution(GfshParseResult parseResult, Result commandResult) {
-      return null;
     }
   }
 }

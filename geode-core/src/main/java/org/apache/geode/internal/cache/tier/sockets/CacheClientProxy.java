@@ -1014,7 +1014,7 @@ public class CacheClientProxy implements ClientSession {
     }
     try {
       this.cils[RegisterInterestTracker.interestListIndex].clearClientInterestList();
-    } catch (CacheClosedException e) {
+    } catch (CancelException e) {
       // ignore if cache is shutting down
     }
     // Commented to fix bug 40259
@@ -2056,7 +2056,7 @@ public class CacheClientProxy implements ClientSession {
     protected FilterProfile getProfile(String regionName) {
       try {
         return this.ccp._cache.getFilterProfile(regionName);
-      } catch (CacheClosedException e) {
+      } catch (CancelException e) {
         return null;
       }
     }
@@ -2537,16 +2537,20 @@ public class CacheClientProxy implements ClientSession {
           if (isStopped()) {
             break;
           }
-          // Process the message
-          long start = getStatistics().startTime();
-          //// BUGFIX for BUG#38206 and BUG#37791
-          boolean isDispatched = dispatchMessage(clientMessage);
-          getStatistics().endMessage(start);
-          if (isDispatched) {
-            this._messageQueue.remove();
-            if (clientMessage instanceof ClientMarkerMessageImpl) {
-              getProxy().markerEnqueued = false;
+          if (clientMessage != null) {
+            // Process the message
+            long start = getStatistics().startTime();
+            //// BUGFIX for BUG#38206 and BUG#37791
+            boolean isDispatched = dispatchMessage(clientMessage);
+            getStatistics().endMessage(start);
+            if (isDispatched) {
+              this._messageQueue.remove();
+              if (clientMessage instanceof ClientMarkerMessageImpl) {
+                getProxy().markerEnqueued = false;
+              }
             }
+          } else {
+            this._messageQueue.remove();
           }
           clientMessage = null;
         } catch (MessageTooLargeException e) {
@@ -2585,7 +2589,7 @@ public class CacheClientProxy implements ClientSession {
               // See isAlive().
               // getProxy().close(false);
 
-              pauseOrUnregisterProxy();
+              pauseOrUnregisterProxy(e);
             } // _isStopped
           } // synchronized
           exceptionOccured = true;
@@ -2700,7 +2704,7 @@ public class CacheClientProxy implements ClientSession {
 
     }
 
-    private void pauseOrUnregisterProxy() {
+    private void pauseOrUnregisterProxy(Throwable t) {
       if (getProxy().isDurable()) {
         try {
           getProxy().pauseDispatching();
@@ -2727,7 +2731,7 @@ public class CacheClientProxy implements ClientSession {
       // been caught and here, so the _proxy will be null.
       if (chm != null) {
         ClientProxyMembershipID proxyID = getProxy().proxyID;
-        chm.removeAllConnectionsAndUnregisterClient(proxyID);
+        chm.removeAllConnectionsAndUnregisterClient(proxyID, t);
         if (!getProxy().isDurable()) {
           getProxy().getCacheClientNotifier().unregisterClient(proxyID, false);
         }
@@ -2917,7 +2921,7 @@ public class CacheClientProxy implements ClientSession {
                 LocalizedMessage.create(
                     LocalizedStrings.CacheClientProxy_0__AN_UNEXPECTED_EXCEPTION_OCCURRED, this),
                 e);
-            pauseOrUnregisterProxy();
+            pauseOrUnregisterProxy(e);
           }
         }
       } catch (Exception e) {

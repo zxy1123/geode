@@ -32,31 +32,32 @@ import org.apache.geode.cache.lucene.LuceneQueryProvider;
 import org.apache.geode.cache.lucene.LuceneResultStruct;
 import org.apache.geode.cache.lucene.PageableLuceneQueryResults;
 import org.apache.geode.cache.lucene.internal.distributed.EntryScore;
-import org.apache.geode.cache.lucene.internal.distributed.LuceneFunction;
+import org.apache.geode.cache.lucene.internal.distributed.LuceneQueryFunction;
 import org.apache.geode.cache.lucene.internal.distributed.LuceneFunctionContext;
 import org.apache.geode.cache.lucene.internal.distributed.TopEntries;
 import org.apache.geode.cache.lucene.internal.distributed.TopEntriesCollector;
 import org.apache.geode.cache.lucene.internal.distributed.TopEntriesCollectorManager;
 import org.apache.geode.cache.lucene.internal.distributed.TopEntriesFunctionCollector;
+import org.apache.geode.internal.logging.LogService;
+import org.apache.logging.log4j.Logger;
 
 public class LuceneQueryImpl<K, V> implements LuceneQuery<K, V> {
+  Logger logger = LogService.getLogger();
+
   private int limit = LuceneQueryFactory.DEFAULT_LIMIT;
   private int pageSize = LuceneQueryFactory.DEFAULT_PAGESIZE;
   private String indexName;
-  // The projected fields are local to a specific index per Query object.
-  private String[] projectedFieldNames;
   /* the lucene Query object to be wrapped here */
   private LuceneQueryProvider query;
   private Region<K, V> region;
   private String defaultField;
 
   public LuceneQueryImpl(String indexName, Region<K, V> region, LuceneQueryProvider provider,
-      String[] projectionFields, int limit, int pageSize) {
+      int limit, int pageSize) {
     this.indexName = indexName;
     this.region = region;
     this.limit = limit;
     this.pageSize = pageSize;
-    this.projectedFieldNames = projectionFields;
     this.query = provider;
   }
 
@@ -92,6 +93,11 @@ public class LuceneQueryImpl<K, V> implements LuceneQuery<K, V> {
 
   private PageableLuceneQueryResults<K, V> findPages(int pageSize) throws LuceneQueryException {
     TopEntries<K> entries = findTopEntries();
+    return newPageableResults(pageSize, entries);
+  }
+
+  protected PageableLuceneQueryResults<K, V> newPageableResults(final int pageSize,
+      final TopEntries<K> entries) {
     return new PageableLuceneQueryResultsImpl<K, V>(entries.getHits(), region, pageSize);
   }
 
@@ -99,22 +105,23 @@ public class LuceneQueryImpl<K, V> implements LuceneQuery<K, V> {
     TopEntriesCollectorManager manager = new TopEntriesCollectorManager(null, limit);
     LuceneFunctionContext<TopEntriesCollector> context =
         new LuceneFunctionContext<>(query, indexName, manager, limit);
-    TopEntriesFunctionCollector collector = new TopEntriesFunctionCollector(context);
-
-    ResultCollector<TopEntriesCollector, TopEntries<K>> rc =
-        (ResultCollector<TopEntriesCollector, TopEntries<K>>) onRegion().withArgs(context)
-            .withCollector(collector).execute(LuceneFunction.ID);
 
     // TODO provide a timeout to the user?
-    TopEntries<K> entries;
+    TopEntries<K> entries = null;
     try {
+      TopEntriesFunctionCollector collector = new TopEntriesFunctionCollector(context);
+      ResultCollector<TopEntriesCollector, TopEntries<K>> rc =
+          (ResultCollector<TopEntriesCollector, TopEntries<K>>) onRegion().withArgs(context)
+              .withCollector(collector).execute(LuceneQueryFunction.ID);
       entries = rc.getResult();
     } catch (FunctionException e) {
       if (e.getCause() instanceof LuceneQueryException) {
         throw new LuceneQueryException(e);
       } else {
+        e.printStackTrace();
         throw e;
       }
+
     }
     return entries;
   }
@@ -133,8 +140,4 @@ public class LuceneQueryImpl<K, V> implements LuceneQuery<K, V> {
     return this.limit;
   }
 
-  @Override
-  public String[] getProjectedFieldNames() {
-    return this.projectedFieldNames;
-  }
 }

@@ -1662,6 +1662,14 @@ public class DistributionManager implements DM {
    * Returns a copy of the map of all members hosting locators. The key is the member, and the value
    * is a collection of host[port] strings. If a bind-address was used for a locator then the form
    * is bind-addr[port].
+   *
+   * The member is the vm that hosts one or more locator, if another locator starts up linking to
+   * this locator, it will put that member in this map as well, and this member will in the map on
+   * the other locato vm as well.
+   *
+   * The keyset of the map are the locator vms in this cluster.
+   *
+   * the value is a collection of strings in case one vm can have multiple locators ????
    * 
    * @since GemFire 6.6.3
    */
@@ -2908,7 +2916,7 @@ public class DistributionManager implements DM {
         continue;
       }
 
-      if (member.equals(this.myid)) { // c'est moi
+      if (member.equals(this.myid)) {
         if (!this.adam && elderCandidates == 1) {
           this.adam = true;
           logger.info(LocalizedMessage.create(
@@ -2917,7 +2925,7 @@ public class DistributionManager implements DM {
           logger.info(LocalizedMessage.create(LocalizedStrings.DistributionManager_I_0_AM_THE_ELDER,
               this.myid));
         }
-      } // c'est moi
+      }
       return member;
     } // while
     // If we get this far then no elder exists

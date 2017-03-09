@@ -28,12 +28,13 @@ import org.apache.geode.internal.lang.StringUtils;
 import org.apache.geode.management.cli.Result.Status;
 import org.apache.geode.management.internal.cli.CommandManager;
 import org.apache.geode.management.internal.cli.commands.CliCommandTestBase;
+import org.apache.geode.management.internal.cli.i18n.CliStrings;
 import org.apache.geode.management.internal.cli.result.CommandResult;
 import org.apache.geode.management.internal.cli.result.TabularResultData;
 import org.apache.geode.management.internal.cli.util.CommandStringBuilder;
 import org.apache.geode.test.dunit.*;
 import org.apache.geode.test.junit.categories.DistributedTest;
-import com.jayway.awaitility.Awaitility;
+import org.awaitility.Awaitility;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -148,7 +149,7 @@ public class LuceneIndexCommandsDUnitTest extends CliCommandTestBase {
     assertEquals(Collections.singletonList(INDEX_NAME), data.retrieveAllValues("Index Name"));
     assertEquals(Collections.singletonList("Initialized"), data.retrieveAllValues("Status"));
     assertEquals(Collections.singletonList("/region"), data.retrieveAllValues("Region Path"));
-    assertEquals(Collections.singletonList("113"), data.retrieveAllValues("Query Executions"));
+    assertEquals(Collections.singletonList("1"), data.retrieveAllValues("Query Executions"));
     assertEquals(Collections.singletonList("2"), data.retrieveAllValues("Commits"));
     assertEquals(Collections.singletonList("2"), data.retrieveAllValues("Updates"));
     assertEquals(Collections.singletonList("2"), data.retrieveAllValues("Documents"));
@@ -349,7 +350,7 @@ public class LuceneIndexCommandsDUnitTest extends CliCommandTestBase {
     csb.addOption(LuceneCliStrings.LUCENE__INDEX_NAME, "notAnIndex");
     csb.addOption(LuceneCliStrings.LUCENE__REGION_PATH, REGION_NAME);
     String resultAsString = executeCommandAndLogResult(csb);
-    assertTrue(resultAsString.contains("Region not found"));
+    assertTrue(resultAsString.contains(getRegionNotFoundErrorMessage(REGION_NAME)));
   }
 
   @Test
@@ -498,7 +499,7 @@ public class LuceneIndexCommandsDUnitTest extends CliCommandTestBase {
     csb.addOption(LuceneCliStrings.LUCENE_SEARCH_INDEX__DEFAULT_FIELD, "field2");
 
     String resultAsString = executeCommandAndLogResult(csb);
-    assertTrue(resultAsString.contains("Region not found"));
+    assertTrue(resultAsString.contains(getRegionNotFoundErrorMessage(REGION_NAME)));
   }
 
   @Test
@@ -550,6 +551,45 @@ public class LuceneIndexCommandsDUnitTest extends CliCommandTestBase {
     TabularResultData data = (TabularResultData) executeCommandAndGetResult(csb).getResultData();
     assertEquals(4, data.retrieveAllValues("key").size());
 
+  }
+
+  @Test
+  public void destroySingleIndexOnRegion() throws Exception {
+    final VM vm1 = Host.getHost(0).getVM(1);
+    createIndex(vm1);
+    CommandManager.getInstance().add(LuceneIndexCommands.class.newInstance());
+    CommandStringBuilder csb = new CommandStringBuilder(LuceneCliStrings.LUCENE_DESTROY_INDEX);
+    csb.addOption(LuceneCliStrings.LUCENE__INDEX_NAME, INDEX_NAME);
+    csb.addOption(LuceneCliStrings.LUCENE__REGION_PATH, REGION_NAME);
+    String resultAsString = executeCommandAndLogResult(csb);
+    String expectedStatus = CliStrings.format(
+        LuceneCliStrings.LUCENE_DESTROY_INDEX__MSG__SUCCESSFULLY_DESTROYED_INDEX_0_FOR_REGION_1,
+        new Object[] {INDEX_NAME, REGION_NAME});
+    assertTrue(resultAsString.contains(expectedStatus));
+  }
+
+  @Test
+  public void destroyAllIndexesOnRegion() throws Exception {
+    final VM vm1 = Host.getHost(0).getVM(1);
+    createIndex(vm1);
+    CommandManager.getInstance().add(LuceneIndexCommands.class.newInstance());
+    CommandStringBuilder csb = new CommandStringBuilder(LuceneCliStrings.LUCENE_DESTROY_INDEX);
+    csb.addOption(LuceneCliStrings.LUCENE__REGION_PATH, REGION_NAME);
+    String resultAsString = executeCommandAndLogResult(csb);
+    String expectedStatus = CliStrings.format(
+        LuceneCliStrings.LUCENE_DESTROY_INDEX__MSG__SUCCESSFULLY_DESTROYED_INDEXES_FOR_REGION_0,
+        new Object[] {REGION_NAME});
+    assertTrue(resultAsString.contains(expectedStatus));
+  }
+
+  @Test
+  public void destroyIndexWithoutRegionShouldReturnError() throws Exception {
+    final VM vm1 = Host.getHost(0).getVM(1);
+    createIndexWithoutRegion(vm1);
+    CommandStringBuilder csb = new CommandStringBuilder(LuceneCliStrings.LUCENE_DESTROY_INDEX);
+    csb.addOption(LuceneCliStrings.LUCENE__REGION_PATH, REGION_NAME);
+    String resultAsString = executeCommandAndLogResult(csb);
+    assertTrue(resultAsString.contains(getRegionNotFoundErrorMessage(REGION_NAME)));
   }
 
   private void createRegion() {
@@ -610,7 +650,7 @@ public class LuceneIndexCommandsDUnitTest extends CliCommandTestBase {
       LuceneService luceneService = LuceneServiceProvider.get(getCache());
       Region region = getCache().getRegion(REGION_NAME);
       region.putAll(entries);
-      luceneService.getIndex(INDEX_NAME, REGION_NAME).waitUntilFlushed(60000);
+      luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
       LuceneIndexImpl index = (LuceneIndexImpl) luceneService.getIndex(INDEX_NAME, REGION_NAME);
       Awaitility.await().atMost(65, TimeUnit.SECONDS)
           .until(() -> assertEquals(countOfDocuments, index.getIndexStats().getDocuments()));
@@ -626,6 +666,12 @@ public class LuceneIndexCommandsDUnitTest extends CliCommandTestBase {
           .create(INDEX_NAME, REGION_NAME, queryString, defaultField);
       assertEquals(Collections.singletonList("A"), query.findKeys());
     });
+  }
+
+  private String getRegionNotFoundErrorMessage(String regionPath) {
+    return CliStrings.format(
+        LuceneCliStrings.LUCENE_DESTROY_INDEX__MSG__COULDNOT_FIND_MEMBERS_FOR_REGION_0,
+        new Object[] {regionPath});
   }
 
   protected class TestObject implements Serializable {

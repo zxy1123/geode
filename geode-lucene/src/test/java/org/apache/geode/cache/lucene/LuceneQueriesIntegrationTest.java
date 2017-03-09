@@ -26,8 +26,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.apache.geode.cache.CacheLoader;
+import org.apache.geode.cache.CacheLoaderException;
+import org.apache.geode.cache.LoaderHelper;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
@@ -89,7 +93,7 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     // <field1:one two three> <field2:one two three>
     // <field1:one@three> <field2:one@three>
 
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
 
     // standard analyzer with double quote
     // this query string will be parsed as "one three"
@@ -139,7 +143,7 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     region.put("primitiveInt2", 223);
     region.put("primitiveInt3", 224);
 
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
     verifyQueryUsingCustomizedProvider(LuceneService.REGION_VALUE_FIELD, 123, 223, "primitiveInt1",
         "primitiveInt2");
   }
@@ -158,14 +162,14 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     region.put("primitiveInt2", 223);
     region.put("primitiveInt3", 224);
 
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
 
     // Note: current QueryParser cannot query by range. It's a known issue in lucene
     verifyQuery(LuceneService.REGION_VALUE_FIELD + ":[123 TO 223]",
         LuceneService.REGION_VALUE_FIELD);
 
     region.put("primitiveDouble1", 123.0);
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
 
     thrown.expectMessage("java.lang.IllegalArgumentException");
     verifyQueryUsingCustomizedProvider(LuceneService.REGION_VALUE_FIELD, 123, 223, "primitiveInt1",
@@ -202,7 +206,8 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     assertEquals(region.values(), new HashSet(query.findValues()));
   }
 
-  private LuceneQuery<Object, Object> addValuesAndCreateQuery(int pagesize) {
+  private LuceneQuery<Object, Object> addValuesAndCreateQuery(int pagesize)
+      throws InterruptedException {
     luceneService.createIndex(INDEX_NAME, REGION_NAME, "field1", "field2");
     region = cache.createRegionFactory(RegionShortcut.PARTITION).create(REGION_NAME);
     final LuceneIndex index = luceneService.getIndex(INDEX_NAME, REGION_NAME);
@@ -219,7 +224,7 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     region.put("F", new TestObject(value3, value3));
     region.put("G", new TestObject(value1, value2));
 
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
     return luceneService.createLuceneQueryFactory().setPageSize(pagesize).create(INDEX_NAME,
         REGION_NAME, "one", "field1");
   }
@@ -244,7 +249,7 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     region.put("C", new TestObject(value3, value3));
     region.put("D", new TestObject(value4, value4));
 
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
 
     verifyQuery("field1:one AND field2:two_four", DEFAULT_FIELD, "A");
     verifyQuery("field1:one AND field2:two", DEFAULT_FIELD, "A");
@@ -263,7 +268,7 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     // Put two values with some of the same tokens
     String value1 = "one three";
     region.put("A", new TestObject(value1, null));
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
 
     verifyQuery("field1:one", DEFAULT_FIELD, "A");
   }
@@ -282,7 +287,7 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     PdxInstance pdx1 = insertAJson(region, "jsondoc1");
     PdxInstance pdx2 = insertAJson(region, "jsondoc2");
     PdxInstance pdx10 = insertAJson(region, "jsondoc10");
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
 
     HashMap expectedResults = new HashMap();
     expectedResults.put("jsondoc1", pdx1);
@@ -297,7 +302,7 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     final LuceneIndex index = luceneService.getIndex(INDEX_NAME, REGION_NAME);
 
     region.put("A", "one three");
-    index.waitUntilFlushed(60000);
+    luceneService.waitUntilFlushed(INDEX_NAME, REGION_NAME, 60000, TimeUnit.MILLISECONDS);
 
     verifyQuery("one", LuceneService.REGION_VALUE_FIELD, "A");
   }
@@ -349,6 +354,44 @@ public class LuceneQueriesIntegrationTest extends LuceneIntegrationTest {
     assertEquals(2, page2.size());
     final List<LuceneResultStruct<Object, Object>> page3 = pages.next();
     assertEquals(2, page3.size());
+    assertFalse(pages.hasNext());
+
+    allEntries.addAll(page1);
+    allEntries.addAll(page2);
+    allEntries.addAll(page3);
+    assertEquals(region.keySet(),
+        allEntries.stream().map(entry -> entry.getKey()).collect(Collectors.toSet()));
+    assertEquals(region.values(),
+        allEntries.stream().map(entry -> entry.getValue()).collect(Collectors.toSet()));
+  }
+
+  @Test
+  public void shouldReturnCorrectResultsOnDeletionAfterQueryExecutionWithLoader() throws Exception {
+    final int pageSize = 2;
+    final LuceneQuery<Object, Object> query = addValuesAndCreateQuery(pageSize);
+    region.getAttributesMutator().setCacheLoader(new CacheLoader() {
+      @Override
+      public Object load(final LoaderHelper helper) throws CacheLoaderException {
+        return new TestObject("should not", "load this");
+      }
+
+      @Override
+      public void close() {
+
+      }
+    });
+    final PageableLuceneQueryResults<Object, Object> pages = query.findPages();
+    List<LuceneResultStruct<Object, Object>> allEntries = new ArrayList<>();
+    assertTrue(pages.hasNext());
+    assertEquals(7, pages.size());
+    // Destroying an entry from the region after the query is executed.
+    region.destroy("C");
+    final List<LuceneResultStruct<Object, Object>> page1 = pages.next();
+    assertEquals(pageSize, page1.size());
+    final List<LuceneResultStruct<Object, Object>> page2 = pages.next();
+    assertEquals(pageSize, page2.size());
+    final List<LuceneResultStruct<Object, Object>> page3 = pages.next();
+    assertEquals(pageSize, page3.size());
     assertFalse(pages.hasNext());
 
     allEntries.addAll(page1);

@@ -208,8 +208,10 @@ public class TcpClient {
           logger.debug("received response: {}", response);
           return response;
         } catch (EOFException ex) {
-          throw new EOFException("Locator at " + ipAddr
+          EOFException eof = new EOFException("Locator at " + ipAddr
               + " did not respond. This is normal if the locator was shutdown. If it wasn't check its log for exceptions.");
+          eof.initCause(ex);
+          throw eof;
         }
       } else {
         return null;
@@ -263,7 +265,7 @@ public class TcpClient {
       sock = socketCreator.connect(ipAddr.getAddress(), ipAddr.getPort(), timeout, null, false);
       sock.setSoTimeout(timeout);
     } catch (SSLHandshakeException e) {
-      throw new LocatorCancelException("Unrecognisable response received");
+      throw new LocatorCancelException("Unrecognisable response received", e);
     }
 
     try {
@@ -282,8 +284,8 @@ public class TcpClient {
       try {
         Object readObject = DataSerializer.readObject(in);
         if (!(readObject instanceof VersionResponse)) {
-          throw new LocatorCancelException("Unrecognisable response received");
-          // throw new IOException("Unexpected response received from locator");
+          throw new LocatorCancelException(
+              "Unrecognisable response received: object is null. This could be the result of trying to connect a non-SSL-enabled locator to an SSL-enabled locator.");
         }
         VersionResponse response = (VersionResponse) readObject;
         if (response != null) {

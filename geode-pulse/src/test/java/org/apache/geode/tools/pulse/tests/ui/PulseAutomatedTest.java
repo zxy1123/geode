@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 import org.apache.geode.tools.pulse.tests.DataBrowserResultLoader;
+import org.apache.geode.tools.pulse.tests.rules.ScreenshotOnFailureRule;
 import org.apache.geode.tools.pulse.tests.rules.ServerRule;
 import org.apache.geode.tools.pulse.tests.rules.WebDriverRule;
 import org.junit.Assert;
@@ -56,6 +57,10 @@ public class PulseAutomatedTest extends PulseBase {
   public WebDriverRule webDriverRule =
       new WebDriverRule("pulseUser", "12345", serverRule.getPulseURL());
 
+  @Rule
+  public ScreenshotOnFailureRule screenshotOnFailureRule =
+      new ScreenshotOnFailureRule(this::getWebDriver);
+
   @Override
   public WebDriver getWebDriver() {
     return webDriverRule.getDriver();
@@ -69,6 +74,7 @@ public class PulseAutomatedTest extends PulseBase {
   @Before
   public void setupPulseTestUtils() {
     PulseTestUtils.setDriverProvider(() -> webDriverRule.getDriver());
+    getWebDriver().get(getPulseURL() + "clusterDetail.html");
   }
 
   @Test
@@ -203,11 +209,11 @@ public class PulseAutomatedTest extends PulseBase {
   @Test
   public void clickHostShowsMemberTest() {
     clickElementUsingXpath(PulseTestLocators.TopNavigation.clusterViewLinkXpath);
-    clickElementUsingId(PulseTestLocators.TopologyView.nodeH1Id);
+    PulseTestUtils.waitForElementWithId(PulseTestLocators.TopologyView.nodeH1Id).click();
     verifyElementPresentById(PulseTestLocators.TopologyView.memberM1Id);
-    clickElementUsingId(PulseTestLocators.TopologyView.nodeH2Id);
+    PulseTestUtils.waitForElementWithId(PulseTestLocators.TopologyView.nodeH2Id).click();
     verifyElementPresentById(PulseTestLocators.TopologyView.memberM2Id);
-    clickElementUsingId(PulseTestLocators.TopologyView.nodeH3Id);
+    PulseTestUtils.waitForElementWithId(PulseTestLocators.TopologyView.nodeH3Id).click();
     verifyElementPresentById(PulseTestLocators.TopologyView.memberM3Id);
   }
 

@@ -14,12 +14,13 @@
  */
 package org.apache.geode.util.test;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.SystemUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-
-import org.apache.geode.internal.FileUtil;
 
 public class TestUtil {
 
@@ -45,12 +46,16 @@ public class TestUtil {
         String filename = name.replaceFirst(".*/", "");
         File tmpFile = File.createTempFile(filename, null);
         tmpFile.deleteOnExit();
-        FileUtil.copy(resource, tmpFile);
-        return tmpFile.getAbsolutePath();
+        FileUtils.copyFile(new File(resource.getFile()), tmpFile);
+        return compatibleWithWindows(tmpFile.getAbsolutePath());
       }
-      return path;
+      return compatibleWithWindows(path);
     } catch (URISyntaxException | IOException e) {
       throw new RuntimeException("Failed getting path to resource " + name, e);
     }
+  }
+
+  private static String compatibleWithWindows(String path) {
+    return SystemUtils.IS_OS_WINDOWS ? path.substring(1) : path;
   }
 }

@@ -50,7 +50,7 @@ import org.apache.geode.test.dunit.Host;
 import org.apache.geode.test.dunit.LogWriterUtils;
 import org.apache.geode.test.dunit.NetworkUtils;
 import org.apache.geode.test.dunit.VM;
-import com.jayway.awaitility.Awaitility;
+import org.awaitility.Awaitility;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -404,9 +404,9 @@ public class LocatorLoadBalancingDUnitTest extends LocatorTestBase {
     final ServerLoad load1 = new ServerLoad(.3f, .01f, .44f, 4564f);
     final ServerLoad load2 = new ServerLoad(23.2f, 1.1f, 22.3f, .3f);
     int serverPort1 = vm1.invoke("Start BridgeServer", () -> startBridgeServer(null, locators,
-        new String[] {REGION_NAME}, new MyLoadProbe(load1)));
+        new String[] {REGION_NAME}, new MyLoadProbe(load1), false));
     int serverPort2 = vm2.invoke("Start BridgeServer", () -> startBridgeServer(null, locators,
-        new String[] {REGION_NAME}, new MyLoadProbe(load2)));
+        new String[] {REGION_NAME}, new MyLoadProbe(load2), false));
 
     HashMap expected = new HashMap();
     ServerLocation l1 = new ServerLocation(NetworkUtils.getServerHostName(host), serverPort1);

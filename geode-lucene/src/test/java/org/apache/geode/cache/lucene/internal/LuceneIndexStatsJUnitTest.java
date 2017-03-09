@@ -55,11 +55,25 @@ public class LuceneIndexStatsJUnitTest {
     stats.startQuery();
     verifyIncInt("queryExecutionsInProgress", 1);
     stats.endQuery(5, 2);
+    stats.incNumberOfQueryExecuted();
     verifyIncInt("queryExecutionsInProgress", -1);
     verifyIncInt("queryExecutions", 1);
     verifyIncLong("queryExecutionTotalHits", 2);
     // Because the initial stat time is 0 and the final time is 5, the delta is -5
     verifyIncLong("queryExecutionTime", -5);
+  }
+
+  @Test
+  public void shouldIncrementRepositoryQueryStats() {
+
+    stats.startRepositoryQuery();
+    verifyIncInt("repositoryQueryExecutionsInProgress", 1);
+    stats.endRepositoryQuery(5, 2);
+    verifyIncInt("repositoryQueryExecutionsInProgress", -1);
+    verifyIncInt("repositoryQueryExecutions", 1);
+    verifyIncLong("repositoryQueryExecutionTotalHits", 2);
+    // Because the initial stat time is 0 and the final time is 5, the delta is -5
+    verifyIncLong("repositoryQueryExecutionTime", -5);
   }
 
   @Test

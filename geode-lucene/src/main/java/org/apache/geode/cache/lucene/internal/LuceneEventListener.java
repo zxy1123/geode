@@ -20,8 +20,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.geode.internal.cache.wan.parallel.ParallelGatewaySenderQueue;
 import org.apache.logging.log4j.Logger;
-
+import org.apache.geode.cache.CacheClosedException;
 import org.apache.geode.InternalGemFireError;
 import org.apache.geode.cache.Operation;
 import org.apache.geode.cache.Region;
@@ -37,11 +38,16 @@ import org.apache.geode.internal.cache.PrimaryBucketException;
 import org.apache.geode.internal.cache.partitioned.Bucket;
 import org.apache.geode.internal.cache.tier.sockets.CacheClientProxy.TestHook;
 import org.apache.geode.internal.logging.LogService;
+import org.apache.lucene.store.AlreadyClosedException;
 
 /**
  * An Async event queue listener that writes all of the events in batches to Lucene
  */
 public class LuceneEventListener implements AsyncEventListener {
+
+  private static LuceneExceptionObserver exceptionObserver = exception -> {
+  };
+
   Logger logger = LogService.getLogger();
 
   private final RepositoryManager repositoryManager;
@@ -55,6 +61,19 @@ public class LuceneEventListener implements AsyncEventListener {
 
   @Override
   public boolean processEvents(List<AsyncEvent> events) {
+    try {
+      return process(events);
+    } catch (RuntimeException e) {
+      exceptionObserver.onException(e);
+      throw e;
+    } catch (Error e) {
+      exceptionObserver.onException(e);
+      throw e;
+    }
+
+  }
+
+  protected boolean process(final List<AsyncEvent> events) {
     // Try to get a PDX instance if possible, rather than a deserialized object
     DefaultQuery.setPdxReadSerialized(true);
 
@@ -89,13 +108,31 @@ public class LuceneEventListener implements AsyncEventListener {
       }
       return true;
     } catch (BucketNotFoundException | RegionDestroyedException | PrimaryBucketException e) {
-      logger.debug("Bucket not found while saving to lucene index: " + e.getMessage());
+      logger.debug("Bucket not found while saving to lucene index: " + e.getMessage(), e);
+      return false;
+    } catch (CacheClosedException e) {
+      logger.debug("Unable to save to lucene index, cache has been closed", e);
+      return false;
+    } catch (AlreadyClosedException e) {
+      logger.debug("Unable to commit, the lucene index is already closed", e);
       return false;
     } catch (IOException e) {
-      logger.error("Unable to save to lucene index", e);
-      return false;
+      throw new InternalGemFireError("Unable to save to lucene index", e);
     } finally {
       DefaultQuery.setPdxReadSerialized(false);
     }
+  }
+
+  public static void setExceptionObserver(LuceneExceptionObserver observer) {
+    if (observer == null) {
+      observer = exception -> {
+      };
+    }
+
+    exceptionObserver = observer;
+  }
+
+  public static LuceneExceptionObserver getExceptionObserver() {
+    return exceptionObserver;
   }
 }

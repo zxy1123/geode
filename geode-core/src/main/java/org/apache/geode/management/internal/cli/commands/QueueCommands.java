@@ -14,11 +14,6 @@
  */
 package org.apache.geode.management.internal.cli.commands;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-
 import org.apache.geode.SystemFailure;
 import org.apache.geode.cache.execute.ResultCollector;
 import org.apache.geode.distributed.DistributedMember;
@@ -36,17 +31,19 @@ import org.apache.geode.management.internal.cli.i18n.CliStrings;
 import org.apache.geode.management.internal.cli.result.CommandResultException;
 import org.apache.geode.management.internal.cli.result.ResultBuilder;
 import org.apache.geode.management.internal.cli.result.TabularResultData;
-import org.apache.geode.management.internal.cli.shell.Gfsh;
-import org.apache.geode.management.internal.configuration.SharedConfigurationWriter;
 import org.apache.geode.management.internal.configuration.domain.XmlEntity;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.security.ResourcePermission.Operation;
 import org.apache.geode.security.ResourcePermission.Resource;
-
-import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The QueueCommands class encapsulates all GemFire Queue commands in Gfsh.
@@ -54,14 +51,10 @@ import org.springframework.shell.core.annotation.CliOption;
  * 
  * @since GemFire 8.0
  */
-public class QueueCommands implements CommandMarker {
-  private Gfsh getGfsh() {
-    return Gfsh.getCurrentInstance();
-  }
+public class QueueCommands extends AbstractCommandsSupport {
 
   @CliCommand(value = CliStrings.CREATE_ASYNC_EVENT_QUEUE,
       help = CliStrings.CREATE_ASYNC_EVENT_QUEUE__HELP)
-  @CliMetaData(writesToSharedConfiguration = true)
   @ResourceOperation(resource = Resource.DATA, operation = Operation.MANAGE)
   public Result createAsyncEventQueue(
       @CliOption(key = CliStrings.CREATE_ASYNC_EVENT_QUEUE__ID, mandatory = true,
@@ -135,7 +128,7 @@ public class QueueCommands implements CommandMarker {
 
       Set<DistributedMember> targetMembers;
       try {
-        targetMembers = CliUtil.findAllMatchingMembers(groups, null);
+        targetMembers = CliUtil.findMembersOrThrow(groups, null);
       } catch (CommandResultException crex) {
         return crex.getResult();
       }
@@ -150,7 +143,7 @@ public class QueueCommands implements CommandMarker {
 
       List<CliFunctionResult> results = CliFunctionResult.cleanResults((List<?>) rc.getResult());
 
-      XmlEntity xmlEntity = null;
+      AtomicReference<XmlEntity> xmlEntity = new AtomicReference<>();
       for (CliFunctionResult result : results) {
         if (result.getThrowable() != null) {
           tabularData.accumulate("Member", result.getMemberIdOrName());
@@ -163,8 +156,8 @@ public class QueueCommands implements CommandMarker {
           tabularData.accumulate("Result", result.getMessage());
           accumulatedData = true;
 
-          if (xmlEntity == null) {
-            xmlEntity = result.getXmlEntity();
+          if (xmlEntity.get() == null) {
+            xmlEntity.set(result.getXmlEntity());
           }
         }
       }
@@ -174,9 +167,9 @@ public class QueueCommands implements CommandMarker {
       }
 
       Result result = ResultBuilder.buildResult(tabularData);
-      if (xmlEntity != null) {
-        result
-            .setCommandPersisted((new SharedConfigurationWriter()).addXmlEntity(xmlEntity, groups));
+      if (xmlEntity.get() != null) {
+        persistClusterConfiguration(result,
+            () -> getSharedConfiguration().addXmlEntity(xmlEntity.get(), groups));
       }
       return result;
     } catch (VirtualMachineError e) {
@@ -200,7 +193,7 @@ public class QueueCommands implements CommandMarker {
 
       Set<DistributedMember> targetMembers;
       try {
-        targetMembers = CliUtil.findAllMatchingMembers((String) null, (String) null);
+        targetMembers = CliUtil.findMembersOrThrow((String) null, (String) null);
       } catch (CommandResultException crex) {
         return crex.getResult();
       }

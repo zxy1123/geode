@@ -14,15 +14,6 @@
  */
 package org.apache.geode.management.internal.cli.commands;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.geode.SystemFailure;
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.CacheFactory;
@@ -53,15 +44,23 @@ import org.apache.geode.management.internal.cli.result.ErrorResultData;
 import org.apache.geode.management.internal.cli.result.InfoResultData;
 import org.apache.geode.management.internal.cli.result.ResultBuilder;
 import org.apache.geode.management.internal.cli.result.TabularResultData;
-import org.apache.geode.management.internal.configuration.SharedConfigurationWriter;
 import org.apache.geode.management.internal.configuration.domain.XmlEntity;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.security.ResourcePermission.Operation;
 import org.apache.geode.security.ResourcePermission.Resource;
-
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The IndexCommands class encapsulates all GemFire shell (Gfsh) commands related to indexes defined
@@ -173,8 +172,7 @@ public class IndexCommands extends AbstractCommandsSupport {
 
   @CliCommand(value = CliStrings.CREATE_INDEX, help = CliStrings.CREATE_INDEX__HELP)
   @CliMetaData(shellOnly = false,
-      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA},
-      writesToSharedConfiguration = true)
+      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA})
   // TODO : Add optionContext for indexName
   public Result createIndex(@CliOption(key = CliStrings.CREATE_INDEX__NAME, mandatory = true,
       help = CliStrings.CREATE_INDEX__NAME__HELP) final String indexName,
@@ -199,7 +197,7 @@ public class IndexCommands extends AbstractCommandsSupport {
           help = CliStrings.CREATE_INDEX__GROUP__HELP) final String group) {
 
     Result result = null;
-    XmlEntity xmlEntity = null;
+    AtomicReference<XmlEntity> xmlEntity = new AtomicReference<>();
 
     this.securityService.authorizeRegionManage(regionPath);
     try {
@@ -238,7 +236,7 @@ public class IndexCommands extends AbstractCommandsSupport {
       IndexInfo indexInfo = new IndexInfo(indexName, indexedExpression, regionPath, idxType);
 
       final Set<DistributedMember> targetMembers =
-          CliUtil.findAllMatchingMembers(group, memberNameOrID);
+          CliUtil.findMembersOrThrow(group, memberNameOrID);
       final ResultCollector<?, ?> rc =
           CliUtil.executeFunction(createIndexFunction, indexInfo, targetMembers);
 
@@ -253,8 +251,8 @@ public class IndexCommands extends AbstractCommandsSupport {
           if (cliFunctionResult.isSuccessful()) {
             successfulMembers.add(cliFunctionResult.getMemberIdOrName());
 
-            if (xmlEntity == null) {
-              xmlEntity = cliFunctionResult.getXmlEntity();
+            if (xmlEntity.get() == null) {
+              xmlEntity.set(cliFunctionResult.getXmlEntity());
             }
           } else {
             final String exceptionMessage = cliFunctionResult.getMessage();
@@ -315,17 +313,18 @@ public class IndexCommands extends AbstractCommandsSupport {
       result = ResultBuilder.createGemFireErrorResult(e.getMessage());
     }
 
-    if (xmlEntity != null) {
-      result.setCommandPersisted((new SharedConfigurationWriter()).addXmlEntity(xmlEntity,
-          group != null ? group.split(",") : null));
+
+    if (xmlEntity.get() != null) {
+      persistClusterConfiguration(result, () -> getSharedConfiguration()
+          .addXmlEntity(xmlEntity.get(), group != null ? group.split(",") : null));
     }
+
     return result;
   }
 
   @CliCommand(value = CliStrings.DESTROY_INDEX, help = CliStrings.DESTROY_INDEX__HELP)
   @CliMetaData(shellOnly = false,
-      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA},
-      writesToSharedConfiguration = true)
+      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA})
   public Result destroyIndex(@CliOption(key = CliStrings.DESTROY_INDEX__NAME, mandatory = false,
       unspecifiedDefaultValue = "",
       help = CliStrings.DESTROY_INDEX__NAME__HELP) final String indexName,
@@ -343,7 +342,6 @@ public class IndexCommands extends AbstractCommandsSupport {
           help = CliStrings.DESTROY_INDEX__GROUP__HELP) final String group) {
 
     Result result = null;
-    XmlEntity xmlEntity = null;
 
     if (StringUtils.isBlank(indexName) && StringUtils.isBlank(regionPath)
         && StringUtils.isBlank(memberNameOrID) && StringUtils.isBlank(group)) {
@@ -367,7 +365,7 @@ public class IndexCommands extends AbstractCommandsSupport {
     Set<DistributedMember> targetMembers = null;
 
     try {
-      targetMembers = CliUtil.findAllMatchingMembers(group, memberNameOrID);
+      targetMembers = CliUtil.findMembersOrThrow(group, memberNameOrID);
     } catch (CommandResultException e) {
       return e.getResult();
     }
@@ -378,17 +376,18 @@ public class IndexCommands extends AbstractCommandsSupport {
     Set<String> successfulMembers = new TreeSet<String>();
     Map<String, Set<String>> indexOpFailMap = new HashMap<String, Set<String>>();
 
+    AtomicReference<XmlEntity> xmlEntity = new AtomicReference<>();
     for (Object funcResult : funcResults) {
       if (!(funcResult instanceof CliFunctionResult)) {
         continue;
       }
 
       CliFunctionResult cliFunctionResult = (CliFunctionResult) funcResult;
+
       if (cliFunctionResult.isSuccessful()) {
         successfulMembers.add(cliFunctionResult.getMemberIdOrName());
-
-        if (xmlEntity == null) {
-          xmlEntity = cliFunctionResult.getXmlEntity();
+        if (xmlEntity.get() == null) {
+          xmlEntity.set(cliFunctionResult.getXmlEntity());
         }
       } else {
         String exceptionMessage = cliFunctionResult.getMessage();
@@ -454,19 +453,17 @@ public class IndexCommands extends AbstractCommandsSupport {
       }
       result = ResultBuilder.buildResult(erd);
     }
-
-
-    if (xmlEntity != null) {
-      result.setCommandPersisted((new SharedConfigurationWriter()).deleteXmlEntity(xmlEntity,
-          group != null ? group.split(",") : null));
+    if (xmlEntity.get() != null) {
+      persistClusterConfiguration(result, () -> getSharedConfiguration()
+          .deleteXmlEntity(xmlEntity.get(), group != null ? group.split(",") : null));
     }
+
     return result;
   }
 
   @CliCommand(value = CliStrings.DEFINE_INDEX, help = CliStrings.DEFINE_INDEX__HELP)
   @CliMetaData(shellOnly = false,
-      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA},
-      writesToSharedConfiguration = true)
+      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA})
   // TODO : Add optionContext for indexName
   public Result defineIndex(@CliOption(key = CliStrings.DEFINE_INDEX_NAME, mandatory = true,
       help = CliStrings.DEFINE_INDEX__HELP) final String indexName,
@@ -533,8 +530,7 @@ public class IndexCommands extends AbstractCommandsSupport {
 
   @CliCommand(value = CliStrings.CREATE_DEFINED_INDEXES, help = CliStrings.CREATE_DEFINED__HELP)
   @CliMetaData(shellOnly = false,
-      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA},
-      writesToSharedConfiguration = true)
+      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA})
   @ResourceOperation(resource = Resource.DATA, operation = Operation.MANAGE)
   // TODO : Add optionContext for indexName
   public Result createDefinedIndexes(
@@ -548,7 +544,7 @@ public class IndexCommands extends AbstractCommandsSupport {
           help = CliStrings.CREATE_DEFINED_INDEXES__GROUP__HELP) final String group) {
 
     Result result = null;
-    XmlEntity xmlEntity = null;
+    AtomicReference<XmlEntity> xmlEntity = new AtomicReference<>();
 
     if (indexDefinitions.isEmpty()) {
       final InfoResultData infoResult = ResultBuilder.createInfoResultData();
@@ -560,7 +556,7 @@ public class IndexCommands extends AbstractCommandsSupport {
       final Cache cache = CacheFactory.getAnyInstance();
 
       final Set<DistributedMember> targetMembers =
-          CliUtil.findAllMatchingMembers(group, memberNameOrID);
+          CliUtil.findMembersOrThrow(group, memberNameOrID);
       final ResultCollector<?, ?> rc =
           CliUtil.executeFunction(createDefinedIndexesFunction, indexDefinitions, targetMembers);
 
@@ -575,8 +571,8 @@ public class IndexCommands extends AbstractCommandsSupport {
           if (cliFunctionResult.isSuccessful()) {
             successfulMembers.add(cliFunctionResult.getMemberIdOrName());
 
-            if (xmlEntity == null) {
-              xmlEntity = cliFunctionResult.getXmlEntity();
+            if (xmlEntity.get() == null) {
+              xmlEntity.set(cliFunctionResult.getXmlEntity());
             }
           } else {
             final String exceptionMessage = cliFunctionResult.getMessage();
@@ -630,17 +626,16 @@ public class IndexCommands extends AbstractCommandsSupport {
       result = ResultBuilder.createGemFireErrorResult(e.getMessage());
     }
 
-    if (xmlEntity != null) {
-      result.setCommandPersisted((new SharedConfigurationWriter()).addXmlEntity(xmlEntity,
-          group != null ? group.split(",") : null));
+    if (xmlEntity.get() != null) {
+      persistClusterConfiguration(result, () -> getSharedConfiguration()
+          .addXmlEntity(xmlEntity.get(), group != null ? group.split(",") : null));
     }
     return result;
   }
 
   @CliCommand(value = CliStrings.CLEAR_DEFINED_INDEXES, help = CliStrings.CLEAR_DEFINED__HELP)
   @CliMetaData(shellOnly = false,
-      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA},
-      writesToSharedConfiguration = true)
+      relatedTopic = {CliStrings.TOPIC_GEODE_REGION, CliStrings.TOPIC_GEODE_DATA})
   @ResourceOperation(resource = Resource.DATA, operation = Operation.MANAGE)
   // TODO : Add optionContext for indexName
   public Result clearDefinedIndexes() {
@@ -652,7 +647,8 @@ public class IndexCommands extends AbstractCommandsSupport {
   }
 
   @CliAvailabilityIndicator({CliStrings.LIST_INDEX, CliStrings.CREATE_INDEX,
-      CliStrings.DESTROY_INDEX})
+      CliStrings.DESTROY_INDEX, CliStrings.CREATE_DEFINED_INDEXES, CliStrings.CLEAR_DEFINED_INDEXES,
+      CliStrings.DEFINE_INDEX})
   public boolean indexCommandsAvailable() {
     return (!CliUtil.isGfshVM() || (getGfsh() != null && getGfsh().isConnectedAndReady()));
   }

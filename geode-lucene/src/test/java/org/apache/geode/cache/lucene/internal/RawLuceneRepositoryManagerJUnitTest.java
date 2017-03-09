@@ -15,31 +15,52 @@
 package org.apache.geode.cache.lucene.internal;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 
+import org.apache.geode.cache.lucene.internal.repository.serializer.HeterogeneousLuceneSerializer;
+import org.apache.geode.distributed.internal.locks.DLockService;
+import org.apache.geode.internal.cache.GemFireCacheImpl;
+import org.apache.geode.internal.cache.PartitionedRegion;
+import org.apache.geode.internal.cache.PartitionedRegionDataStore;
+import org.apache.geode.internal.cache.PartitionedRegionHelper;
+import org.apache.geode.test.fake.Fakes;
+import org.apache.geode.test.junit.rules.DiskDirRule;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NIOFSDirectory;
-import org.apache.lucene.store.RAMDirectory;
 import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
-import org.apache.geode.cache.lucene.internal.directory.RegionDirectory;
-import org.apache.geode.cache.lucene.internal.filesystem.FileSystemStats;
 import org.apache.geode.cache.lucene.internal.repository.IndexRepositoryImpl;
 import org.apache.geode.internal.cache.BucketNotFoundException;
 import org.apache.geode.internal.cache.BucketRegion;
-import org.apache.geode.internal.cache.PartitionedRegion;
-import org.apache.geode.internal.cache.PartitionedRegionDataStore;
-import org.apache.geode.internal.cache.PartitionedRegion.RetryTimeKeeper;
+
+import java.io.File;
 
 public class RawLuceneRepositoryManagerJUnitTest extends PartitionedRepositoryManagerJUnitTest {
+
+  @Rule
+  public DiskDirRule diskDirRule = new DiskDirRule();
+
+  @Before
+  public void setUp() {
+    cache = Fakes.cache();
+
+    userRegion = Mockito.mock(PartitionedRegion.class);
+    userDataStore = Mockito.mock(PartitionedRegionDataStore.class);
+    when(userRegion.getDataStore()).thenReturn(userDataStore);
+    when(cache.getRegion("/testRegion")).thenReturn(userRegion);
+    serializer = new HeterogeneousLuceneSerializer(new String[] {"a", "b"});
+    createIndexAndRepoManager();
+  }
 
   @After
   public void tearDown() {
@@ -73,7 +94,7 @@ public class RawLuceneRepositoryManagerJUnitTest extends PartitionedRepositoryMa
   }
 
   @Override
-  protected BucketRegion setUpMockBucket(int id) {
+  protected BucketRegion setUpMockBucket(int id) throws BucketNotFoundException {
     BucketRegion mockBucket = Mockito.mock(BucketRegion.class);
     when(mockBucket.getId()).thenReturn(id);
     when(userRegion.getBucketRegion(eq(id), eq(null))).thenReturn(mockBucket);
@@ -81,6 +102,8 @@ public class RawLuceneRepositoryManagerJUnitTest extends PartitionedRepositoryMa
     when(userRegion.getBucketRegion(eq(id + 113), eq(null))).thenReturn(mockBucket);
     when(userDataStore.getLocalBucketById(eq(id + 113))).thenReturn(mockBucket);
     dataBuckets.put(id, mockBucket);
+
+    repoManager.computeRepository(mockBucket.getId());
     return mockBucket;
   }
 

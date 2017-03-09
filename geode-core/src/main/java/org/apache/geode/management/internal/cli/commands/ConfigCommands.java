@@ -14,19 +14,7 @@
  */
 package org.apache.geode.management.internal.cli.commands;
 
-import static org.apache.geode.distributed.ConfigurationProperties.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
+import static org.apache.geode.distributed.ConfigurationProperties.STATISTIC_SAMPLING_ENABLED;
 
 import org.apache.geode.SystemFailure;
 import org.apache.geode.cache.CacheClosedException;
@@ -53,32 +41,37 @@ import org.apache.geode.management.internal.cli.result.ErrorResultData;
 import org.apache.geode.management.internal.cli.result.InfoResultData;
 import org.apache.geode.management.internal.cli.result.ResultBuilder;
 import org.apache.geode.management.internal.cli.result.TabularResultData;
-import org.apache.geode.management.internal.cli.shell.Gfsh;
-import org.apache.geode.management.internal.configuration.SharedConfigurationWriter;
 import org.apache.geode.management.internal.configuration.domain.XmlEntity;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.security.ResourcePermission.Operation;
 import org.apache.geode.security.ResourcePermission.Resource;
-
-import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 
 /****
  * @since GemFire 7.0
  *
  */
-public class ConfigCommands implements CommandMarker {
+public class ConfigCommands extends AbstractCommandsSupport {
   private final ExportConfigFunction exportConfigFunction = new ExportConfigFunction();
   private final GetMemberConfigInformationFunction getMemberConfigFunction =
       new GetMemberConfigInformationFunction();
   private final AlterRuntimeConfigFunction alterRunTimeConfigFunction =
       new AlterRuntimeConfigFunction();
-
-  private static Gfsh getGfsh() {
-    return Gfsh.getCurrentInstance();
-  }
 
   @CliCommand(value = {CliStrings.DESCRIBE_CONFIG}, help = CliStrings.DESCRIBE_CONFIG__HELP)
   @CliMetaData(shellOnly = false, relatedTopic = {CliStrings.TOPIC_GEODE_CONFIG})
@@ -218,7 +211,7 @@ public class ConfigCommands implements CommandMarker {
 
     Set<DistributedMember> targetMembers;
     try {
-      targetMembers = CliUtil.findAllMatchingMembers(group, member);
+      targetMembers = CliUtil.findMembersOrThrow(group, member);
     } catch (CommandResultException crex) {
       return crex.getResult();
     }
@@ -313,7 +306,7 @@ public class ConfigCommands implements CommandMarker {
 
     try {
 
-      targetMembers = CliUtil.findAllMatchingMembers(group, memberNameOrId);
+      targetMembers = CliUtil.findMembersOrThrow(group, memberNameOrId);
 
       if (archiveDiskSpaceLimit != null) {
         runTimeDistributionConfigAttributes.put(
@@ -427,9 +420,9 @@ public class ConfigCommands implements CommandMarker {
           // Set the Cache attributes to be modified
           final XmlEntity xmlEntity = XmlEntity.builder().withType(CacheXml.CACHE)
               .withAttributes(rumTimeCacheAttributes).build();
-          result.setCommandPersisted(
-              new SharedConfigurationWriter().modifyPropertiesAndCacheAttributes(properties,
-                  xmlEntity, group != null ? group.split(",") : null));
+          persistClusterConfiguration(result,
+              () -> getSharedConfiguration().modifyXmlAndProperties(properties, xmlEntity,
+                  group != null ? group.split(",") : null));
           return result;
         } else {
           StringBuilder errorMessageBuilder = new StringBuilder();
@@ -508,7 +501,7 @@ public class ConfigCommands implements CommandMarker {
     }
 
     @Override
-    public Result postExecution(GfshParseResult parseResult, Result commandResult) {
+    public Result postExecution(GfshParseResult parseResult, Result commandResult, Path tempFile) {
       if (commandResult.hasIncomingFiles()) {
         try {
           commandResult.saveIncomingFiles(saveDirString);

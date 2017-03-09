@@ -17,7 +17,7 @@
 package org.apache.geode.tools.pulse.tests.rules;
 
 
-import com.jayway.awaitility.Awaitility;
+import org.awaitility.Awaitility;
 import org.apache.geode.internal.AvailablePort;
 import org.apache.geode.internal.admin.SSLConfig;
 import org.apache.geode.management.internal.JettyHelper;
@@ -30,8 +30,8 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public class ServerRule extends ExternalResource {
-  public static final String LOCALHOST = "localhost";
-  public static final String PULSE_CONTEXT = "/pulse";
+  private static final String LOCALHOST = "localhost";
+  private static final String PULSE_CONTEXT = "/pulse/";
 
   private org.eclipse.jetty.server.Server jetty;
   private Server server;

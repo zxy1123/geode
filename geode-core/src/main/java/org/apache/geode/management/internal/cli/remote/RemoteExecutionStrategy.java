@@ -14,17 +14,7 @@
  */
 package org.apache.geode.management.internal.cli.remote;
 
-import java.lang.reflect.Method;
-
-import org.springframework.shell.event.ParseResult;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
-
-import org.apache.geode.distributed.DistributedLockService;
-import org.apache.geode.distributed.internal.InternalDistributedSystem;
-import org.apache.geode.distributed.internal.SharedConfiguration;
 import org.apache.geode.internal.ClassPathLoader;
-import org.apache.geode.internal.cache.GemFireCacheImpl;
 import org.apache.geode.management.ManagementService;
 import org.apache.geode.management.cli.CliMetaData;
 import org.apache.geode.management.cli.Result;
@@ -34,6 +24,11 @@ import org.apache.geode.management.internal.cli.GfshParseResult;
 import org.apache.geode.management.internal.cli.LogWrapper;
 import org.apache.geode.management.internal.cli.result.FileResult;
 import org.apache.geode.management.internal.cli.result.ResultBuilder;
+import org.springframework.shell.event.ParseResult;
+import org.springframework.util.Assert;
+import org.springframework.util.ReflectionUtils;
+
+import java.lang.reflect.Method;
 
 /**
  * 
@@ -93,30 +88,8 @@ public class RemoteExecutionStrategy {
         }
         logWrapper.info("Executing " + gfshParseResult.getUserInput());
 
-        GemFireCacheImpl gfc = GemFireCacheImpl.getInstance();
-
-        // Do the locking and annotation check only if the shared configuration service is enabled
-        // Else go the usual route of command execution
-        if (gfc.getDistributionManager().isSharedConfigurationServiceEnabledForDS()
-            && (writesToSharedConfiguration(method) || readsFromSharedConfiguration(method))) {
-          DistributedLockService dls = SharedConfiguration
-              .getSharedConfigLockService(InternalDistributedSystem.getAnyInstance());
-          if (dls.lock(SharedConfiguration.SHARED_CONFIG_LOCK_NAME, 10000, -1)) {
-            try {
-              result = (Result) ReflectionUtils.invokeMethod(gfshParseResult.getMethod(),
-                  gfshParseResult.getInstance(), gfshParseResult.getArguments());
-            } finally {
-              dls.unlock(SharedConfiguration.SHARED_CONFIG_LOCK_NAME);
-            }
-          } else {
-            return ResultBuilder.createGemFireErrorResult(
-                "Unable to execute the command due to ongoing configuration change/member startup.");
-          }
-        } else {
-          result = (Result) ReflectionUtils.invokeMethod(gfshParseResult.getMethod(),
-              gfshParseResult.getInstance(), gfshParseResult.getArguments());
-        }
-
+        result = (Result) ReflectionUtils.invokeMethod(gfshParseResult.getMethod(),
+            gfshParseResult.getInstance(), gfshParseResult.getArguments());
 
         if (result != null && Status.ERROR.equals(result.getStatus())) {
           logWrapper
@@ -124,7 +97,7 @@ public class RemoteExecutionStrategy {
         }
 
         if (interceptor != null) {
-          Result postExecResult = interceptor.postExecution(gfshParseResult, result);
+          Result postExecResult = interceptor.postExecution(gfshParseResult, result, null);
           if (postExecResult != null) {
             if (Status.ERROR.equals(postExecResult.getStatus())) {
               logWrapper.warning(postExecResult.toString(), null);
@@ -145,16 +118,6 @@ public class RemoteExecutionStrategy {
       throw e;
     }
     return result;
-  }
-
-  private boolean writesToSharedConfiguration(Method method) {
-    CliMetaData cliMetadata = method.getAnnotation(CliMetaData.class);
-    return cliMetadata != null && cliMetadata.writesToSharedConfiguration();
-  }
-
-  private boolean readsFromSharedConfiguration(Method method) {
-    CliMetaData cliMetadata = method.getAnnotation(CliMetaData.class);
-    return cliMetadata != null && cliMetadata.readsSharedConfiguration();
   }
 
   private boolean isShellOnly(Method method) {

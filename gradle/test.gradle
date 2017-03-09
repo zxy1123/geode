@@ -37,7 +37,7 @@ subprojects {
       exclude module: 'junit-dep'
     }
     testCompile 'com.google.code.tempus-fugit:tempus-fugit:' + project.'tempus-fugit.version'
-    testCompile 'com.jayway.awaitility:awaitility:' + project.'awaitility.version'
+    testCompile 'org.awaitility:awaitility:' + project.'awaitility.version'
     testCompile 'edu.umd.cs.mtc:multithreadedtc:' + project.'multithreadedtc.version'
     testCompile 'eu.codearte.catch-exception:catch-exception:' + project.'catch-exception.version'
     testCompile 'eu.codearte.catch-exception:catch-throwable:' + project.'catch-throwable.version'
@@ -50,7 +50,6 @@ subprojects {
     testCompile 'pl.pragmatists:JUnitParams:' + project.'JUnitParams.version'
 
     testRuntime 'cglib:cglib:' + project.'cglib.version'
-    testRuntime 'org.ow2.asm:asm:' + project.'asm.version'
   }
   
   //This target does not run any tests. Rather, it validates that there are no
@@ -139,6 +138,7 @@ subprojects {
   task clientServerTest(type:Test) {
     useJUnit {
       includeCategories 'org.apache.geode.test.junit.categories.ClientServerTest'
+      excludeCategories 'org.apache.geode.test.junit.categories.FlakyTest'
     }
     doFirst {
       TestPropertiesWriter.writeTestProperties(buildDir, name)
@@ -148,6 +148,7 @@ subprojects {
   task dlockTest(type:Test) {
     useJUnit {
       includeCategories 'org.apache.geode.test.junit.categories.DLockTest'
+      excludeCategories 'org.apache.geode.test.junit.categories.FlakyTest'
     }
     doFirst {
       TestPropertiesWriter.writeTestProperties(buildDir, name)
@@ -157,6 +158,7 @@ subprojects {
   task membershipTest(type:Test) {
     useJUnit {
       includeCategories 'org.apache.geode.test.junit.categories.MembershipTest'
+      excludeCategories 'org.apache.geode.test.junit.categories.FlakyTest'
     }
     doFirst {
       TestPropertiesWriter.writeTestProperties(buildDir, name)
@@ -166,6 +168,7 @@ subprojects {
   task restAPITest(type:Test) {
     useJUnit {
       includeCategories 'org.apache.geode.test.junit.categories.RestAPITest'
+      excludeCategories 'org.apache.geode.test.junit.categories.FlakyTest'
     }
     doFirst {
       TestPropertiesWriter.writeTestProperties(buildDir, name)
@@ -176,6 +179,7 @@ subprojects {
   task serializationTest(type:Test) {
     useJUnit {
       includeCategories 'org.apache.geode.test.junit.categories.serializationTest'
+      excludeCategories 'org.apache.geode.test.junit.categories.FlakyTest'
     }
     doFirst {
       TestPropertiesWriter.writeTestProperties(buildDir, name)
