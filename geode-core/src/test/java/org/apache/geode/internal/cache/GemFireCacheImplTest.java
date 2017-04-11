@@ -42,19 +42,23 @@ public class GemFireCacheImplTest {
     TypeRegistry typeRegistry = mock(TypeRegistry.class);
     SystemTimer ccpTimer = mock(SystemTimer.class);
     GemFireCacheImpl gfc = GemFireCacheImpl.createWithAsyncEventListeners(ds, cc, typeRegistry);
-    gfc.setCCPTimer(ccpTimer);
-    for (int i = 1; i < GemFireCacheImpl.PURGE_INTERVAL; i++) {
-      gfc.purgeCCPTimer();
-      verify(ccpTimer, times(0)).timerPurge();
-    }
-    gfc.purgeCCPTimer();
-    verify(ccpTimer, times(1)).timerPurge();
-    for (int i = 1; i < GemFireCacheImpl.PURGE_INTERVAL; i++) {
+    try {
+      gfc.setCCPTimer(ccpTimer);
+      for (int i = 1; i < GemFireCacheImpl.PURGE_INTERVAL; i++) {
+        gfc.purgeCCPTimer();
+        verify(ccpTimer, times(0)).timerPurge();
+      }
       gfc.purgeCCPTimer();
       verify(ccpTimer, times(1)).timerPurge();
+      for (int i = 1; i < GemFireCacheImpl.PURGE_INTERVAL; i++) {
+        gfc.purgeCCPTimer();
+        verify(ccpTimer, times(1)).timerPurge();
+      }
+      gfc.purgeCCPTimer();
+      verify(ccpTimer, times(2)).timerPurge();
+    } finally {
+      gfc.close();
     }
-    gfc.purgeCCPTimer();
-    verify(ccpTimer, times(2)).timerPurge();
   }
 
   @Test
