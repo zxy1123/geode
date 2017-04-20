@@ -116,7 +116,7 @@ public class DiskInitFileJUnitTest {
 
     dif.close();
   }
-  
+
   @Test
   public void testKrfIds() {
     // create a mock statistics factory for creating directory holders
@@ -144,7 +144,7 @@ public class DiskInitFileJUnitTest {
         ignoring(parent);
       }
     });
-    
+
     DiskInitFile dif = new DiskInitFile("testKrfIds", parent, false, Collections.<File>emptySet());
     assertEquals(false, dif.hasKrf(1));
     dif.cmnKrfCreate(1);
@@ -167,7 +167,7 @@ public class DiskInitFileJUnitTest {
     dif.createRegion(drv);
     dif.forceCompaction();
     dif.close();
-    
+
     dif = new DiskInitFile("testKrfIds", parent, true, Collections.<File>emptySet());
     assertEquals(false, dif.hasKrf(1));
     assertEquals(false, dif.hasKrf(2));
