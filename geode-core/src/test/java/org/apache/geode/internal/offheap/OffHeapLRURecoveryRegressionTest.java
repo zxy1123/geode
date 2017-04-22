@@ -95,10 +95,11 @@ public class OffHeapLRURecoveryRegressionTest {
     return result;
   }
 
-  private void  createDiskStore(GemFireCacheImpl gfc) {
+  private void createDiskStore(GemFireCacheImpl gfc) {
     DiskStoreFactory dsf = gfc.createDiskStoreFactory();
     dsf.create(DS_NAME);
   }
+
   private Region<Object, Object> createRegion(GemFireCacheImpl gfc) {
     createDiskStore(gfc);
     RegionFactory<Object, Object> rf =
