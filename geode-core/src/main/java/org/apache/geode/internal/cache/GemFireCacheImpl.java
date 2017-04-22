@@ -2105,10 +2105,12 @@ public class GemFireCacheImpl
       return this.offHeapEvictor;
     }
   }
+
   /** Used by test to inject an evictor */
   void setOffHeapEvictor(OffHeapEvictor evictor) {
     this.offHeapEvictor = evictor;
   }
+
   /** Used by test to inject an evictor */
   void setHeapEvictor(HeapEvictor evictor) {
     this.heapEvictor = evictor;

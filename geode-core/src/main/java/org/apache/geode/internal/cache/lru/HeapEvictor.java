@@ -450,6 +450,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
     getEvictorThreadPool().shutdownNow();
     isRunning.set(false);
   }
+
   public boolean isRunning() {
     return isRunning.get();
   }

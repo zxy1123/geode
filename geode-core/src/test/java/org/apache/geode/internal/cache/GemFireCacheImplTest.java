@@ -62,7 +62,7 @@ public class GemFireCacheImplTest {
       gfc.close();
     }
   }
-  
+
   @Test
   public void checkEvictorsClosed() {
     InternalDistributedSystem ds = Fakes.distributedSystem();
