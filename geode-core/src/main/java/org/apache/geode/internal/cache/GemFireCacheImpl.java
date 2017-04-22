@@ -2105,6 +2105,14 @@ public class GemFireCacheImpl
       return this.offHeapEvictor;
     }
   }
+  /** Used by test to inject an evictor */
+  void setOffHeapEvictor(OffHeapEvictor evictor) {
+    this.offHeapEvictor = evictor;
+  }
+  /** Used by test to inject an evictor */
+  void setHeapEvictor(HeapEvictor evictor) {
+    this.heapEvictor = evictor;
+  }
 
   @Override
   public PersistentMemberManager getPersistentMemberManager() {
@@ -2394,11 +2402,9 @@ public class GemFireCacheImpl
             if (cms != null) {
               cms.close();
             }
-            HeapEvictor he = this.heapEvictor;
-            if (he != null) {
-              he.close();
-            }
           }
+          closeHeapEvictor();
+          closeOffHeapEvictor();
         } catch (CancelException e) {
           // make sure the disk stores get closed
           closeDiskStores();
@@ -2480,6 +2486,20 @@ public class GemFireCacheImpl
 
     } // static synchronization on GemFireCache.class
 
+  }
+
+  private void closeOffHeapEvictor() {
+    OffHeapEvictor evictor = this.offHeapEvictor;
+    if (evictor != null) {
+      evictor.close();
+    }
+  }
+
+  private void closeHeapEvictor() {
+    HeapEvictor evictor = this.heapEvictor;
+    if (evictor != null) {
+      evictor.close();
+    }
   }
 
   // see Cache.isReconnecting()

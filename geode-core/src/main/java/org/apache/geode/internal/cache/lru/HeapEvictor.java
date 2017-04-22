@@ -94,7 +94,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
 
   private BlockingQueue<Runnable> poolQueue;
 
-  private AtomicBoolean isRunning = new AtomicBoolean(true);
+  private final AtomicBoolean isRunning = new AtomicBoolean(true);
 
   public HeapEvictor(Cache gemFireCache) {
     this.cache = gemFireCache;
@@ -203,7 +203,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
   }
 
   public ThreadPoolExecutor getEvictorThreadPool() {
-    if (isRunning.get()) {
+    if (isRunning()) {
       return evictorThreadPool;
     }
     return null;
@@ -215,7 +215,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
    * @return sum of scheduled and running tasks
    */
   public int getRunningAndScheduledTasks() {
-    if (isRunning.get()) {
+    if (isRunning()) {
       return this.evictorThreadPool.getActiveCount() + this.evictorThreadPool.getQueue().size();
     }
     return -1;
@@ -327,7 +327,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
 
     // Do we care about eviction events and did the eviction event originate
     // in this VM ...
-    if (this.isRunning.get() && event.isLocal()) {
+    if (isRunning() && event.isLocal()) {
       if (event.getState().isEviction()) {
         final LogWriter logWriter = cache.getLogger();
 
@@ -450,9 +450,12 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
     getEvictorThreadPool().shutdownNow();
     isRunning.set(false);
   }
+  public boolean isRunning() {
+    return isRunning.get();
+  }
 
   public ArrayList testOnlyGetSizeOfTasks() {
-    if (isRunning.get())
+    if (isRunning())
       return testTaskSetSizes;
     return null;
   }
