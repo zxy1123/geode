@@ -12,23 +12,11 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.geode.cache.query.internal.cq.spi;
+package org.apache.geode.rest.internal.web.controllers.support;
 
-import java.io.DataInput;
-import java.io.IOException;
-
-import org.apache.geode.cache.query.internal.cq.CqService;
-import org.apache.geode.cache.query.internal.cq.ServerCQ;
 import org.apache.geode.internal.cache.InternalCache;
 
-public interface CqServiceFactory {
+public interface CacheProvider {
 
-  void initialize();
-
-  /**
-   * Create a new CqService for the given cache
-   */
-  CqService create(InternalCache cache);
-
-  ServerCQ readCqQuery(DataInput in) throws ClassNotFoundException, IOException;
+  InternalCache getInternalCache();
 }
