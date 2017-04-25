@@ -250,8 +250,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
       long bytesToEvictPerTask = (long) (getTotalBytesToEvict() * percentage);
       regionsForSingleTask.add(lr);
       if (mustEvict()) {
-        executeInThreadPool(
-            new RegionEvictorTask(regionsForSingleTask, this, bytesToEvictPerTask));
+        executeInThreadPool(new RegionEvictorTask(regionsForSingleTask, this, bytesToEvictPerTask));
       } else {
         break;
       }
@@ -280,7 +279,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
         RegionEvictorTask task = new RegionEvictorTask(regionList, this, bytesToEvictPerTask);
         evictorTaskSet.add(task);
       }
-      for (RegionEvictorTask regionEvictorTask: evictorTaskSet) {
+      for (RegionEvictorTask regionEvictorTask : evictorTaskSet) {
         testTaskSetSizes.add(regionEvictorTask.getRegionList().size());
       }
       return evictorTaskSet;
@@ -304,7 +303,7 @@ public class HeapEvictor implements ResourceListener<MemoryEvent> {
       regionsForSingleTask.add(itr.next());
     }
 
-    for (RegionEvictorTask regionEvictorTask: evictorTaskSet) {
+    for (RegionEvictorTask regionEvictorTask : evictorTaskSet) {
       testTaskSetSizes.add(regionEvictorTask.getRegionList().size());
     }
     return evictorTaskSet;
