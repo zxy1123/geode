@@ -1718,32 +1718,32 @@ public class AsyncEventListenerDUnitTest extends AsyncEventQueueTestBase {
       Region r = cache.getRegion(Region.SEPARATOR + getTestMethodName() + "_PR");
       r.put(1, 1);
       r.put(2, 2);
-      //This will trigger the gateway event filter to close the cache
+      // This will trigger the gateway event filter to close the cache
       try {
         r.removeAll(Collections.singleton(1));
         fail("Should have received a partition offline exception");
-      } catch(PartitionOfflineException expected) {
-    	  
+      } catch (PartitionOfflineException expected) {
+
       }
     });
   }
 
-private void createPersistentPartitionRegion() {
-	AttributesFactory fact = new AttributesFactory();
+  private void createPersistentPartitionRegion() {
+    AttributesFactory fact = new AttributesFactory();
 
-      PartitionAttributesFactory pfact = new PartitionAttributesFactory();
-      pfact.setTotalNumBuckets(16);
-      fact.setPartitionAttributes(pfact.create());
-      fact.setDataPolicy(DataPolicy.PERSISTENT_PARTITION);
-      fact.setOffHeap(isOffHeap());
-      Region r = cache.createRegionFactory(fact.create()).addAsyncEventQueueId("ln")
-          .create(getTestMethodName() + "_PR");
-}
+    PartitionAttributesFactory pfact = new PartitionAttributesFactory();
+    pfact.setTotalNumBuckets(16);
+    fact.setPartitionAttributes(pfact.create());
+    fact.setDataPolicy(DataPolicy.PERSISTENT_PARTITION);
+    fact.setOffHeap(isOffHeap());
+    Region r = cache.createRegionFactory(fact.create()).addAsyncEventQueueId("ln")
+        .create(getTestMethodName() + "_PR");
+  }
 
-private void addAEQWithCacheCloseFilter() {
-	cache.createAsyncEventQueueFactory().addGatewayEventFilter(new CloseCacheGatewayFilter()).setPersistent(true).setParallel(true)
-	    .create("ln", new MyAsyncEventListener());
-}
+  private void addAEQWithCacheCloseFilter() {
+    cache.createAsyncEventQueueFactory().addGatewayEventFilter(new CloseCacheGatewayFilter())
+        .setPersistent(true).setParallel(true).create("ln", new MyAsyncEventListener());
+  }
 
   private static Set<Object> getKeysSeen(VM vm, String asyncEventQueueId) {
     return vm.invoke(() -> {
@@ -1762,37 +1762,37 @@ private void addAEQWithCacheCloseFilter() {
   }
 
   private final class CloseCacheGatewayFilter implements GatewayEventFilter {
-	@Override
-	public boolean beforeEnqueue(final GatewayQueueEvent event) {
-	  if (event.getOperation().isRemoveAll()) {
-	    new Thread(() -> cache.close()).start();
-	    try {
-	      Thread.sleep(1000);
-	    } catch (InterruptedException e) {
-	      // ignore
-	    }
-	    throw new CacheClosedException();
-	  }
-	  return true;
-	}
+    @Override
+    public boolean beforeEnqueue(final GatewayQueueEvent event) {
+      if (event.getOperation().isRemoveAll()) {
+        new Thread(() -> cache.close()).start();
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // ignore
+        }
+        throw new CacheClosedException();
+      }
+      return true;
+    }
 
-	@Override
-	public boolean beforeTransmit(final GatewayQueueEvent event) {
-	  return false;
-	}
+    @Override
+    public boolean beforeTransmit(final GatewayQueueEvent event) {
+      return false;
+    }
 
-	@Override
-	public void afterAcknowledgement(final GatewayQueueEvent event) {
+    @Override
+    public void afterAcknowledgement(final GatewayQueueEvent event) {
 
-	}
+    }
 
-	@Override
-	public void close() {
+    @Override
+    public void close() {
 
-	}
-}
+    }
+  }
 
-private static class BucketMovingAsyncEventListener implements AsyncEventListener {
+  private static class BucketMovingAsyncEventListener implements AsyncEventListener {
     private final DistributedMember destination;
     private boolean moved;
     private Set<Object> keysSeen = new HashSet<Object>();
