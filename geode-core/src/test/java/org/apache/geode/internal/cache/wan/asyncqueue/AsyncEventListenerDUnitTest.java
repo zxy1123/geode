@@ -1699,31 +1699,8 @@ public class AsyncEventListenerDUnitTest extends AsyncEventQueueTestBase {
     vm1.invoke(() -> addAEQWithCacheCloseFilter());
     vm2.invoke(() -> addAEQWithCacheCloseFilter());
 
-    //vm1.invoke(() -> AsyncEventQueueTestBase.createPartitionedRegionWithAsyncEventQueue(
-        //getTestMethodName() + "_PR", "ln", isOffHeap()));
-
-    vm1.invoke(() -> {
-      AttributesFactory fact = new AttributesFactory();
-
-      PartitionAttributesFactory pfact = new PartitionAttributesFactory();
-      pfact.setTotalNumBuckets(16);
-      fact.setPartitionAttributes(pfact.create());
-      fact.setDataPolicy(DataPolicy.PERSISTENT_PARTITION);
-      fact.setOffHeap(isOffHeap());
-      Region r = cache.createRegionFactory(fact.create()).addAsyncEventQueueId("ln")
-          .create(getTestMethodName() + "_PR");
-    });
-    vm2.invoke(() -> {
-      AttributesFactory fact = new AttributesFactory();
-
-      PartitionAttributesFactory pfact = new PartitionAttributesFactory();
-      pfact.setTotalNumBuckets(16);
-      fact.setPartitionAttributes(pfact.create());
-      fact.setDataPolicy(DataPolicy.PERSISTENT_PARTITION);
-      fact.setOffHeap(isOffHeap());
-      Region r = cache.createRegionFactory(fact.create()).addAsyncEventQueueId("ln")
-          .create(getTestMethodName() + "_PR");
-    });
+    vm1.invoke(() -> createPersistentPartitionRegion());
+    vm2.invoke(() -> createPersistentPartitionRegion());
     vm3.invoke(() -> {
       AttributesFactory fact = new AttributesFactory();
 
@@ -1749,9 +1726,19 @@ public class AsyncEventListenerDUnitTest extends AsyncEventQueueTestBase {
     	  
       }
     });
-
-    vm1.invoke(() -> Awaitility.await().atMost(1, TimeUnit.MINUTES).until(() -> cache.isClosed()));
   }
+
+private void createPersistentPartitionRegion() {
+	AttributesFactory fact = new AttributesFactory();
+
+      PartitionAttributesFactory pfact = new PartitionAttributesFactory();
+      pfact.setTotalNumBuckets(16);
+      fact.setPartitionAttributes(pfact.create());
+      fact.setDataPolicy(DataPolicy.PERSISTENT_PARTITION);
+      fact.setOffHeap(isOffHeap());
+      Region r = cache.createRegionFactory(fact.create()).addAsyncEventQueueId("ln")
+          .create(getTestMethodName() + "_PR");
+}
 
 private void addAEQWithCacheCloseFilter() {
 	cache.createAsyncEventQueueFactory().addGatewayEventFilter(new CloseCacheGatewayFilter()).setPersistent(true).setParallel(true)
@@ -1777,9 +1764,7 @@ private void addAEQWithCacheCloseFilter() {
   private final class CloseCacheGatewayFilter implements GatewayEventFilter {
 	@Override
 	public boolean beforeEnqueue(final GatewayQueueEvent event) {
-	  // if (event.getOperation().isDestroy()) {
 	  if (event.getOperation().isRemoveAll()) {
-		System.out.println("cacheCloseFilter: isRemoveAll = true");
 	    new Thread(() -> cache.close()).start();
 	    try {
 	      Thread.sleep(1000);
