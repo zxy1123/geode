@@ -1,18 +1,16 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.geode.cache;
 
@@ -30,8 +28,10 @@ public class StringPrefixPartitionResolverJUnitTest {
 
   @Test
   public void testGetName() {
-    assertEquals("org.apache.geode.cache.StringPrefixPartitionResolver:", (new StringPrefixPartitionResolver()).getName());
+    assertEquals("org.apache.geode.cache.StringPrefixPartitionResolver:",
+        (new StringPrefixPartitionResolver()).getName());
   }
+
   @Test
   public void testEquals() {
     StringPrefixPartitionResolver pr1 = new StringPrefixPartitionResolver();
@@ -40,22 +40,25 @@ public class StringPrefixPartitionResolverJUnitTest {
     assertEquals(true, pr1.equals(pr2));
     assertEquals(false, pr1.equals(new Object()));
   }
-  
+
   @Test
   public void testNonStringKey() {
     @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, new Object(), null, null);
+    EntryOperation<String, Object> eo =
+        new EntryOperationImpl(null, null, new Object(), null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertThatThrownBy(() -> pr.getRoutingObject(eo)).isInstanceOf(ClassCastException.class);
   }
+
   @Test
   public void testNoDelimiterKey() {
     @SuppressWarnings("unchecked")
     EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, "foobar", null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertThatThrownBy(() -> pr.getRoutingObject(eo)).isInstanceOf(IllegalArgumentException.class)
-      .hasMessage("The key \"foobar\" does not contains the \":\" delimiter.");
+        .hasMessage("The key \"foobar\" does not contains the \":\" delimiter.");
   }
+
   @Test
   public void testEmptyPrefix() {
     @SuppressWarnings("unchecked")
@@ -63,6 +66,7 @@ public class StringPrefixPartitionResolverJUnitTest {
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("", pr.getRoutingObject(eo));
   }
+
   @Test
   public void testAllPrefix() {
     @SuppressWarnings("unchecked")
@@ -70,6 +74,7 @@ public class StringPrefixPartitionResolverJUnitTest {
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("foobar", pr.getRoutingObject(eo));
   }
+
   @Test
   public void testSimpleKey() {
     @SuppressWarnings("unchecked")
@@ -77,10 +82,12 @@ public class StringPrefixPartitionResolverJUnitTest {
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("1", pr.getRoutingObject(eo));
   }
+
   @Test
   public void testMulitPrefix() {
     @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, "one:two:three", null, null);
+    EntryOperation<String, Object> eo =
+        new EntryOperationImpl(null, null, "one:two:three", null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("one", pr.getRoutingObject(eo));
   }

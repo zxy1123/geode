@@ -1,46 +1,42 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.geode.cache;
 
 /**
- * This partition resolver requires every key of the partitioned region
- * to be an instance of String and to contain at least one ":" delimiter.
- * The prefix, the substring of the key that precedes the first delimiter,
- * is returned by getRoutingObject.
+ * This partition resolver requires every key of the partitioned region to be an instance of String
+ * and to contain at least one ":" delimiter. The prefix, the substring of the key that precedes the
+ * first delimiter, is returned by getRoutingObject.
  * 
  * @since Geode 1.2.0
  */
 public class StringPrefixPartitionResolver implements PartitionResolver<String, Object> {
 
   /**
-   * The default delimiter is ":".
-   * Currently this class only uses the default delimiter
-   * but in a future release configuring the delimiter may
-   * be supported.
+   * The default delimiter is ":". Currently this class only uses the default delimiter but in a
+   * future release configuring the delimiter may be supported.
    */
   public static final String DEFAULT_DELIMITER = ":";
+
   /**
    * Creates a prefix resolver with the default delimiter.
    */
-  public StringPrefixPartitionResolver() {
-  }
+  public StringPrefixPartitionResolver() {}
 
   /**
    * Returns the prefix of the String key that precedes the first ":" in the key.
+   * 
    * @throws ClassCastException if the key is not an instance of String
    * @throws IllegalArgumentException if the key does not contain at least one ":".
    */
@@ -50,7 +46,8 @@ public class StringPrefixPartitionResolver implements PartitionResolver<String, 
     String delimiter = getDelimiter();
     int idx = key.indexOf(delimiter);
     if (idx == -1) {
-      throw new IllegalArgumentException("The key \"" + key + "\" does not contains the \"" + delimiter + "\" delimiter.");
+      throw new IllegalArgumentException(
+          "The key \"" + key + "\" does not contains the \"" + delimiter + "\" delimiter.");
     }
     return key.substring(0, idx);
   }
@@ -75,8 +72,7 @@ public class StringPrefixPartitionResolver implements PartitionResolver<String, 
     StringPrefixPartitionResolver other = (StringPrefixPartitionResolver) o;
     return other.getName().equals(getName());
   }
-  
+
   @Override
-  public void close() {
-  }
+  public void close() {}
 }
