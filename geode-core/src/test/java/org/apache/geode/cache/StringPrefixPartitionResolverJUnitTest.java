@@ -20,9 +20,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import org.apache.geode.internal.cache.EntryOperationImpl;
+import org.apache.geode.test.junit.categories.UnitTest;
 
+@Category(UnitTest.class)
 public class StringPrefixPartitionResolverJUnitTest {
 
   @Test
