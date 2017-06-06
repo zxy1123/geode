@@ -16,7 +16,7 @@ package org.apache.geode.cache;
 
 /**
  * This partition resolver requires every key of the partitioned region to be an instance of String
- * and to contain at least one ":" delimiter. The prefix, the substring of the key that precedes the
+ * and to contain at least one "|" delimiter. The prefix, the substring of the key that precedes the
  * first delimiter, is returned by getRoutingObject.
  * 
  * @since Geode 1.2.0
@@ -24,10 +24,10 @@ package org.apache.geode.cache;
 public class StringPrefixPartitionResolver implements PartitionResolver<String, Object> {
 
   /**
-   * The default delimiter is ":". Currently this class only uses the default delimiter but in a
+   * The default delimiter is "|". Currently this class only uses the default delimiter but in a
    * future release configuring the delimiter may be supported.
    */
-  public static final String DEFAULT_DELIMITER = ":";
+  public static final String DEFAULT_DELIMITER = "|";
 
   /**
    * Creates a prefix resolver with the default delimiter.
@@ -35,10 +35,10 @@ public class StringPrefixPartitionResolver implements PartitionResolver<String, 
   public StringPrefixPartitionResolver() {}
 
   /**
-   * Returns the prefix of the String key that precedes the first ":" in the key.
+   * Returns the prefix of the String key that precedes the first "|" in the key.
    * 
    * @throws ClassCastException if the key is not an instance of String
-   * @throws IllegalArgumentException if the key does not contain at least one ":".
+   * @throws IllegalArgumentException if the key does not contain at least one "|".
    */
   @Override
   public Object getRoutingObject(EntryOperation<String, Object> opDetails) {
@@ -59,6 +59,11 @@ public class StringPrefixPartitionResolver implements PartitionResolver<String, 
 
   private java.lang.String getDelimiter() {
     return DEFAULT_DELIMITER;
+  }
+
+  @Override
+  public int hashCode() {
+    return getName().hashCode();
   }
 
   @Override

@@ -25,10 +25,11 @@ import org.apache.geode.test.junit.categories.UnitTest;
 
 @Category(UnitTest.class)
 public class StringPrefixPartitionResolverJUnitTest {
+  static final String DELIMITER = StringPrefixPartitionResolver.DEFAULT_DELIMITER;
 
   @Test
   public void testGetName() {
-    assertEquals("org.apache.geode.cache.StringPrefixPartitionResolver:",
+    assertEquals("org.apache.geode.cache.StringPrefixPartitionResolver" + DELIMITER,
         (new StringPrefixPartitionResolver()).getName());
   }
 
@@ -56,13 +57,14 @@ public class StringPrefixPartitionResolverJUnitTest {
     EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, "foobar", null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertThatThrownBy(() -> pr.getRoutingObject(eo)).isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("The key \"foobar\" does not contains the \":\" delimiter.");
+        .hasMessage("The key \"foobar\" does not contains the \"" + DELIMITER + "\" delimiter.");
   }
 
   @Test
   public void testEmptyPrefix() {
     @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, ":foobar", null, null);
+    EntryOperation<String, Object> eo =
+        new EntryOperationImpl(null, null, DELIMITER + "foobar", null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("", pr.getRoutingObject(eo));
   }
@@ -70,7 +72,8 @@ public class StringPrefixPartitionResolverJUnitTest {
   @Test
   public void testAllPrefix() {
     @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, "foobar:", null, null);
+    EntryOperation<String, Object> eo =
+        new EntryOperationImpl(null, null, "foobar" + DELIMITER, null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("foobar", pr.getRoutingObject(eo));
   }
@@ -78,7 +81,8 @@ public class StringPrefixPartitionResolverJUnitTest {
   @Test
   public void testSimpleKey() {
     @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, "1:2", null, null);
+    EntryOperation<String, Object> eo =
+        new EntryOperationImpl(null, null, "1" + DELIMITER + "2", null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("1", pr.getRoutingObject(eo));
   }
@@ -86,8 +90,8 @@ public class StringPrefixPartitionResolverJUnitTest {
   @Test
   public void testMulitPrefix() {
     @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo =
-        new EntryOperationImpl(null, null, "one:two:three", null, null);
+    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null,
+        "one" + DELIMITER + "two" + DELIMITER + "three", null, null);
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
     assertEquals("one", pr.getRoutingObject(eo));
   }
