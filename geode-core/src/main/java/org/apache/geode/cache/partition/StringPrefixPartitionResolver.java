@@ -12,7 +12,10 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.geode.cache;
+package org.apache.geode.cache.partition;
+
+import org.apache.geode.cache.EntryOperation;
+import org.apache.geode.cache.PartitionResolver;
 
 /**
  * This partition resolver requires every key of the partitioned region to be an instance of String

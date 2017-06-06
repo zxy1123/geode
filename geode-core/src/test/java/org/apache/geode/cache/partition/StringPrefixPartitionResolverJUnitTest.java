@@ -12,7 +12,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.geode.cache;
+package org.apache.geode.cache.partition;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.*;
@@ -20,6 +20,8 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.geode.cache.EntryOperation;
+import org.apache.geode.cache.partition.StringPrefixPartitionResolver;
 import org.apache.geode.internal.cache.EntryOperationImpl;
 import org.apache.geode.test.junit.categories.UnitTest;
 
@@ -29,7 +31,7 @@ public class StringPrefixPartitionResolverJUnitTest {
 
   @Test
   public void testGetName() {
-    assertEquals("org.apache.geode.cache.StringPrefixPartitionResolver" + DELIMITER,
+    assertEquals("org.apache.geode.cache.partition.StringPrefixPartitionResolver" + DELIMITER,
         (new StringPrefixPartitionResolver()).getName());
   }
 
