@@ -31,7 +31,7 @@ public class StringPrefixPartitionResolverJUnitTest {
 
   @Test
   public void testGetName() {
-    assertEquals("org.apache.geode.cache.partition.StringPrefixPartitionResolver" + DELIMITER,
+    assertEquals("org.apache.geode.cache.partition.StringPrefixPartitionResolver",
         (new StringPrefixPartitionResolver()).getName());
   }
 

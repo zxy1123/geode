@@ -57,7 +57,7 @@ public class StringPrefixPartitionResolver implements PartitionResolver<String, 
 
   @Override
   public java.lang.String getName() {
-    return getClass().getName() + getDelimiter();
+    return getClass().getName();
   }
 
   private java.lang.String getDelimiter() {
@@ -78,7 +78,7 @@ public class StringPrefixPartitionResolver implements PartitionResolver<String, 
       return false;
     }
     StringPrefixPartitionResolver other = (StringPrefixPartitionResolver) o;
-    return other.getName().equals(getName());
+    return other.getName().equals(getName()) && other.getDelimiter().equals(getDelimiter());
   }
 
   @Override
