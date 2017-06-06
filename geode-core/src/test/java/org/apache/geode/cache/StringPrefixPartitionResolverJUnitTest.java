@@ -44,56 +44,51 @@ public class StringPrefixPartitionResolverJUnitTest {
 
   @Test
   public void testNonStringKey() {
-    @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo =
-        new EntryOperationImpl(null, null, new Object(), null, null);
+    Object key = new Object();
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
-    assertThatThrownBy(() -> pr.getRoutingObject(eo)).isInstanceOf(ClassCastException.class);
+    assertThatThrownBy(() -> pr.getRoutingObject(createEntryOperation(key)))
+        .isInstanceOf(ClassCastException.class);
   }
 
   @Test
   public void testNoDelimiterKey() {
-    @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null, "foobar", null, null);
+    String key = "foobar";
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
-    assertThatThrownBy(() -> pr.getRoutingObject(eo)).isInstanceOf(IllegalArgumentException.class)
+    assertThatThrownBy(() -> pr.getRoutingObject(createEntryOperation(key)))
+        .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("The key \"foobar\" does not contains the \"" + DELIMITER + "\" delimiter.");
   }
 
   @Test
   public void testEmptyPrefix() {
-    @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo =
-        new EntryOperationImpl(null, null, DELIMITER + "foobar", null, null);
+    String key = DELIMITER + "foobar";
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
-    assertEquals("", pr.getRoutingObject(eo));
+    assertEquals("", pr.getRoutingObject(createEntryOperation(key)));
   }
 
   @Test
   public void testAllPrefix() {
-    @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo =
-        new EntryOperationImpl(null, null, "foobar" + DELIMITER, null, null);
+    String key = "foobar" + DELIMITER;
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
-    assertEquals("foobar", pr.getRoutingObject(eo));
+    assertEquals("foobar", pr.getRoutingObject(createEntryOperation(key)));
   }
 
   @Test
   public void testSimpleKey() {
-    @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo =
-        new EntryOperationImpl(null, null, "1" + DELIMITER + "2", null, null);
+    String key = "1" + DELIMITER + "2";
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
-    assertEquals("1", pr.getRoutingObject(eo));
+    assertEquals("1", pr.getRoutingObject(createEntryOperation(key)));
   }
 
   @Test
   public void testMulitPrefix() {
-    @SuppressWarnings("unchecked")
-    EntryOperation<String, Object> eo = new EntryOperationImpl(null, null,
-        "one" + DELIMITER + "two" + DELIMITER + "three", null, null);
+    String key = "one" + DELIMITER + "two" + DELIMITER + "three";
     StringPrefixPartitionResolver pr = new StringPrefixPartitionResolver();
-    assertEquals("one", pr.getRoutingObject(eo));
+    assertEquals("one", pr.getRoutingObject(createEntryOperation(key)));
   }
 
+  @SuppressWarnings("unchecked")
+  private EntryOperation<String, Object> createEntryOperation(Object key) {
+    return new EntryOperationImpl(null, null, key, null, null);
+  }
 }
