@@ -36,36 +36,23 @@ message GetResponse {
     EncodedValue result = 1;
 }
 
-message PutManyRequest {
+message PutAllRequest {
     string regionName = 1;
-    int32 numberOfEntries = 2;
-    repeated Entry entry = 3;
+    repeated Entry entry = 2;
 }
 
-message PutManyResponse {
-    int32 numberOfKeysFailed = 1;
+message PutAllResponse {
+    repeated EncodedValue failedKeys = 1;
+}
+
+message GetAllRequest {
+    string regionName = 1;
     repeated EncodedValue key = 2;
+    EncodedValue callbackArg = 3;
 }
 
-message GetManyRequest {
-    string regionName = 1;
-    int32 numberOfKeys = 2;
-    repeated EncodedValue key = 3;
-    EncodedValue callbackArg = 4;
-}
-
-message GetManyResponse {
-    int32 numberOfEntries = 1;
-    repeated Entry entries = 2;
-}
-
-message GetRegionsRequest {
-
-}
-
-message GetRegionsResponse {
-    int32 numberOfRegions = 1;
-    repeated Region regions = 2;
+message GetAllResponse {
+    repeated Entry entries = 1;
 }
 
 message ListKeysRequest {
@@ -73,8 +60,7 @@ message ListKeysRequest {
 }
 
 message ListKeysResponse {
-    int32 numberOfKeys = 1;
-    repeated EncodedValue key = 2;
+    repeated EncodedValue key = 1;
 }
 
 message RemoveRequest {
@@ -86,17 +72,9 @@ message RemoveResponse {
     bool success = 1;
 }
 
-message RemoveManyRequest {
-    string regionName = 1;
-    repeated EncodedValue key = 2;
-}
-
-message RemoveManyResponse {
-    bool success = 1;
-}
-
 message RemoveAllRequest {
     string regionName = 1;
+    repeated EncodedValue key = 2;
 }
 
 message RemoveAllResponse {
@@ -117,4 +95,12 @@ message DestroyRegionRequest {
 
 message DestroyRegionResponse {
     bool success = 1;
+}
+
+message GetRegionsRequest {
+
+}
+
+message GetRegionsResponse {
+    repeated Region regions = 1;
 }

@@ -39,17 +39,18 @@ message Request {
     oneof requestAPI {
         PutRequest putRequest = 2;
         GetRequest getRequest = 3;
-        PutManyRequest putManyRequest = 4;
-        GetManyRequest getManyRequest = 5;
-        GetRegionsRequest getRegionsRequest = 6;
-        ListKeysRequest listKeysRequest = 7;
-        RemoveRequest removeRequest = 8;
-        RemoveManyRequest removeManyRequest = 9;
-        RemoveAllRequest removeAllRequest = 10;
-        CreateRegionRequest createRegionRequest = 11;
-        DestroyRegionRequest destroyRegionRequest = 12;
-        PingRequest pingRequest = 13;
-        GetServersRequest getServersRequest = 14;
+        PutAllRequest putAllRequest = 4;
+        GetAllRequest getAllRequest = 5;
+        RemoveRequest removeRequest = 6;
+        RemoveAllRequest removeAllRequest = 7;
+        ListKeysRequest listKeysRequest = 8;
+
+        CreateRegionRequest createRegionRequest = 9;
+        DestroyRegionRequest destroyRegionRequest = 10;
+
+        PingRequest pingRequest = 11;
+        GetServersRequest getServersRequest = 12;
+        GetRegionsRequest getRegionsRequest = 13;
     }
 }
 
@@ -58,17 +59,18 @@ message Response {
     oneof responseAPI {
         PutResponse putResponse = 2;
         GetResponse getResponse = 3;
-        PutManyResponse putManyResponse = 4;
-        GetManyResponse getManyResponse = 5;
-        GetRegionsResponse getRegionsResponse = 6;
-        ListKeysResponse listKeysResponse = 7;
-        RemoveResponse removeResponse = 8;
-        RemoveManyResponse removeManyResponse = 9;
-        RemoveAllResponse removeAllResponse = 10;
-        CreateRegionResponse createRegionResponse = 11;
-        DestroyRegionResponse destroyRegionResponse = 12;
-        PingResponse pingResponse = 13;
-        GetServersResponse getServersResponse = 14;
+        PutAllResponse putAllResponse = 4;
+        GetAllResponse getAllResponse = 5;
+        RemoveResponse removeResponse = 6;
+        RemoveAllResponse removeAllResponse = 7;
+        ListKeysResponse listKeysResponse = 8;
+
+        CreateRegionResponse createRegionResponse = 20;
+        DestroyRegionResponse destroyRegionResponse = 21;
+
+        PingResponse pingResponse = 31;
+        GetServersResponse getServersResponse = 32;
+        GetRegionsResponse getRegionsResponse = 33;
     }
 }
 

@@ -56,5 +56,5 @@ message Region {
 }
 
 message Server {
-    string URL = 1;
+    string url = 1;
 }
