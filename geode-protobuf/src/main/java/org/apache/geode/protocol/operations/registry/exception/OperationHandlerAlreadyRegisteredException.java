@@ -14,14 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.geode.client.protocol.exception;
+package org.apache.geode.protocol.operations.registry.exception;
 
-public class InvalidProtocolMessageException extends Exception {
-  public InvalidProtocolMessageException(String message) {
+public class OperationHandlerAlreadyRegisteredException extends RuntimeException {
+  public OperationHandlerAlreadyRegisteredException(String message) {
     super(message);
-  }
-
-  public InvalidProtocolMessageException(String message, Throwable cause) {
-    super(message, cause);
   }
 }

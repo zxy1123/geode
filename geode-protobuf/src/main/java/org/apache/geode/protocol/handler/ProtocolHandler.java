@@ -14,30 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.geode.client.protocol.handler.protobuf;
+package org.apache.geode.protocol.handler;
 
-import org.apache.geode.client.protocol.exception.InvalidProtocolMessageException;
-import org.apache.geode.client.protocol.handler.ProtocolHandler;
-import org.apache.geode.protocol.protobuf.ClientProtocol;
+import org.apache.geode.protocol.exception.InvalidProtocolMessageException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class ProtobufProtocolHandler implements ProtocolHandler<ClientProtocol.Message> {
-  @Override
-  public ClientProtocol.Message deserialize(InputStream inputStream)
-      throws InvalidProtocolMessageException {
-    try {
-      return ClientProtocol.Message.parseDelimitedFrom(inputStream);
-    } catch (IOException e) {
-      throw new InvalidProtocolMessageException("Failed to parse Protobuf Message", e);
-    }
-  }
-
-  @Override
-  public void serialize(ClientProtocol.Message inputMessage, OutputStream outputStream)
-      throws IOException {
-    inputMessage.writeDelimitedTo(outputStream);
-  }
+public interface ProtocolHandler <T> {
+  T deserialize(InputStream inputStream) throws InvalidProtocolMessageException;
+  void serialize(T inputMessage, OutputStream outputStream) throws IOException;
 }
