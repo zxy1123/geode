@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.geode.client.protocol;
+package org.apache.geode.protocol.handler;
 
-import org.apache.geode.client.protocol.exception.InvalidProtocolMessageException;
-import org.apache.geode.client.protocol.handler.ProtocolHandler;
-import org.apache.geode.client.protocol.handler.protobuf.ProtobufProtocolHandler;
+import org.apache.geode.client.protocol.MessageUtil;
+import org.apache.geode.protocol.exception.InvalidProtocolMessageException;
+import org.apache.geode.protocol.handler.ProtocolHandler;
+import org.apache.geode.protocol.handler.protobuf.ProtobufProtocolHandler;
 import org.apache.geode.protocol.protobuf.ClientProtocol;
 import org.junit.Assert;
 import org.junit.Before;
@@ -31,7 +32,7 @@ import java.io.InputStream;
 import java.util.ServiceLoader;
 
 public class ProtobufProtocolHandlerTest {
-  private ProtocolHandler protocolHandler;
+  private ProtocolHandler<ClientProtocol.Message> protocolHandler;
 
   @Before
   public void startup() {
@@ -53,7 +54,7 @@ public class ProtobufProtocolHandlerTest {
     expectedRequestMessage.writeDelimitedTo(byteArrayOutputStream);
     InputStream inputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
 
-    ClientProtocol.Message actualMessage = (ClientProtocol.Message) protocolHandler.deserialize(inputStream);
+    ClientProtocol.Message actualMessage = protocolHandler.deserialize(inputStream);
     Assert.assertEquals(expectedRequestMessage, actualMessage);
   }
 

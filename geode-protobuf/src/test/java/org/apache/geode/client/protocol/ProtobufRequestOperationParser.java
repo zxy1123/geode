@@ -16,9 +16,16 @@
  */
 package org.apache.geode.client.protocol;
 
-/**
- * Created by ukohlmeyer on 6/12/17.
- */
-public interface OpsHandlerRegistry<T> {
-  public OpsHandler getOpsHandler(T operationCode);
+import org.apache.geode.protocol.protobuf.ClientProtocol;
+
+class ProtobufRequestOperationParser {
+  static Object getRequestForOperationTypeID(ClientProtocol.Request request) {
+    switch (request.getRequestAPICase()) {
+      case PUTREQUEST: return request.getPutRequest();
+      case GETREQUEST: return request.getGetRequest();
+      default:
+        throw new RuntimeException(
+            "Unknown request type: " + request.getRequestAPICase().getNumber());
+    }
+  }
 }
