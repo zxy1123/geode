@@ -45,12 +45,12 @@ message Request {
         RemoveAllRequest removeAllRequest = 7;
         ListKeysRequest listKeysRequest = 8;
 
-        CreateRegionRequest createRegionRequest = 9;
-        DestroyRegionRequest destroyRegionRequest = 10;
+        CreateRegionRequest createRegionRequest = 21;
+        DestroyRegionRequest destroyRegionRequest = 22;
 
-        PingRequest pingRequest = 11;
-        GetServersRequest getServersRequest = 12;
-        GetRegionsRequest getRegionsRequest = 13;
+        PingRequest pingRequest = 41;
+        GetServersRequest getServersRequest = 42;
+        GetRegionsRequest getRegionsRequest = 43;
     }
 }
 
@@ -68,9 +68,9 @@ message Response {
         CreateRegionResponse createRegionResponse = 20;
         DestroyRegionResponse destroyRegionResponse = 21;
 
-        PingResponse pingResponse = 31;
-        GetServersResponse getServersResponse = 32;
-        GetRegionsResponse getRegionsResponse = 33;
+        PingResponse pingResponse = 41;
+        GetServersResponse getServersResponse = 42;
+        GetRegionsResponse getRegionsResponse = 43;
     }
 }
 

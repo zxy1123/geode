@@ -14,15 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.geode.client.protocol.handler;
+package org.apache.geode.client.protocol;
 
-import org.apache.geode.client.protocol.exception.InvalidProtocolMessageException;
+import com.sun.xml.internal.bind.v2.runtime.output.Encoded;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-public interface ProtocolHandler <T> {
-  T deserialize(InputStream inputStream) throws InvalidProtocolMessageException;
-  void serialize(T inputMessage, OutputStream outputStream) throws IOException;
+public interface EncodingHandlerRegistry {
+  EncodingHandler getEncodingHandlerForType(Class klass)
 }
