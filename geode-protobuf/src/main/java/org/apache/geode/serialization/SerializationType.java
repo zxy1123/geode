@@ -6,7 +6,7 @@ import java.nio.charset.Charset;
 
 public enum SerializationType {
   STRING(String.class),
-  BYTE_BLOB(byte[].class),
+  BINARY(byte[].class),
   INT(int.class),
   BYTE(byte.class),
   SHORT(short.class),
@@ -16,7 +16,6 @@ public enum SerializationType {
   FLOAT(float.class),
   DOUBLE(double.class);
 
-  private static final Charset UTF8 = Charset.forName("UTF-8");
   public final Class klass;
 
   SerializationType(Class klass) {

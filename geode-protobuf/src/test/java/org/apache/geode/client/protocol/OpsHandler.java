@@ -14,9 +14,8 @@
  */
 package org.apache.geode.client.protocol;
 
-/**
- * Created by ukohlmeyer on 6/12/17.
- */
+import org.apache.geode.serialization.registry.SerializationCodecRegistry;
+
 public interface OpsHandler<Req, Resp> {
-  Resp process(EncodingHandlerRegistry encodingHandlerRegistry, Req request);
+  Resp process(SerializationCodecRegistry serializationCodecRegistry, Req request);
 }

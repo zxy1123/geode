@@ -26,7 +26,7 @@ public class EncodingTypeToSerializationTypeTranslatorJUnitTest {
         translator.getSerializationTypeForEncodingType(BasicTypes.EncodingType.BYTE));
     assertSame(SerializationType.BOOLEAN,
         translator.getSerializationTypeForEncodingType(BasicTypes.EncodingType.BOOLEAN));
-    assertSame(SerializationType.BYTE_BLOB,
+    assertSame(SerializationType.BINARY,
         translator.getSerializationTypeForEncodingType(BasicTypes.EncodingType.BINARY));
     assertSame(SerializationType.FLOAT,
         translator.getSerializationTypeForEncodingType(BasicTypes.EncodingType.FLOAT));
@@ -52,8 +52,8 @@ public class EncodingTypeToSerializationTypeTranslatorJUnitTest {
     EncodingTypeToSerializationTypeTranslator translator =
         new EncodingTypeToSerializationTypeTranslator();
     for (BasicTypes.EncodingType encodingType : BasicTypes.EncodingType.values()) {
-      if (!(encodingType.equals(BasicTypes.EncodingType.UNRECOGNIZED) || encodingType
-          .equals(BasicTypes.EncodingType.INVALID))) {
+      if (!(encodingType.equals(BasicTypes.EncodingType.UNRECOGNIZED)
+          || encodingType.equals(BasicTypes.EncodingType.INVALID))) {
         try {
           translator.getSerializationTypeForEncodingType(encodingType);
         } catch (UnsupportedEncodingTypeException e) {

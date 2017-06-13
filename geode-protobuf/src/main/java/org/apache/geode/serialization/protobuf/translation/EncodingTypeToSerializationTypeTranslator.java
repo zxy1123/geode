@@ -22,16 +22,26 @@ public class EncodingTypeToSerializationTypeTranslator {
   public SerializationType getSerializationTypeForEncodingType(BasicTypes.EncodingType encodingType)
       throws UnsupportedEncodingTypeException {
     switch (encodingType) {
-      case INT: return SerializationType.INT;
-      case BYTE: return SerializationType.BYTE;
-      case JSON: return SerializationType.JSON;
-      case LONG: return SerializationType.LONG;
-      case FLOAT: return SerializationType.FLOAT;
-      case SHORT: return SerializationType.SHORT;
-      case BINARY: return SerializationType.BYTE_BLOB;
-      case DOUBLE: return SerializationType.DOUBLE;
-      case STRING: return SerializationType.STRING;
-      case BOOLEAN: return SerializationType.BOOLEAN;
+      case INT:
+        return SerializationType.INT;
+      case BYTE:
+        return SerializationType.BYTE;
+      case JSON:
+        return SerializationType.JSON;
+      case LONG:
+        return SerializationType.LONG;
+      case FLOAT:
+        return SerializationType.FLOAT;
+      case SHORT:
+        return SerializationType.SHORT;
+      case BINARY:
+        return SerializationType.BINARY;
+      case DOUBLE:
+        return SerializationType.DOUBLE;
+      case STRING:
+        return SerializationType.STRING;
+      case BOOLEAN:
+        return SerializationType.BOOLEAN;
       default:
         throw new UnsupportedEncodingTypeException(
             "No serialization type found for protobuf encoding type: " + encodingType);
