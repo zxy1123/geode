@@ -12,10 +12,10 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.geode.protocol.operations.registry.exception;
+package org.apache.geode.serialization.registry.exception;
 
-public class OperationHandlerAlreadyRegisteredException extends Exception {
-  public OperationHandlerAlreadyRegisteredException(String message) {
+public class CodecAlreadyRegisteredForTypeException extends Exception {
+  public CodecAlreadyRegisteredForTypeException(String message) {
     super(message);
   }
 }

@@ -1,18 +1,16 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.geode.protocol.operations.registry;
 
@@ -25,7 +23,8 @@ import java.util.HashMap;
 public class OperationsHandlerRegistry {
   private HashMap<Integer, OperationHandler> registeredOperations = new HashMap<>();
 
-  public OperationHandler getOperationHandlerForOperationId(int operationCode) {
+  public OperationHandler getOperationHandlerForOperationId(int operationCode)
+      throws OperationHandlerNotRegisteredException {
     OperationHandler operationHandler = registeredOperations.get(operationCode);
     if (operationHandler == null) {
       throw new OperationHandlerNotRegisteredException(
@@ -35,7 +34,7 @@ public class OperationsHandlerRegistry {
   }
 
   public synchronized void registerOperationHandlerForOperationId(int operationCode,
-                                                                  OperationHandler operationHandler) {
+      OperationHandler operationHandler) throws OperationHandlerAlreadyRegisteredException {
     if (registeredOperations.containsKey(operationCode)) {
       throw new OperationHandlerAlreadyRegisteredException(
           "An operation handler for operationCode: " + operationCode

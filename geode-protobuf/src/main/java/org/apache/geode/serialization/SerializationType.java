@@ -11,7 +11,10 @@ public enum SerializationType {
   BYTE(byte.class),
   SHORT(short.class),
   LONG(long.class),
-  JSON(PdxInstance.class);
+  JSON(PdxInstance.class),
+  BOOLEAN(boolean.class),
+  FLOAT(float.class),
+  DOUBLE(double.class);
 
   private static final Charset UTF8 = Charset.forName("UTF-8");
   public final Class klass;

@@ -22,21 +22,23 @@ public class OperationsHandlerRegistryJUnitTest {
   }
 
   @Test
-  public void testAddOperationsHandlerForOperationType() {
-    operationsHandlerRegistry
-        .registerOperationHandlerForOperationId(5, new DummyOperationHandler());
+  public void testAddOperationsHandlerForOperationType()
+      throws OperationHandlerAlreadyRegisteredException {
+    operationsHandlerRegistry.registerOperationHandlerForOperationId(5,
+        new DummyOperationHandler());
     assertEquals(1, operationsHandlerRegistry.getRegisteredOperationHandlersCount());
   }
 
   @Test
-  public void testAddingDuplicateOperationsHandlerForOperationType_ThrowsException() {
+  public void testAddingDuplicateOperationsHandlerForOperationType_ThrowsException()
+      throws OperationHandlerAlreadyRegisteredException, OperationHandlerNotRegisteredException {
     DummyOperationHandler expectedOperationHandler = new DummyOperationHandler();
     operationsHandlerRegistry.registerOperationHandlerForOperationId(5, expectedOperationHandler);
     assertEquals(1, operationsHandlerRegistry.getRegisteredOperationHandlersCount());
     boolean exceptionCaught = false;
     try {
-      operationsHandlerRegistry
-          .registerOperationHandlerForOperationId(5, new DummyOperationHandler());
+      operationsHandlerRegistry.registerOperationHandlerForOperationId(5,
+          new DummyOperationHandler());
     } catch (OperationHandlerAlreadyRegisteredException e) {
       exceptionCaught = true;
     }
@@ -47,7 +49,8 @@ public class OperationsHandlerRegistryJUnitTest {
   }
 
   @Test
-  public void testGetOperationsHandlerForOperationType() {
+  public void testGetOperationsHandlerForOperationType()
+      throws OperationHandlerAlreadyRegisteredException, OperationHandlerNotRegisteredException {
     DummyOperationHandler expectedOperationHandler = new DummyOperationHandler();
     operationsHandlerRegistry.registerOperationHandlerForOperationId(5, expectedOperationHandler);
     OperationHandler operationHandler =
@@ -68,6 +71,10 @@ public class OperationsHandlerRegistryJUnitTest {
 
   private class DummyOperationHandler implements OperationHandler {
 
+    @Override
+    public Object process(Object encodingHandlerRegistry, Object request) {
+      return null;
+    }
   }
 
 
