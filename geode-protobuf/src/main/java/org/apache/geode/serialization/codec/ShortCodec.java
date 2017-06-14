@@ -16,6 +16,7 @@
  */
 package org.apache.geode.serialization.codec;
 
+import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.TypeCodec;
 
 import java.nio.ByteBuffer;
@@ -29,5 +30,10 @@ public class ShortCodec implements TypeCodec<Short> {
   @Override
   public byte[] encode(Short incoming) {
     return ByteBuffer.allocate(Short.BYTES).putShort(incoming).array();
+  }
+
+  @Override
+  public SerializationType getSerializationType() {
+    return SerializationType.SHORT;
   }
 }

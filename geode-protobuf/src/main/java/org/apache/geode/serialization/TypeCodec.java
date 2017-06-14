@@ -18,4 +18,6 @@ public interface TypeCodec<T> {
   T decode(byte[] incoming);
 
   byte[] encode(T incoming);
+
+  SerializationType getSerializationType();
 }

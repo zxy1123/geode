@@ -19,15 +19,28 @@ import org.apache.geode.serialization.TypeCodec;
 import org.apache.geode.serialization.registry.exception.CodecAlreadyRegisteredForTypeException;
 import org.apache.geode.serialization.registry.exception.CodecNotRegisteredForTypeException;
 import org.apache.geode.test.junit.categories.UnitTest;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category(UnitTest.class)
 public class CodecRegistryJUnitTest {
+  private SerializationCodecRegistry codecRegistry;
+  @Before
+  public void startup() throws CodecAlreadyRegisteredForTypeException {
+    codecRegistry = new SerializationCodecRegistry();
+  }
+
+  @After
+  public void tearDown(){
+    codecRegistry.shutdown();
+  }
+
   @Test
   public void testRegisterCodec() throws CodecAlreadyRegisteredForTypeException {
-    SerializationCodecRegistry codecRegistry = new SerializationCodecRegistry();
     Assert.assertEquals(0, codecRegistry.getRegisteredCodecCount());
     codecRegistry.register(SerializationType.INT, new DummyTypeCodec());
     Assert.assertEquals(1, codecRegistry.getRegisteredCodecCount());
@@ -36,7 +49,6 @@ public class CodecRegistryJUnitTest {
   @Test
   public void testRegisteringCodecForRegisteredType_throwsException()
       throws CodecAlreadyRegisteredForTypeException {
-    SerializationCodecRegistry codecRegistry = new SerializationCodecRegistry();
     codecRegistry.register(SerializationType.INT, new DummyTypeCodec());
 
     boolean caughtException = false;
@@ -52,7 +64,6 @@ public class CodecRegistryJUnitTest {
   @Test
   public void testGetRegisteredCodec()
       throws CodecAlreadyRegisteredForTypeException, CodecNotRegisteredForTypeException {
-    SerializationCodecRegistry codecRegistry = new SerializationCodecRegistry();
     TypeCodec expectedCodec = new DummyTypeCodec();
     codecRegistry.register(SerializationType.INT, expectedCodec);
     Assert.assertEquals(1, codecRegistry.getRegisteredCodecCount());
@@ -62,7 +73,6 @@ public class CodecRegistryJUnitTest {
 
   @Test
   public void testGetCodecForUnregisteredType_throwsException() {
-    SerializationCodecRegistry codecRegistry = new SerializationCodecRegistry();
     boolean caughtException = false;
     try {
       codecRegistry.getCodecForType(SerializationType.INT);
@@ -82,6 +92,11 @@ public class CodecRegistryJUnitTest {
     @Override
     public byte[] encode(Object incoming) {
       return new byte[0];
+    }
+
+    @Override
+    public SerializationType getSerializationType() {
+      return Mockito.mock(SerializationType.class);
     }
   }
 }

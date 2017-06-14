@@ -16,6 +16,7 @@
  */
 package org.apache.geode.serialization.codec;
 
+import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.TypeCodec;
 
 import java.nio.charset.Charset;
@@ -31,5 +32,10 @@ public class StringCodec implements TypeCodec<String> {
   @Override
   public byte[] encode(String incoming) {
     return incoming.getBytes(UTF8);
+  }
+
+  @Override
+  public SerializationType getSerializationType() {
+    return SerializationType.STRING;
   }
 }

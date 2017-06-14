@@ -52,6 +52,11 @@ public class OpsProcessorTest {
           public byte[] encode(String incoming) {
             return incoming.getBytes();
           }
+
+          @Override
+          public SerializationType getSerializationType() {
+            return null;
+          }
         });
 
     ClientProtocol.Request messageRequest = ClientProtocol.Request.newBuilder()

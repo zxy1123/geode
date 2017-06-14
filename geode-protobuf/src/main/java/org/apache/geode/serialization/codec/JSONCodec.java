@@ -18,6 +18,7 @@ package org.apache.geode.serialization.codec;
 
 import org.apache.geode.pdx.JSONFormatter;
 import org.apache.geode.pdx.PdxInstance;
+import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.TypeCodec;
 
 public class JSONCodec implements TypeCodec<PdxInstance> {
@@ -29,5 +30,10 @@ public class JSONCodec implements TypeCodec<PdxInstance> {
   @Override
   public byte[] encode(PdxInstance incoming) {
     return JSONFormatter.toJSONByteArray(incoming);
+  }
+
+  @Override
+  public SerializationType getSerializationType() {
+    return SerializationType.JSON;
   }
 }

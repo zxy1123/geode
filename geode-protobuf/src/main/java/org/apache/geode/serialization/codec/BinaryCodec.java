@@ -16,6 +16,7 @@
  */
 package org.apache.geode.serialization.codec;
 
+import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.TypeCodec;
 
 public class BinaryCodec implements TypeCodec<byte[]> {
@@ -27,5 +28,10 @@ public class BinaryCodec implements TypeCodec<byte[]> {
   @Override
   public byte[] encode(byte[] incoming) {
     return incoming;
+  }
+
+  @Override
+  public SerializationType getSerializationType() {
+    return SerializationType.BINARY;
   }
 }

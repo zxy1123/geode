@@ -16,6 +16,7 @@
  */
 package org.apache.geode.serialization.codec;
 
+import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.TypeCodec;
 
 import java.nio.ByteBuffer;
@@ -29,5 +30,10 @@ public class BooleanCodec implements TypeCodec<Boolean> {
   @Override
   public byte[] encode(Boolean incoming) {
     return ByteBuffer.allocate(Byte.BYTES).put(incoming ? (byte) 1 : (byte) 0).array();
+  }
+
+  @Override
+  public SerializationType getSerializationType() {
+    return SerializationType.BOOLEAN;
   }
 }

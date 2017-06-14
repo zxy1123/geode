@@ -20,9 +20,17 @@ import org.apache.geode.serialization.registry.exception.CodecAlreadyRegisteredF
 import org.apache.geode.serialization.registry.exception.CodecNotRegisteredForTypeException;
 
 import java.util.HashMap;
+import java.util.ServiceLoader;
 
 public class SerializationCodecRegistry {
   private HashMap<SerializationType, TypeCodec> codecRegistry = new HashMap<>();
+
+  public SerializationCodecRegistry() throws CodecAlreadyRegisteredForTypeException {
+    ServiceLoader<TypeCodec> typeCodecs = ServiceLoader.load(TypeCodec.class);
+    for (TypeCodec typeCodec : typeCodecs) {
+      register(typeCodec.getSerializationType(), typeCodec);
+    }
+  }
 
   public synchronized void register(SerializationType serializationType, TypeCodec<?> typeCodec)
       throws CodecAlreadyRegisteredForTypeException {
@@ -45,5 +53,9 @@ public class SerializationCodecRegistry {
           "There is no codec registered for type: " + serializationType);
     }
     return typeCodec;
+  }
+
+  public void shutdown() {
+    codecRegistry.clear();
   }
 }

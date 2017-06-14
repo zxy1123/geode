@@ -16,6 +16,7 @@
  */
 package org.apache.geode.serialization.codec;
 
+import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.TypeCodec;
 
 import java.nio.ByteBuffer;
@@ -29,5 +30,10 @@ public class DoubleCodec implements TypeCodec<Double> {
   @Override
   public byte[] encode(Double incoming) {
     return ByteBuffer.allocate(Double.BYTES).putDouble(incoming).array();
+  }
+
+  @Override
+  public SerializationType getSerializationType() {
+    return SerializationType.DOUBLE;
   }
 }

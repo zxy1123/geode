@@ -16,6 +16,7 @@
  */
 package org.apache.geode.serialization.codec;
 
+import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.TypeCodec;
 
 import java.nio.ByteBuffer;
@@ -29,5 +30,10 @@ public class LongCodec implements TypeCodec<Long> {
   @Override
   public byte[] encode(Long incoming) {
     return ByteBuffer.allocate(Long.BYTES).putLong(incoming).array();
+  }
+
+  @Override
+  public SerializationType getSerializationType() {
+    return SerializationType.LONG;
   }
 }
