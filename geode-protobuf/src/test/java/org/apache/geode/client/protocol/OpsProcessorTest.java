@@ -72,6 +72,8 @@ public class OpsProcessorTest {
 //        ProtobufRequestOperationParser.getRequestForOperationTypeID(messageRequest)))
 //            .thenReturn(expectedResponse);
 
+
+
     OpsProcessor processor = new OpsProcessor(opsHandlerRegistry, serializationCodecRegistry);
     ClientProtocol.Response response = processor.process(messageRequest);
     Assert.assertEquals(expectedResponse, response.getGetResponse());

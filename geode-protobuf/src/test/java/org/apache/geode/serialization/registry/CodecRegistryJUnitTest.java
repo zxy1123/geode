@@ -24,36 +24,44 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
+import org.junit.runner.RunWith;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({SerializationType.class})
 @Category(UnitTest.class)
 public class CodecRegistryJUnitTest {
   private SerializationCodecRegistry codecRegistry;
+
   @Before
   public void startup() throws CodecAlreadyRegisteredForTypeException {
     codecRegistry = new SerializationCodecRegistry();
   }
 
   @After
-  public void tearDown(){
+  public void tearDown() {
     codecRegistry.shutdown();
   }
 
   @Test
   public void testRegisterCodec() throws CodecAlreadyRegisteredForTypeException {
-    Assert.assertEquals(0, codecRegistry.getRegisteredCodecCount());
-    codecRegistry.register(SerializationType.INT, new DummyTypeCodec());
-    Assert.assertEquals(1, codecRegistry.getRegisteredCodecCount());
+    Assert.assertEquals(10, codecRegistry.getRegisteredCodecCount());
+    SerializationType mockSerializationType = PowerMockito.mock(SerializationType.class);
+    codecRegistry.register(mockSerializationType, new DummyTypeCodec());
+    Assert.assertEquals(11, codecRegistry.getRegisteredCodecCount());
   }
 
   @Test
   public void testRegisteringCodecForRegisteredType_throwsException()
       throws CodecAlreadyRegisteredForTypeException {
-    codecRegistry.register(SerializationType.INT, new DummyTypeCodec());
+    SerializationType mockSerializationType = PowerMockito.mock(SerializationType.class);
+    codecRegistry.register(mockSerializationType, new DummyTypeCodec());
 
     boolean caughtException = false;
     try {
-      codecRegistry.register(SerializationType.INT, new DummyTypeCodec());
+      codecRegistry.register(mockSerializationType, new DummyTypeCodec());
     } catch (CodecAlreadyRegisteredForTypeException e) {
       caughtException = true;
     }
@@ -65,9 +73,9 @@ public class CodecRegistryJUnitTest {
   public void testGetRegisteredCodec()
       throws CodecAlreadyRegisteredForTypeException, CodecNotRegisteredForTypeException {
     TypeCodec expectedCodec = new DummyTypeCodec();
-    codecRegistry.register(SerializationType.INT, expectedCodec);
-    Assert.assertEquals(1, codecRegistry.getRegisteredCodecCount());
-    TypeCodec codec = codecRegistry.getCodecForType(SerializationType.INT);
+    SerializationType mockSerializationType = PowerMockito.mock(SerializationType.class);
+    codecRegistry.register(mockSerializationType, expectedCodec);
+    TypeCodec codec = codecRegistry.getCodecForType(mockSerializationType);
     Assert.assertSame(expectedCodec, codec);
   }
 
@@ -75,7 +83,8 @@ public class CodecRegistryJUnitTest {
   public void testGetCodecForUnregisteredType_throwsException() {
     boolean caughtException = false;
     try {
-      codecRegistry.getCodecForType(SerializationType.INT);
+      SerializationType mockSerializationType = PowerMockito.mock(SerializationType.class);
+      codecRegistry.getCodecForType(mockSerializationType);
     } catch (CodecNotRegisteredForTypeException e) {
       caughtException = true;
     }
@@ -96,7 +105,7 @@ public class CodecRegistryJUnitTest {
 
     @Override
     public SerializationType getSerializationType() {
-      return Mockito.mock(SerializationType.class);
+      return PowerMockito.mock(SerializationType.class);
     }
   }
 }

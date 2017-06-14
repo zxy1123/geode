@@ -32,6 +32,10 @@ dependencies {
     testCompile project(':geode-junit')
     testCompile files(project(':geode-core').sourceSets.test.output)
 
+    testCompile 'org.powermock:powermock-core:' + project.'powermock.version'
+    testCompile 'org.powermock:powermock-module-junit4:' + project.'powermock.version'
+    testCompile 'org.powermock:powermock-api-mockito:' + project.'powermock.version'
+
     compile 'com.google.protobuf:protobuf-java:3.3.1'
 }
 
