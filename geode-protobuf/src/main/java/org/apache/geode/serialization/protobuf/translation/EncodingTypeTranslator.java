@@ -14,11 +14,13 @@
  */
 package org.apache.geode.serialization.protobuf.translation;
 
+import org.apache.geode.pdx.JSONFormatter;
+import org.apache.geode.pdx.PdxInstance;
 import org.apache.geode.protocol.protobuf.BasicTypes;
 import org.apache.geode.serialization.SerializationType;
 import org.apache.geode.serialization.protobuf.translation.exception.UnsupportedEncodingTypeException;
 
-public class EncodingTypeToSerializationTypeTranslator {
+public class EncodingTypeTranslator {
   public SerializationType getSerializationTypeForEncodingType(BasicTypes.EncodingType encodingType)
       throws UnsupportedEncodingTypeException {
     switch (encodingType) {
@@ -46,5 +48,36 @@ public class EncodingTypeToSerializationTypeTranslator {
         throw new UnsupportedEncodingTypeException(
             "No serialization type found for protobuf encoding type: " + encodingType);
     }
+  }
+
+  public static BasicTypes.EncodingType getEncodingTypeForObject(Object resultValue)
+      throws UnsupportedEncodingTypeException {
+    if (resultValue instanceof Integer) {
+      return BasicTypes.EncodingType.INT;
+    } else if (resultValue instanceof Byte) {
+      return BasicTypes.EncodingType.BYTE;
+    } else if (resultValue instanceof PdxInstance) {
+      String pdxClassName = ((PdxInstance) resultValue).getClassName();
+      if (pdxClassName.equals(JSONFormatter.JSON_CLASSNAME)) {
+        return BasicTypes.EncodingType.JSON;
+      }
+    } else if (resultValue instanceof Long) {
+      return BasicTypes.EncodingType.LONG;
+    } else if (resultValue instanceof Float) {
+      return BasicTypes.EncodingType.FLOAT;
+    } else if (resultValue instanceof Short) {
+      return BasicTypes.EncodingType.SHORT;
+    } else if (resultValue instanceof byte[]) {
+      return BasicTypes.EncodingType.BINARY;
+    } else if (resultValue instanceof Double) {
+      return BasicTypes.EncodingType.DOUBLE;
+    } else if (resultValue instanceof String) {
+      return BasicTypes.EncodingType.STRING;
+    } else if (resultValue instanceof Boolean) {
+      return BasicTypes.EncodingType.BOOLEAN;
+    }
+
+    throw new UnsupportedEncodingTypeException(
+        "We cannot translate: " + resultValue.getClass() + " into a specific Protobuf Encoding");
   }
 }

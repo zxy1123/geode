@@ -16,13 +16,15 @@ package org.apache.geode.protocol.operations;
 
 import org.apache.geode.protocol.protobuf.ClientProtocol;
 
-class ProtobufRequestOperationParser {
-  static Object getRequestForOperationTypeID(ClientProtocol.Request request) {
+public class ProtobufRequestOperationParser {
+  public static Object getRequestForOperationTypeID(ClientProtocol.Request request) {
     switch (request.getRequestAPICase()) {
       case PUTREQUEST:
         return request.getPutRequest();
       case GETREQUEST:
         return request.getGetRequest();
+      case PUTALLREQUEST:
+        return request.getPutAllRequest();
       default:
         throw new RuntimeException(
             "Unknown request type: " + request.getRequestAPICase().getNumber());

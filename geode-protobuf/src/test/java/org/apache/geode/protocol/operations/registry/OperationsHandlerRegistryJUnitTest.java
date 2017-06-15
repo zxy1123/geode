@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.geode.protocol.operations.OperationHandler;
 import org.apache.geode.protocol.operations.registry.exception.OperationHandlerAlreadyRegisteredException;
 import org.apache.geode.protocol.operations.registry.exception.OperationHandlerNotRegisteredException;
+import org.apache.geode.serialization.SerializationService;
 import org.apache.geode.test.junit.categories.UnitTest;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,7 +73,7 @@ public class OperationsHandlerRegistryJUnitTest {
   private class DummyOperationHandler implements OperationHandler {
 
     @Override
-    public Object process(Object encodingHandlerRegistry, Object request) {
+    public Object process(SerializationService serializationService, Object request) {
       return null;
     }
   }

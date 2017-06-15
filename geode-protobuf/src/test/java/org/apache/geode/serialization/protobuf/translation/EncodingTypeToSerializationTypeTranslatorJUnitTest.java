@@ -14,8 +14,8 @@ public class EncodingTypeToSerializationTypeTranslatorJUnitTest {
 
   @Test
   public void testTranslateEncodingTypes() throws UnsupportedEncodingTypeException {
-    EncodingTypeToSerializationTypeTranslator translator =
-        new EncodingTypeToSerializationTypeTranslator();
+    EncodingTypeTranslator translator =
+        new EncodingTypeTranslator();
     assertSame(SerializationType.INT,
         translator.getSerializationTypeForEncodingType(BasicTypes.EncodingType.INT));
     assertSame(SerializationType.LONG,
@@ -42,15 +42,15 @@ public class EncodingTypeToSerializationTypeTranslatorJUnitTest {
   public void testTranslateInvalidEncoding_throwsException()
       throws UnsupportedEncodingTypeException {
 
-    EncodingTypeToSerializationTypeTranslator translator =
-        new EncodingTypeToSerializationTypeTranslator();
+    EncodingTypeTranslator translator =
+        new EncodingTypeTranslator();
     translator.getSerializationTypeForEncodingType(BasicTypes.EncodingType.INVALID);
   }
 
   @Test
   public void testAllEncodingTypeTranslations() {
-    EncodingTypeToSerializationTypeTranslator translator =
-        new EncodingTypeToSerializationTypeTranslator();
+    EncodingTypeTranslator translator =
+        new EncodingTypeTranslator();
     for (BasicTypes.EncodingType encodingType : BasicTypes.EncodingType.values()) {
       if (!(encodingType.equals(BasicTypes.EncodingType.UNRECOGNIZED)
           || encodingType.equals(BasicTypes.EncodingType.INVALID))) {

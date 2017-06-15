@@ -18,18 +18,14 @@ package org.apache.geode.client.protocol;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.ByteString;
-
 import org.apache.geode.protocol.operations.OperationHandler;
 //import org.apache.geode.protocol.operations.ProtobufRequestOperationParser;
+import org.apache.geode.protocol.operations.ProtobufRequestOperationParser;
 import org.apache.geode.protocol.operations.registry.OperationsHandlerRegistry;
 import org.apache.geode.protocol.operations.registry.exception.OperationHandlerNotRegisteredException;
-import org.apache.geode.protocol.protobuf.BasicTypes;
 import org.apache.geode.protocol.protobuf.ClientProtocol;
 import org.apache.geode.protocol.protobuf.RegionAPI;
-import org.apache.geode.serialization.SerializationType;
-import org.apache.geode.serialization.TypeCodec;
-import org.apache.geode.serialization.registry.SerializationCodecRegistry;
+import org.apache.geode.serialization.SerializationService;
 import org.apache.geode.serialization.registry.exception.CodecNotRegisteredForTypeException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,68 +35,40 @@ public class OpsProcessorTest {
   public void testOpsProcessor() throws CodecNotRegisteredForTypeException {
     OperationsHandlerRegistry opsHandlerRegistry = mock(OperationsHandlerRegistry.class);
     OperationHandler operationHandlerStub = mock(OperationHandler.class);
-    SerializationCodecRegistry serializationCodecRegistry = mock(SerializationCodecRegistry.class);
+    SerializationService serializationService = mock(SerializationService.class);
 
-    when(serializationCodecRegistry.getCodecForType(SerializationType.STRING))
-        .thenReturn(new TypeCodec<String>() {
-          @Override
-          public String decode(byte[] incoming) {
-            return new String(incoming);
-          }
-
-          @Override
-          public byte[] encode(String incoming) {
-            return incoming.getBytes();
-          }
-
-          @Override
-          public SerializationType getSerializationType() {
-            return null;
-          }
-        });
+//    when(serializationService.encode(BasicTypes.EncodingType.STRING,"10"))
+//        .thenReturn("10".getBytes(Charset.forName("UTF-8")));
 
     ClientProtocol.Request messageRequest = ClientProtocol.Request.newBuilder()
         .setGetRequest(RegionAPI.GetRequest.newBuilder()).build();
-    RegionAPI.GetResponse expectedResponse = getGetResponse(serializationCodecRegistry);
+    RegionAPI.GetResponse expectedResponse = RegionAPI.GetResponse.newBuilder().build();
     try {
       when(opsHandlerRegistry.getOperationHandlerForOperationId(2))
           .thenReturn(operationHandlerStub);
     } catch (OperationHandlerNotRegisteredException e) {
       e.printStackTrace();
     }
-//    when(operationHandlerStub.process(serializationCodecRegistry,
-//        ProtobufRequestOperationParser.getRequestForOperationTypeID(messageRequest)))
-//            .thenReturn(expectedResponse);
+    when(operationHandlerStub.process(serializationService,
+        ProtobufRequestOperationParser.getRequestForOperationTypeID(messageRequest)))
+            .thenReturn(expectedResponse);
 
 
 
-    OpsProcessor processor = new OpsProcessor(opsHandlerRegistry, serializationCodecRegistry);
+    OpsProcessor processor = new OpsProcessor(opsHandlerRegistry, serializationService);
     ClientProtocol.Response response = processor.process(messageRequest);
     Assert.assertEquals(expectedResponse, response.getGetResponse());
 
   }
 
-  private RegionAPI.GetResponse getGetResponse(SerializationCodecRegistry serializationCodecRegistry)
-      throws CodecNotRegisteredForTypeException {
-    RegionAPI.GetResponse.Builder getResponseBuilder = RegionAPI.GetResponse.newBuilder();
-    BasicTypes.EncodedValue.Builder encodedValueBuilder = BasicTypes.EncodedValue.newBuilder();
-    TypeCodec typeCodec =
-        serializationCodecRegistry.getCodecForType(SerializationType.STRING);
-    byte[] serializedValue = typeCodec.encode("10");
-    encodedValueBuilder.setValue(ByteString.copyFrom(serializedValue));
-    encodedValueBuilder.setEncodingType(BasicTypes.EncodingType.STRING);
-    getResponseBuilder.setResult(encodedValueBuilder);
-    return getResponseBuilder.build();
-  }
-
   private class OpsProcessor {
     private final OperationsHandlerRegistry opsHandlerRegistry;
-    private final SerializationCodecRegistry serializationCodecRegistry;
+    private final SerializationService serializationService;
 
     public OpsProcessor(OperationsHandlerRegistry opsHandlerRegistry,
-                        SerializationCodecRegistry serializationCodecRegistry) {
+                        SerializationService serializationService) {
       this.opsHandlerRegistry = opsHandlerRegistry;
-      this.serializationCodecRegistry = serializationCodecRegistry;
+      this.serializationService = serializationService;
     }
 
     public ClientProtocol.Response process(ClientProtocol.Request request) {
@@ -111,11 +79,10 @@ public class OpsProcessorTest {
         e.printStackTrace();
       }
 
-//      Object responseMessage = opsHandler.process(serializationCodecRegistry,
-//          ProtobufRequestOperationParser.getRequestForOperationTypeID(request));
-//      return ClientProtocol.Response.newBuilder()
-//          .setGetResponse((RegionAPI.GetResponse) responseMessage).build();
-      return null;
+      Object responseMessage = opsHandler.process(serializationService,
+          ProtobufRequestOperationParser.getRequestForOperationTypeID(request));
+      return ClientProtocol.Response.newBuilder()
+          .setGetResponse((RegionAPI.GetResponse) responseMessage).build();
     }
   }
 }

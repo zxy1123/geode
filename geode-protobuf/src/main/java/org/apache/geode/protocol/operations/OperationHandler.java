@@ -14,6 +14,9 @@
  */
 package org.apache.geode.protocol.operations;
 
-public interface OperationHandler<T> {
-  Object process(Object encodingHandlerRegistry, T request);
+import org.apache.geode.serialization.SerializationService;
+
+public interface OperationHandler<Req, Resp> {
+  Resp process(SerializationService serializationService, Req request);
+  int getOperationCode();
 }
