@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.client.Pool;
+import org.apache.geode.distributed.internal.membership.InternalDistributedMember;
 import org.apache.geode.internal.cache.EventID;
 import org.apache.geode.internal.cache.LocalRegion;
 import org.apache.geode.test.dunit.Host;
@@ -96,31 +97,33 @@ public class ClientServerMiscBCDUnitTest extends ClientServerMiscDUnitTest {
     });
   }
 
-  // @Test
-  @Ignore
-  public void testDistributedMemberBytesWithCurrentServerAndOldClient() throws Exception {
-    // Start current version server
-    int serverPort = initServerCache(true);
+   @Test
+//  @Ignore
+   public void testDistributedMemberBytesWithCurrentServerAndOldClient() throws Exception {
+     // Start current version server
+     int serverPort = initServerCache(true);
 
-    // Start old version client and do puts
-    VM client = Host.getHost(0).getVM(testVersion, 1);
-    String hostname = NetworkUtils.getServerHostName(Host.getHost(0));
-    client.invoke("create client cache", () -> {
-      createClientCache(hostname, serverPort);
-      populateCache();
-    });
+     // Start old version client and do puts
+     VM client = Host.getHost(0).getVM(testVersion, 1);
+     String hostname = NetworkUtils.getServerHostName(Host.getHost(0));
+     client.invoke("create client cache", () -> {
+       createClientCache(hostname, serverPort);
+       populateCache();
+     });
 
-    // Get client member id byte array on client
-    byte[] clientMembershipIdBytesOnClient =
-        client.invoke(() -> getClientMembershipIdBytesOnClient());
+     // Get client member id byte array on client
+     byte[] clientMembershipIdBytesOnClient =
+         client.invoke(() -> getClientMembershipIdBytesOnClient());
 
-    // Get client member id byte array on server
-    byte[] clientMembershipIdBytesOnServer =
-        server1.invoke(() -> getClientMembershipIdBytesOnServer());
+     // Get client member id byte array on server
+     byte[] clientMembershipIdBytesOnServer =
+         server1.invoke(() -> getClientMembershipIdBytesOnServer());
 
-    // Verify member id bytes on client and server are equal
-    assertTrue(Arrays.equals(clientMembershipIdBytesOnClient, clientMembershipIdBytesOnServer));
-  }
+     // Verify member id bytes on client and server are equal
+     String complaint = "size on client=" + clientMembershipIdBytesOnClient.length
+         + "; size on server=" + clientMembershipIdBytesOnServer.length;
+     assertTrue(complaint, Arrays.equals(clientMembershipIdBytesOnClient, clientMembershipIdBytesOnServer));
+   }
 
   private byte[] getClientMembershipIdBytesOnClient() {
     return EventID.getMembershipId(getCache().getDistributedSystem());

@@ -388,18 +388,76 @@ public class EventID implements DataSerializableFixedID, Serializable, Externali
       return false;
     if (threadID != other.threadID)
       return false;
-    if (!Arrays.equals(membershipID, other.membershipID))
+    return equalMembershipIds(membershipID, other.membershipID);
+  }
+
+  static final int NULL_90_MEMBER_DATA_LENGTH = 17;
+
+  /**
+   * GEODE-3072 - v1.0.0 memberIDs in EventIDs may have 17 trailing bytes
+   * that should be ignored
+   */
+  static public boolean equalMembershipIds(byte[] m1, byte[] m2) {
+//    if (true) {
+//      return Arrays.equals(m1, m2);
+//    }
+    int sizeDifference = Math.abs(m1.length-m2.length);
+    if (sizeDifference != 0 && sizeDifference != NULL_90_MEMBER_DATA_LENGTH) {
       return false;
+    }
+    for (int i=0; i<m1.length; i++) {
+      if (i >= m2.length) {
+        return nullUUIDCheck(m1, i);
+      }
+      if (m1[i] != m2[i]) {
+        return false;
+      }
+    }
+    if (m1.length != m2.length) {
+      return nullUUIDCheck(m2, m1.length);
+    }
+    assert m1.length == m2.length;
     return true;
   }
 
+  /**
+   * GEODE-3072 - v1.0.0 memberIDs in EventIDs may have 17 trailing bytes
+   * that should be ignored
+   */
+  static private boolean nullUUIDCheck(byte[] memberID, int position) {
+    if (memberID.length - position != NULL_90_MEMBER_DATA_LENGTH) {
+      return false;
+    }
+    for (int i=position; i<memberID.length; i++) {
+      if (memberID[i] != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
 
-  @Override
+  /**
+   * GEODE-3072 - v1.0.0 memberIDs in EventIDs may have 17 trailing bytes
+   * that should be ignored
+   */
+  static public int hashCodeMemberId(byte[] memberID) {
+//    if (true) {
+//      return Arrays.hashCode(memberID);
+//    }
+    if (memberID.length < NULL_90_MEMBER_DATA_LENGTH + 19 // 19 is minimum serialized length of an InternalDistributedMember
+        || !nullUUIDCheck(memberID, memberID.length-NULL_90_MEMBER_DATA_LENGTH)) {
+      return Arrays.hashCode(memberID);
+    }
+    byte[] newID = new byte[memberID.length-NULL_90_MEMBER_DATA_LENGTH];
+    System.arraycopy(memberID, 0, newID, 0, newID.length);
+    return Arrays.hashCode(newID);
+  }
+
   public int hashCode() {
     if (hashCode == 0) {
       final int prime = 31;
       int result = 1;
-      result = prime * result + Arrays.hashCode(membershipID);
+      result = prime * result + hashCodeMemberId(membershipID);
       result = prime * result + (int) (sequenceID ^ (sequenceID >>> 32));
       result = prime * result + (int) (threadID ^ (threadID >>> 32));
       hashCode = result;
@@ -438,18 +496,14 @@ public class EventID implements DataSerializableFixedID, Serializable, Externali
   public String cheapToString() {
     final StringBuffer buf = new StringBuffer();
     buf.append(getShortClassName());
-    if (LOG_ID_BYTES) {
+//    if (LOG_ID_BYTES) {
       buf.append("[membershipID=");
-      for (int i = 0; i < membershipID.length; i++) {
-        buf.append(membershipID[i]);
-        if (i < membershipID.length - 1) {
-          buf.append(',');
-        }
-      }
+    appendByteArray(buf, membershipID);
+    buf.append(" (").append(membershipID.length).append(" bytes, full=").append(getDistributedMember()).append(")");
       buf.append(";");
-    } else {
-      buf.append("[");
-    }
+//    } else {
+//      buf.append("[");
+//    }
     // buf.append(this.membershipID.toString());
     buf.append("threadID=");
     buf.append(ThreadIdentifier.toDisplayString(threadID));
@@ -466,6 +520,16 @@ public class EventID implements DataSerializableFixedID, Serializable, Externali
     }
     buf.append("]");
     return buf.toString();
+  }
+
+
+  public static void appendByteArray(StringBuffer buf, byte[] membershipID) {
+    for (int i = 0; i < membershipID.length; i++) {
+      buf.append(membershipID[i]);
+      if (i < membershipID.length - 1) {
+        buf.append(',');
+      }
+    }
   }
 
   private static byte[] initializeAndGetDSEventIdentity(DistributedSystem sys) {

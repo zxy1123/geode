@@ -39,22 +39,26 @@ public class PeriodicAck extends BaseCommand {
       final SecurityService securityService, long start)
       throws IOException, ClassNotFoundException {
     serverConnection.setAsTrue(REQUIRES_RESPONSE);
-    if (logger.isDebugEnabled()) {
-      logger.debug("{}: Received periodic ack request ({} bytes) from {}",
+//    if (logger.isDebugEnabled()) {
+      logger.info("{}: Received periodic ack request ({} bytes) from {}",
           serverConnection.getName(), clientMessage.getPayloadLength(),
           serverConnection.getSocketString());
-    }
+//    }
     try {
       int numEvents = clientMessage.getNumberOfParts();
       boolean success = false;
       CacheClientNotifier ccn = serverConnection.getAcceptor().getCacheClientNotifier();
       CacheClientProxy proxy = ccn.getClientProxy(serverConnection.getProxyID());
       if (proxy != null) {
+//        try {
+//          Thread.sleep(5000);
+//        } catch (InterruptedException e) {}
         proxy.getHARegionQueue().createAckedEventsMap();
         for (int i = 0; i < numEvents; i++) {
           Part eventIdPart = clientMessage.getPart(i);
           eventIdPart.setVersion(serverConnection.getClientVersion());
           EventID eid = (EventID) eventIdPart.getObject();
+//          logger.info("For {} dispatching ack event {}", serverConnection.getProxyID().getDistributedMember(), eid);
           success = ccn.processDispatchedMessage(serverConnection.getProxyID(), eid);
           if (!success)
             break;
