@@ -232,7 +232,7 @@ public class ClusterConfigurationLoader {
       if (StringUtils.isNotBlank(ipaddress)) {
         locatorInetAddress = InetAddress.getByName(ipaddress);
       } else {
-        locatorInetAddress = dlId.getHost();
+        locatorInetAddress = dlId.getHost().getAddress();
       }
 
       int port = dlId.getPort();
