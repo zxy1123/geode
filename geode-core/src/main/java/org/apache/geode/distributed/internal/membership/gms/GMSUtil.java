@@ -24,11 +24,12 @@ import java.util.StringTokenizer;
 import org.apache.logging.log4j.Logger;
 
 import org.apache.geode.GemFireConfigException;
+import org.apache.geode.distributed.internal.membership.gms.membership.HostAddress;
 import org.apache.geode.internal.net.SocketCreator;
 
 public class GMSUtil {
 
-  public static List<InetSocketAddress> parseLocators(String locatorsString, String bindAddress) {
+  public static List<HostAddress> parseLocators(String locatorsString, String bindAddress) {
     InetAddress addr = null;
 
     try {
@@ -44,9 +45,8 @@ public class GMSUtil {
   }
 
 
-  public static List<InetSocketAddress> parseLocators(String locatorsString,
-      InetAddress bindAddress) {
-    List<InetSocketAddress> result = new ArrayList<>(2);
+  public static List<HostAddress> parseLocators(String locatorsString, InetAddress bindAddress) {
+    List<HostAddress> result = new ArrayList<>(2);
     String host;
     int port;
     boolean checkLoopback = (bindAddress != null);
@@ -82,7 +82,8 @@ public class GMSUtil {
                     + ").  On Unix this usually means that /etc/hosts is misconfigured.");
           }
         }
-        result.add(isa);
+        HostAddress la = new HostAddress(isa, host);
+        result.add(la);
       } catch (NumberFormatException e) {
         // this shouldn't happen because the config has already been parsed and
         // validated
