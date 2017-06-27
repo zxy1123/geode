@@ -49,7 +49,6 @@ import org.apache.geode.cache.client.internal.locator.ServerLocationRequest;
 import org.apache.geode.cache.client.internal.locator.ServerLocationResponse;
 import org.apache.geode.distributed.internal.DistributionConfig;
 import org.apache.geode.distributed.internal.ServerLocation;
-import org.apache.geode.distributed.internal.membership.gms.membership.HostAddress;
 import org.apache.geode.distributed.internal.tcpserver.TcpClient;
 import org.apache.geode.internal.cache.tier.sockets.ClientProxyMembershipID;
 import org.apache.geode.internal.i18n.LocalizedStrings;
@@ -70,11 +69,9 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
   private TcpClient tcpClient;
 
   protected static final LocatorListRequest LOCATOR_LIST_REQUEST = new LocatorListRequest();
-  private static final Comparator<HostAddress> SOCKET_ADDRESS_COMPARATOR =
-      new Comparator<HostAddress>() {
-        public int compare(HostAddress la1, HostAddress la2) {
-          InetSocketAddress o1 = la1.getSocketInetAddress();
-          InetSocketAddress o2 = la2.getSocketInetAddress();
+  private static final Comparator<InetSocketAddress> SOCKET_ADDRESS_COMPARATOR =
+      new Comparator<InetSocketAddress>() {
+        public int compare(InetSocketAddress o1, InetSocketAddress o2) {
           // shouldn't happen, but if it does we'll say they're the same.
           if (o1.getAddress() == null || o2.getAddress() == null) {
             return 0;
@@ -90,7 +87,7 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
             return o1.getPort() - o2.getPort();
         }
       };
-  protected final List<HostAddress> initialLocators;
+  protected final List<InetSocketAddress> initialLocators;
   private final String serverGroup;
   private AtomicReference<LocatorList> locators = new AtomicReference<LocatorList>();
   private AtomicReference<LocatorList> onlineLocators = new AtomicReference<LocatorList>();
@@ -111,18 +108,12 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
    * @param serverGroup
    * @param handshakeTimeout
    */
-  public AutoConnectionSourceImpl(List<InetSocketAddress> locators, List<HostAddress> contacts,
-      String serverGroup, int handshakeTimeout) {
-    /*
-     * if (contacts == null || contacts.size() == 0) { contacts = new ArrayList<>(); for
-     * (InetSocketAddress l : locators) { LocatorAddress la = new LocatorAddress(l,
-     * l.getHostName()); contacts.add(la); } }
-     */
-    ArrayList<HostAddress> tmpContacts =
-        new ArrayList<HostAddress>(Collections.unmodifiableList(contacts));
+  public AutoConnectionSourceImpl(List<InetSocketAddress> contacts, String serverGroup,
+      int handshakeTimeout) {
+    ArrayList<InetSocketAddress> tmpContacts = new ArrayList<InetSocketAddress>(contacts);
     this.locators.set(new LocatorList(tmpContacts));
     this.onlineLocators.set(new LocatorList(Collections.emptyList()));
-    this.initialLocators = Collections.unmodifiableList(this.locators.get().getLocatorAddresses());
+    this.initialLocators = Collections.unmodifiableList(tmpContacts);
     this.connectionTimeout = handshakeTimeout;
     this.serverGroup = serverGroup;
     this.tcpClient = new TcpClient();
@@ -211,21 +202,20 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
   }
 
 
-  private ServerLocationResponse queryOneLocator(HostAddress locator,
+  private ServerLocationResponse queryOneLocator(InetSocketAddress locator,
       ServerLocationRequest request) {
     Object returnObj = null;
     try {
       pool.getStats().incLocatorRequests();
-      returnObj = tcpClient.requestToServer(locator.getSocketInetAddressC(), request,
-          connectionTimeout, true);
+      returnObj = tcpClient.requestToServer(locator, request, connectionTimeout, true);
       ServerLocationResponse response = (ServerLocationResponse) returnObj;
       pool.getStats().incLocatorResponses();
       if (response != null) {
-        reportLiveLocator(locator.getSocketInetAddressC());
+        reportLiveLocator(locator);
       }
       return response;
     } catch (IOException ioe) {
-      reportDeadLocator(locator.getSocketInetAddressC(), ioe);
+      reportDeadLocator(locator, ioe);
       updateLocatorInLocatorList(locator);
       return null;
     } catch (ClassNotFoundException e) {
@@ -238,7 +228,7 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
       if (logger.isDebugEnabled()) {
         logger.debug("Received odd response object from the locator: {}", returnObj);
       }
-      reportDeadLocator(locator.getSocketInetAddressC(), e);
+      reportDeadLocator(locator, e);
       return null;
     }
   }
@@ -250,20 +240,19 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
    * 
    * @param locator
    */
-  protected void updateLocatorInLocatorList(HostAddress locator) {
-    if (locator.getSocketInetAddressC().getHostName() != null && !locator.isIpString()) {
+  protected void updateLocatorInLocatorList(InetSocketAddress locator) {
+    if (locator.getHostName() != null) {
       LocatorList locatorList = locators.get();
-      List<HostAddress> newLocatorsList = new ArrayList<>();
+      List<InetSocketAddress> newLocatorsList = new ArrayList<>();
 
-      for (HostAddress tloc : locatorList.getLocatorAddresses()) {
+      for (InetSocketAddress tloc : locatorList.getLocators()) {
         if (tloc.equals(locator)) {
           /**
            * This call doesn't throw UnknownHostException;
            */
-          InetSocketAddress changeLoc = new InetSocketAddress(locator.getHostName(),
-              locator.getSocketInetAddressC().getPort());
-          HostAddress la = new HostAddress(changeLoc, locator.getHostName());
-          newLocatorsList.add(la);
+          InetSocketAddress changeLoc =
+              new InetSocketAddress(locator.getHostName(), locator.getPort());
+          newLocatorsList.add(changeLoc);
           logger.info("updateLocatorInLocatorList changing locator list: loc form: " + locator
               + " ,loc to: " + changeLoc);
         } else {
@@ -280,7 +269,7 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
   }
 
   protected List<InetSocketAddress> getCurrentLocators() {
-    return locators.get().getLocators();
+    return locators.get().locators;
   }
 
   protected ServerLocationResponse queryLocators(ServerLocationRequest request) {
@@ -289,13 +278,13 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
 
     final boolean isDebugEnabled = logger.isDebugEnabled();
     do {
-      HostAddress la = (HostAddress) controllerItr.next();
+      InetSocketAddress locator = (InetSocketAddress) controllerItr.next();
       if (isDebugEnabled) {
-        logger.debug("Sending query to locator {}: {}", la, request);
+        logger.debug("Sending query to locator {}: {}", locator, request);
       }
-      response = queryOneLocator(la, request);
+      response = queryOneLocator(locator, request);
       if (isDebugEnabled) {
-        logger.debug("Received query response from locator {}: {}", la, response);
+        logger.debug("Received query response from locator {}: {}", locator, response);
       }
     } while (controllerItr.hasNext() && (response == null || !response.hasResult()));
 
@@ -312,31 +301,28 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
     isBalanced = response.isBalanced();
     List<ServerLocation> locatorResponse = response.getLocators();
 
-    List<HostAddress> newLocatorAddresses = new ArrayList<HostAddress>(locatorResponse.size());
-    List<HostAddress> newOnlineLocators = new ArrayList<>(locatorResponse.size());
+    List<InetSocketAddress> newLocators = new ArrayList<InetSocketAddress>(locatorResponse.size());
+    List<InetSocketAddress> newOnlineLocators =
+        new ArrayList<InetSocketAddress>(locatorResponse.size());
 
-    Set<HostAddress> badLocators = new HashSet<>(initialLocators);
+    Set<InetSocketAddress> badLocators = new HashSet<InetSocketAddress>(initialLocators);
     for (Iterator<ServerLocation> itr = locatorResponse.iterator(); itr.hasNext();) {
       ServerLocation locator = itr.next();
       InetSocketAddress address = new InetSocketAddress(locator.getHostName(), locator.getPort());
-      HostAddress la = new HostAddress(address, locator.getHostName());
-      newLocatorAddresses.add(la);
-      newOnlineLocators.add(la);
-      badLocators.remove(la);
+      newLocators.add(address);
+      newOnlineLocators.add(address);
+      badLocators.remove(address);
     }
 
-    addbadLocators(newLocatorAddresses, badLocators);
-
-    LocatorList newLocatorList = new LocatorList(newLocatorAddresses);
+    addbadLocators(newLocators, badLocators);
 
     if (logger.isInfoEnabled()) {
-      List<InetSocketAddress> newLocators = newLocatorList.getLocators();
       LocatorList oldLocators = (LocatorList) locators.get();
       ArrayList<InetSocketAddress> removedLocators =
           new ArrayList<InetSocketAddress>(oldLocators.getLocators());
       removedLocators.removeAll(newLocators);
 
-      ArrayList<InetSocketAddress> addedLocators = new ArrayList<>(newLocators);
+      ArrayList<InetSocketAddress> addedLocators = new ArrayList<InetSocketAddress>(newLocators);
       addedLocators.removeAll(oldLocators.getLocators());
       if (!addedLocators.isEmpty()) {
         locatorCallback.locatorsDiscovered(Collections.unmodifiableList(addedLocators));
@@ -351,33 +337,34 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
             removedLocators));
       }
     }
-
-
+    LocatorList newLocatorList = new LocatorList(newLocators);
 
     locators.set(newLocatorList);
     onlineLocators.set(new LocatorList(newOnlineLocators));
-    pool.getStats().setLocatorCount(newLocatorAddresses.size());
+    pool.getStats().setLocatorCount(newLocators.size());
   }
 
   /**
    * This method will add bad locator only when locator with hostname and port is not already in
    * list.
    */
-  protected void addbadLocators(List<HostAddress> newLocators, Set<HostAddress> badLocators) {
-    for (HostAddress badloc : badLocators) {
+  protected void addbadLocators(List<InetSocketAddress> newLocators,
+      Set<InetSocketAddress> badLocators) {
+    for (InetSocketAddress badLoc : badLocators) {
       boolean addIt = true;
-      for (HostAddress goodloc : newLocators) {
-        boolean isSameHost = badloc.getHostName().equals(goodloc.getHostName());
-        if (isSameHost && badloc.getPort() == goodloc.getPort()) {
-          // ip has been changed so don't add this in current
-          // list
-          addIt = false;
-          break;
-
+      for (InetSocketAddress goodloc : newLocators) {
+        boolean isSameHost = badLoc.getHostName().equals(goodloc.getHostName());
+        if (isSameHost) {
+          boolean isSamePort = badLoc.getPort() == goodloc.getPort();
+          if (isSamePort) {
+            // ip has been changed so don't add this in current list
+            addIt = false;
+            break;
+          }
         }
       }
       if (addIt) {
-        newLocators.add(badloc);
+        newLocators.add(badLoc);
       }
     }
   }
@@ -436,23 +423,15 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
    * A list of locators, which remembers the last known good locator.
    */
   private static class LocatorList {
-    protected final List<HostAddress> locators;
+    protected final List<InetSocketAddress> locators;
     protected AtomicInteger currentLocatorIndex = new AtomicInteger();
 
-    public LocatorList(List<HostAddress> locators) {
+    public LocatorList(List<InetSocketAddress> locators) {
       Collections.sort(locators, SOCKET_ADDRESS_COMPARATOR);
       this.locators = Collections.unmodifiableList(locators);
     }
 
-    public List<InetSocketAddress> getLocators() {
-      List<InetSocketAddress> locs = new ArrayList<>();
-      for (HostAddress la : locators) {
-        locs.add(la.getSocketInetAddress());
-      }
-      return locs;
-    }
-
-    public List<HostAddress> getLocatorAddresses() {
+    public Collection<InetSocketAddress> getLocators() {
       return locators;
     }
 
@@ -460,7 +439,7 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
       return locators.size();
     }
 
-    public Iterator<HostAddress> iterator() {
+    public Iterator<InetSocketAddress> iterator() {
       return new LocatorIterator();
     }
 
@@ -475,7 +454,7 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
      * controller.
      * 
      */
-    protected class LocatorIterator implements Iterator<HostAddress> {
+    protected class LocatorIterator implements Iterator<InetSocketAddress> {
       private int startLocator = currentLocatorIndex.get();
       private int locatorNum = 0;
 
@@ -483,12 +462,12 @@ public class AutoConnectionSourceImpl implements ConnectionSource {
         return locatorNum < locators.size();
       }
 
-      public HostAddress next() {
+      public InetSocketAddress next() {
         if (!hasNext()) {
           return null;
         } else {
           int index = (locatorNum + startLocator) % locators.size();
-          HostAddress nextLocator = locators.get(index);
+          InetSocketAddress nextLocator = locators.get(index);
           currentLocatorIndex.set(index);
           locatorNum++;
           return nextLocator;

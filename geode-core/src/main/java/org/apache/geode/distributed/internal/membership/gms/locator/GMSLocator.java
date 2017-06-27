@@ -51,7 +51,6 @@ import org.apache.geode.distributed.internal.membership.gms.GMSUtil;
 import org.apache.geode.distributed.internal.membership.gms.NetLocator;
 import org.apache.geode.distributed.internal.membership.gms.Services;
 import org.apache.geode.distributed.internal.membership.gms.interfaces.Locator;
-import org.apache.geode.distributed.internal.membership.gms.membership.HostAddress;
 import org.apache.geode.distributed.internal.membership.gms.mgr.GMSMembershipManager;
 import org.apache.geode.distributed.internal.tcpserver.TcpClient;
 import org.apache.geode.distributed.internal.tcpserver.TcpServer;
@@ -71,7 +70,7 @@ public class GMSLocator implements Locator, NetLocator {
   private final boolean networkPartitionDetectionEnabled;
   private final String securityUDPDHAlgo;
   private final String locatorString;
-  private final List<HostAddress> locators;
+  private final List<InetSocketAddress> locators;
   private Services services;
   private final LocatorStats stats;
   private InternalDistributedMember localAddress;
@@ -103,7 +102,7 @@ public class GMSLocator implements Locator, NetLocator {
     this.securityUDPDHAlgo = securityUDPDHAlgo;
     this.locatorString = locatorString;
     if (this.locatorString == null || this.locatorString.length() == 0) {
-      this.locators = new ArrayList<HostAddress>(0);
+      this.locators = new ArrayList<>(0);
     } else {
       this.locators = GMSUtil.parseLocators(locatorString, bindAddress);
     }
@@ -357,8 +356,8 @@ public class GMSLocator implements Locator, NetLocator {
   }
 
   private boolean recoverFromOthers() {
-    for (HostAddress other : this.locators) {
-      if (recover(other.getSocketInetAddress())) {
+    for (InetSocketAddress other : this.locators) {
+      if (recover(other)) {
         logger.info("Peer locator recovered state from " + other);
         return true;
       }

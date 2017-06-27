@@ -603,7 +603,6 @@ public class WanAutoDiscoveryDUnitTest extends WANTestBase {
     testRemoteLocators(remoteLocators, true, 1);
   }
 
-  // pool has been created even though locator address is not valid
   @Test
   public void testInvalidHostRemoteLocators() {
     IgnoredException ie = IgnoredException
@@ -611,8 +610,7 @@ public class WanAutoDiscoveryDUnitTest extends WANTestBase {
     try {
       Set<String> remoteLocators = new HashSet();
       addUnknownHost(remoteLocators);
-      // now we don't validata address upfront
-      testRemoteLocators(remoteLocators, true, 1);
+      testRemoteLocators(remoteLocators, false, 0);
     } finally {
       ie.remove();
     }
@@ -623,8 +621,7 @@ public class WanAutoDiscoveryDUnitTest extends WANTestBase {
     Set<String> remoteLocators = new HashSet();
     remoteLocators.add("localhost[12345]");
     addUnknownHost(remoteLocators);
-    // now we add the locator to pool, because we don't validate locator address
-    testRemoteLocators(remoteLocators, true, 2);
+    testRemoteLocators(remoteLocators, true, 1);
   }
 
   private void addUnknownHost(Set<String> remoteLocators) {

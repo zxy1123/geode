@@ -184,7 +184,7 @@ public class GMSJoinLeave implements JoinLeave, MessageHandler {
    */
   private NetView lastConflictingView;
 
-  private List<HostAddress> locators;
+  private List<InetSocketAddress> locators;
 
   /**
    * a list of join/leave/crashes
@@ -1064,9 +1064,8 @@ public class GMSJoinLeave implements JoinLeave, MessageHandler {
     state.locatorsContacted = 0;
 
     do {
-      for (HostAddress laddr : locators) {
+      for (InetSocketAddress addr : locators) {
         try {
-          InetSocketAddress addr = laddr.getSocketInetAddress();
           Object o = tcpClientWrapper.sendCoordinatorFindRequest(addr, request, connectTimeout);
           FindCoordinatorResponse response =
               (o instanceof FindCoordinatorResponse) ? (FindCoordinatorResponse) o : null;
@@ -1102,7 +1101,6 @@ public class GMSJoinLeave implements JoinLeave, MessageHandler {
             }
           }
         } catch (IOException | ClassNotFoundException problem) {
-          logger.debug("EOFException IOException ", problem);
         }
       }
     } while (!anyResponses && System.currentTimeMillis() < giveUpTime);
@@ -1155,7 +1153,7 @@ public class GMSJoinLeave implements JoinLeave, MessageHandler {
         FindCoordinatorRequest request, int connectTimeout)
         throws ClassNotFoundException, IOException {
       TcpClient client = new TcpClient();
-      return client.requestToServer(addr, request, connectTimeout, true);
+      return client.requestToServer(addr.getAddress(), addr.getPort(), request, connectTimeout);
     }
   }
 

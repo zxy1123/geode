@@ -158,7 +158,7 @@ public class TcpClient {
     if (addr == null) {
       ipAddr = new InetSocketAddress(port);
     } else {
-      ipAddr = new InetSocketAddress(addr, port); // fix for bug 30810 bruce??
+      ipAddr = new InetSocketAddress(addr.getHostName(), port); // fix for bug 30810
     }
     return requestToServer(ipAddr, request, timeout, replyExpected);
   }
@@ -232,7 +232,6 @@ public class TcpClient {
           logger.debug("received response: {}", response);
           return response;
         } catch (EOFException ex) {
-          logger.debug("requestToServer EOFException ", ex);
           EOFException eof = new EOFException("Locator at " + ipAddr
               + " did not respond. This is normal if the locator was shutdown. If it wasn't check its log for exceptions.");
           eof.initCause(ex);
