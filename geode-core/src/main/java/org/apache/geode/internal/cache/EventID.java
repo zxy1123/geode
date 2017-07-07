@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.geode.internal.InternalDataSerializer;
 import org.apache.logging.log4j.Logger;
 
 import org.apache.geode.DataSerializer;
@@ -339,21 +338,7 @@ public class EventID implements DataSerializableFixedID, Serializable, Externali
   }
 
   public void toData(DataOutput dop) throws IOException {
-    Version version = InternalDataSerializer.getVersionForDataStream(dop);
-    // if we are sending to old clients we need to reserialize the ID
-    // using the client's version to ensure it gets the proper on-wire form
-    // of the identifier
-    // See GEODE-3072
-    if (version.compareTo(Version.GEODE_110) < 0) {
-      InternalDistributedMember member = getDistributedMember(version);
-      // reserialize with the client's version so that we write the UUID
-      // bytes
-      HeapDataOutputStream hdos = new HeapDataOutputStream(version);
-      member.writeEssentialData(hdos);
-      DataSerializer.writeByteArray(hdos.toByteArray(), dop);
-    } else {
-      DataSerializer.writeByteArray(this.membershipID, dop);
-    }
+    DataSerializer.writeByteArray(this.membershipID, dop);
     DataSerializer.writeByteArray(getOptimizedByteArrayForEventID(this.threadID, this.sequenceID),
         dop);
     dop.writeInt(this.bucketID);
