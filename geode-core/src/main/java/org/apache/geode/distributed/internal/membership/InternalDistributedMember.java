@@ -847,7 +847,8 @@ public class InternalDistributedMember implements DistributedMember, Externaliza
     netMbr = MemberFactory.newNetMember(inetAddr, port, sbEnabled, elCoord, version,
         new MemberAttributes(dcPort, vmPid, vmKind, vmViewId, name, groups,
             durableClientAttributes));
-    if (version >= Version.GFE_90.ordinal() && targetHasUUIDBytes(InternalDataSerializer.getVersionForDataStream(in))) {
+    if (version >= Version.GFE_90.ordinal()
+        && targetHasUUIDBytes(InternalDataSerializer.getVersionForDataStream(in))) {
       try {
         netMbr.readAdditionalData(in);
       } catch (java.io.EOFException e) {
@@ -859,7 +860,8 @@ public class InternalDistributedMember implements DistributedMember, Externaliza
   }
 
   boolean targetHasUUIDBytes(Version targetVersion) {
-    return targetVersion.ordinal() < Version.GEODE_110.ordinal() || targetVersion.ordinal() >= Version.GEODE_120.ordinal();
+    return targetVersion.ordinal() < Version.GEODE_110.ordinal()
+        || targetVersion.ordinal() >= Version.GEODE_120.ordinal();
   }
 
   public int getDSFID() {
