@@ -847,7 +847,7 @@ public class InternalDistributedMember implements DistributedMember, Externaliza
     netMbr = MemberFactory.newNetMember(inetAddr, port, sbEnabled, elCoord, version,
         new MemberAttributes(dcPort, vmPid, vmKind, vmViewId, name, groups,
             durableClientAttributes));
-    if (version >= Version.GFE_90.ordinal()) {
+    if (version >= Version.GFE_90.ordinal() && targetHasUUIDBytes(InternalDataSerializer.getVersionForDataStream(in))) {
       try {
         netMbr.readAdditionalData(in);
       } catch (java.io.EOFException e) {
@@ -856,6 +856,10 @@ public class InternalDistributedMember implements DistributedMember, Externaliza
     }
 
     Assert.assertTrue(netMbr.getVmKind() > 0);
+  }
+
+  boolean targetHasUUIDBytes(Version targetVersion) {
+    return targetVersion.ordinal() < Version.GEODE_110.ordinal() || targetVersion.ordinal() >= Version.GEODE_120.ordinal();
   }
 
   public int getDSFID() {
@@ -965,7 +969,7 @@ public class InternalDistributedMember implements DistributedMember, Externaliza
     fromDataPre_GFE_9_0_0_0(in);
     // just in case this is just a non-versioned read
     // from a file we ought to check the version
-    if (getNetMember().getVersionOrdinal() >= Version.GFE_90.ordinal()) {
+    if (netMbr.getVersionOrdinal() >= Version.GFE_90.ordinal()) {
       try {
         netMbr.readAdditionalData(in);
       } catch (EOFException e) {
@@ -1101,7 +1105,7 @@ public class InternalDistributedMember implements DistributedMember, Externaliza
     netMbr = MemberFactory.newNetMember(inetAddr, port, sbEnabled, elCoord,
         InternalDataSerializer.getVersionForDataStream(in).ordinal(), attr);
 
-    if (InternalDataSerializer.getVersionForDataStream(in).compareTo(Version.GFE_90) == 0) {
+    if (targetHasUUIDBytes(InternalDataSerializer.getVersionForDataStream(in))) {
       netMbr.readAdditionalData(in);
     }
   }
@@ -1132,7 +1136,7 @@ public class InternalDistributedMember implements DistributedMember, Externaliza
     // write name last to fix bug 45160
     DataSerializer.writeString(netMbr.getName(), out);
 
-    if (InternalDataSerializer.getVersionForDataStream(out).compareTo(Version.GFE_90) == 0) {
+    if (targetHasUUIDBytes(InternalDataSerializer.getVersionForDataStream(out))) {
       netMbr.writeAdditionalData(out);
     }
   }
