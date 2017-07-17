@@ -51,8 +51,7 @@ public class ProtobufOpsProcessorJUnitTest {
     when(operationHandlerStub.process(serializationServiceStub, messageRequest, dummyCache))
         .thenReturn(expectedResponse);
 
-    ProtobufOpsProcessor processor =
-        new ProtobufOpsProcessor(opsHandlerRegistryStub, serializationServiceStub);
+    ProtobufOpsProcessor processor = new ProtobufOpsProcessor(serializationServiceStub);
     ClientProtocol.Response response = processor.process(messageRequest, dummyCache);
     Assert.assertEquals(expectedResponse, response);
   }

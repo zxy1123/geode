@@ -43,7 +43,7 @@ public class MessageUtil {
 
     ClientProtocol.Request request =
         ProtobufRequestUtilities.createPutRequest(requestRegion, entry);
-    return ProtobufUtilities.createProtobufRequest(header, request);
+    return ProtobufUtilities.createProtobufMessage(header, request);
   }
 
   public static ClientProtocol.Message makeGetRequestMessage(
@@ -52,7 +52,7 @@ public class MessageUtil {
       UnsupportedEncodingTypeException, CodecNotRegisteredForTypeException {
     ClientProtocol.Request request = ProtobufRequestUtilities.createGetRequest(requestRegion,
         ProtobufUtilities.createEncodedValue(serializationService, requestKey));
-    return ProtobufUtilities.createProtobufRequest(header, request);
+    return ProtobufUtilities.createProtobufMessage(header, request);
   }
 
   private static ClientProtocol.Request.Builder getRequestBuilder() {

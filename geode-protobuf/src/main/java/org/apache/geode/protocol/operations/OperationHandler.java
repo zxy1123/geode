@@ -15,6 +15,7 @@
 package org.apache.geode.protocol.operations;
 
 import org.apache.geode.cache.Cache;
+import org.apache.geode.protocol.protobuf.ClientProtocol;
 import org.apache.geode.protocol.protobuf.ProtobufOpsProcessor;
 import org.apache.geode.serialization.SerializationService;
 
@@ -31,3 +32,4 @@ public interface OperationHandler<Req, Resp> {
    */
   Resp process(SerializationService serializationService, Req request, Cache cache);
 }
+

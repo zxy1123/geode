@@ -18,6 +18,7 @@ import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.protocol.protobuf.BasicTypes;
 import org.apache.geode.protocol.protobuf.ClientProtocol;
+import org.apache.geode.protocol.protobuf.RegionAPI;
 import org.apache.geode.protocol.protobuf.utilities.ProtobufRequestUtilities;
 import org.apache.geode.protocol.protobuf.utilities.ProtobufUtilities;
 import org.apache.geode.serialization.SerializationService;
@@ -101,11 +102,10 @@ public class PutAllRequestOperationHandlerJUnitTest {
       CodecNotRegisteredForTypeException, CodecAlreadyRegisteredForTypeException {
     PutAllRequestOperationHandler operationHandler = new PutAllRequestOperationHandler();
 
-    ClientProtocol.Response response = operationHandler.process(serializationServiceStub,
+    RegionAPI.PutAllResponse response = operationHandler.process(serializationServiceStub,
         generateTestRequest(false, true), cacheStub);
 
-    Assert.assertEquals(ClientProtocol.Response.ResponseAPICase.PUTALLRESPONSE,
-        response.getResponseAPICase());
+    Assert.assertNotNull(response);
 
     HashMap<Object, Object> expectedValues = new HashMap<>();
     expectedValues.put(TEST_KEY1, TEST_VALUE1);
@@ -119,13 +119,12 @@ public class PutAllRequestOperationHandlerJUnitTest {
   public void processWithInvalidEntryReturnsError() throws Exception {
     PutAllRequestOperationHandler operationHandler = new PutAllRequestOperationHandler();
 
-    ClientProtocol.Response response = operationHandler.process(serializationServiceStub,
+    RegionAPI.PutAllResponse response = operationHandler.process(serializationServiceStub,
         generateTestRequest(true, true), cacheStub);
 
-    Assert.assertEquals(ClientProtocol.Response.ResponseAPICase.ERRORRESPONSE,
-        response.getResponseAPICase());
-    Assert.assertThat(response.getErrorResponse().getMessage(),
-        CoreMatchers.containsString(EXCEPTION_TEXT));
+    Assert.assertNull(response);
+//    Assert.assertThat(response.getErrorResponse().getMessage(),
+//        CoreMatchers.containsString(EXCEPTION_TEXT));
     // can't verify anything about put keys because we make no guarantees.
   }
 
@@ -133,16 +132,15 @@ public class PutAllRequestOperationHandlerJUnitTest {
   public void processWithNoEntriesPasses() throws Exception {
     PutAllRequestOperationHandler operationHandler = new PutAllRequestOperationHandler();
 
-    ClientProtocol.Response response = operationHandler.process(serializationServiceStub,
+    RegionAPI.PutAllResponse response = operationHandler.process(serializationServiceStub,
         generateTestRequest(false, false), cacheStub);
 
-    Assert.assertEquals(ClientProtocol.Response.ResponseAPICase.PUTALLRESPONSE,
-        response.getResponseAPICase());
+    Assert.assertNotNull(response);
 
     verify(regionMock, times(0)).put(any(), any());
   }
 
-  private ClientProtocol.Request generateTestRequest(boolean addInvalidKey, boolean addValidKeys)
+  private RegionAPI.PutAllRequest generateTestRequest(boolean addInvalidKey, boolean addValidKeys)
       throws UnsupportedEncodingTypeException, CodecNotRegisteredForTypeException {
     Set<BasicTypes.Entry> entries = new HashSet<>();
     if (addInvalidKey) {
@@ -161,6 +159,6 @@ public class PutAllRequestOperationHandlerJUnitTest {
           ProtobufUtilities.createEncodedValue(serializationServiceStub, TEST_KEY3),
           ProtobufUtilities.createEncodedValue(serializationServiceStub, TEST_VALUE3)));
     }
-    return ProtobufRequestUtilities.createPutAllRequest(TEST_REGION, entries);
+    return ProtobufRequestUtilities.createPutAllRequest(TEST_REGION, entries).getPutAllRequest();
   }
 }

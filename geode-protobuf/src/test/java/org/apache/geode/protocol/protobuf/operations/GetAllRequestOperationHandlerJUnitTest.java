@@ -14,10 +14,13 @@
  */
 package org.apache.geode.protocol.protobuf.operations;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
+import org.apache.geode.protocol.operations.registry.OperationsHandlerRegistryJUnitTest;
 import org.apache.geode.protocol.protobuf.BasicTypes;
-import org.apache.geode.protocol.protobuf.ClientProtocol;
 import org.apache.geode.protocol.protobuf.RegionAPI;
 import org.apache.geode.protocol.protobuf.utilities.ProtobufRequestUtilities;
 import org.apache.geode.protocol.protobuf.utilities.ProtobufUtilities;
@@ -33,13 +36,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.nio.charset.Charset;
-import java.util.*;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 @Category(UnitTest.class)
-public class GetAllRequestOperationHandlerJUnitTest {
+public class GetAllRequestOperationHandlerJUnitTest extends OperationsHandlerRegistryJUnitTest {
   private static final String TEST_KEY1 = "my key1";
   private static final String TEST_VALUE1 = "my value1";
   private static final String TEST_KEY2 = "my key2";
@@ -84,7 +87,7 @@ public class GetAllRequestOperationHandlerJUnitTest {
   }
 
   private void addStringMockEncoding(SerializationService mock, String s, boolean add_encoding,
-      boolean add_decoding) throws Exception {
+                                     boolean add_decoding) throws Exception {
     if (add_encoding) {
       when(mock.encode(BasicTypes.EncodingType.STRING, s))
           .thenReturn(s.getBytes(Charset.forName("UTF-8")));
@@ -99,16 +102,13 @@ public class GetAllRequestOperationHandlerJUnitTest {
   public void processReturnsExpectedValuesForValidKeys()
       throws CodecAlreadyRegisteredForTypeException, UnsupportedEncodingTypeException,
       CodecNotRegisteredForTypeException {
-    ClientProtocol.Request getRequest = generateTestRequest(true);
-    ClientProtocol.Response response =
-        operationHandler.process(serializationServiceStub, getRequest, cacheStub);
+    RegionAPI.GetAllResponse response =
+        operationHandler.process(serializationServiceStub, generateTestRequest(true), cacheStub);
 
-    Assert.assertEquals(ClientProtocol.Response.ResponseAPICase.GETALLRESPONSE,
-        response.getResponseAPICase());
-    RegionAPI.GetAllResponse getAllResponse = response.getGetAllResponse();
-    Assert.assertEquals(3, getAllResponse.getEntriesCount());
+    Assert.assertNotNull(response);
+    Assert.assertEquals(3, response.getEntriesCount());
 
-    List<BasicTypes.Entry> entriesList = getAllResponse.getEntriesList();
+    List<BasicTypes.Entry> entriesList = response.getEntriesList();
     Map<String, String> responseEntries = convertEntryListToMap(entriesList);
 
     Assert.assertEquals(TEST_VALUE1, responseEntries.get(TEST_KEY1));
@@ -119,20 +119,17 @@ public class GetAllRequestOperationHandlerJUnitTest {
   @Test
   public void processReturnsNoEntriesForNoKeysRequested()
       throws UnsupportedEncodingTypeException, CodecNotRegisteredForTypeException {
-    ClientProtocol.Request getRequest = generateTestRequest(false);
-    ClientProtocol.Response response =
-        operationHandler.process(serializationServiceStub, getRequest, cacheStub);
+    RegionAPI.GetAllResponse response =
+        operationHandler.process(serializationServiceStub, generateTestRequest(false), cacheStub);
 
-    Assert.assertEquals(ClientProtocol.Response.ResponseAPICase.GETALLRESPONSE,
-        response.getResponseAPICase());
+    Assert.assertNotNull(response);
 
-    RegionAPI.GetAllResponse getAllResponse = response.getGetAllResponse();
-    List<BasicTypes.Entry> entriesList = getAllResponse.getEntriesList();
+    List<BasicTypes.Entry> entriesList = response.getEntriesList();
     Map<String, String> responseEntries = convertEntryListToMap(entriesList);
     Assert.assertEquals(0, responseEntries.size());
   }
 
-  private ClientProtocol.Request generateTestRequest(boolean addKeys)
+  private RegionAPI.GetAllRequest generateTestRequest(boolean addKeys)
       throws UnsupportedEncodingTypeException, CodecNotRegisteredForTypeException {
     HashSet<BasicTypes.EncodedValue> testKeys = new HashSet<>();
     if (addKeys) {

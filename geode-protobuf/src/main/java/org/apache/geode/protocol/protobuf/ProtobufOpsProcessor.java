@@ -15,32 +15,88 @@
 package org.apache.geode.protocol.protobuf;
 
 import org.apache.geode.cache.Cache;
-import org.apache.geode.protocol.exception.InvalidProtocolMessageException;
 import org.apache.geode.protocol.operations.OperationHandler;
-import org.apache.geode.protocol.operations.registry.OperationsHandlerRegistry;
-import org.apache.geode.protocol.operations.registry.exception.OperationHandlerNotRegisteredException;
+import org.apache.geode.protocol.protobuf.operations.GetAllRequestOperationHandler;
+import org.apache.geode.protocol.protobuf.operations.GetRequestOperationHandler;
+import org.apache.geode.protocol.protobuf.operations.PutRequestOperationHandler;
 import org.apache.geode.serialization.SerializationService;
+
+import java.util.HashMap;
+import java.util.function.Function;
 
 /**
  * This handles protobuf requests by determining the operation type of the request and dispatching
  * it to the appropriate handler.
  */
 public class ProtobufOpsProcessor {
-  private final OperationsHandlerRegistry opsHandlerRegistry;
+
+  private HashMap<ClientProtocol.Request.RequestAPICase, Blah> operationHandlers = new HashMap<>();
   private final SerializationService serializationService;
 
-  public ProtobufOpsProcessor(OperationsHandlerRegistry opsHandlerRegistry,
-      SerializationService serializationService) {
-    this.opsHandlerRegistry = opsHandlerRegistry;
+  public ProtobufOpsProcessor(SerializationService serializationService) {
     this.serializationService = serializationService;
+    addOperationHandlers();
   }
 
-  public ClientProtocol.Response process(ClientProtocol.Request request, Cache cache)
-      throws OperationHandlerNotRegisteredException, InvalidProtocolMessageException {
+  public ClientProtocol.Response process(ClientProtocol.Request request, Cache cache) {
     ClientProtocol.Request.RequestAPICase requestType = request.getRequestAPICase();
-    OperationHandler opsHandler =
-        opsHandlerRegistry.getOperationHandlerForOperationId(requestType.getNumber());
+    Blah blah = operationHandlers.get(requestType);
 
-    return (ClientProtocol.Response) opsHandler.process(serializationService, request, cache);
+    Object opResponse =
+        blah.opH.process(serializationService, blah.fromRequest.apply(request), cache);
+    ClientProtocol.Response.Builder builder =
+        (ClientProtocol.Response.Builder) blah.toResponse.apply(opResponse);
+    return builder.build();
+  }
+
+  private void addOperationHandlers(){
+//    registry.registerOperationHandlerForOperationId(
+//        ClientProtocol.Request.RequestAPICase.GETREQUEST,
+//        new GetRequestOperationHandler());
+//    registry.registerOperationHandlerForOperationId(
+//        ClientProtocol.Request.RequestAPICase.PUTREQUEST,
+//        new PutRequestOperationHandler());
+//    registry.registerOperationHandlerForOperationId(
+//        ClientProtocol.Request.RequestAPICase.GETREGIONNAMESREQUEST,
+//        new GetRegionNamesRequestOperationHandler());
+//    registry.registerOperationHandlerForOperationId(
+//        ClientProtocol.Request.RequestAPICase.GETALLREQUEST,
+//        new GetAllRequestOperationHandler());
+//    registry.registerOperationHandlerForOperationId(
+//        ClientProtocol.Request.RequestAPICase.PUTALLREQUEST,
+//        new PutAllRequestOperationHandler());
+//    registry.registerOperationHandlerForOperationId(
+//        ClientProtocol.Request.RequestAPICase.REMOVEREQUEST,
+//        new RemoveRequestOperationHandler());
+
+    operationHandlers.put(ClientProtocol.Request.RequestAPICase.GETALLREQUEST,
+        new Blah<>(new GetAllRequestOperationHandler(),
+            request -> request.getGetAllRequest(),
+            opsResp -> ClientProtocol.Response.newBuilder().setGetAllResponse(opsResp)));
+
+    operationHandlers.put(ClientProtocol.Request.RequestAPICase.PUTREQUEST,
+        new Blah<>(new PutRequestOperationHandler(),
+            request -> request.getPutRequest(),
+            opsResp -> ClientProtocol.Response.newBuilder().setPutResponse(opsResp)));
+
+    operationHandlers.put(ClientProtocol.Request.RequestAPICase.GETREQUEST,
+        new Blah<>(new GetRequestOperationHandler(),
+            request -> request.getGetRequest(),
+            opsResp -> ClientProtocol.Response.newBuilder().setGetResponse(opsResp)));
+  }
+
+  //TODO This needs to get a nicer name.
+  private class Blah<OperationReq, OpResp> {
+    private OperationHandler<OperationReq, OpResp> opH;
+    private Function<ClientProtocol.Request, OperationReq> fromRequest;
+    private Function<OpResp, ClientProtocol.Response.Builder> toResponse;
+
+    public Blah(OperationHandler<OperationReq, OpResp> opH,
+                Function<ClientProtocol.Request, OperationReq> fromRequest,
+                Function<OpResp, ClientProtocol.Response.Builder> toResponse) {
+      this.opH = opH;
+      this.fromRequest = fromRequest;
+      this.toResponse = toResponse;
+    }
   }
 }

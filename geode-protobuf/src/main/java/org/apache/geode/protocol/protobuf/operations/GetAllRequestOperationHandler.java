@@ -33,27 +33,21 @@ import java.util.Map;
 import java.util.Set;
 
 public class GetAllRequestOperationHandler
-    implements OperationHandler<ClientProtocol.Request, ClientProtocol.Response> {
+    implements OperationHandler<RegionAPI.GetAllRequest, RegionAPI.GetAllResponse> {
   private static Logger logger = LogManager.getLogger();
 
   @Override
-  public ClientProtocol.Response process(SerializationService serializationService,
-      ClientProtocol.Request request, Cache cache) {
-    if (request.getRequestAPICase() != ClientProtocol.Request.RequestAPICase.GETALLREQUEST) {
-      return ProtobufResponseUtilities
-          .createAndLogErrorResponse("Improperly formatted getAll request message.", logger, null);
-    }
-    RegionAPI.GetAllRequest getAllRequest = request.getGetAllRequest();
-
-    String regionName = getAllRequest.getRegionName();
+  public RegionAPI.GetAllResponse process(SerializationService serializationService,
+                                         RegionAPI.GetAllRequest request, Cache cache) {
+    String regionName = request.getRegionName();
     Region region = cache.getRegion(regionName);
-    if (region == null) {
-      return ProtobufResponseUtilities.createErrorResponse("Region not found");
-    }
+//    if (region == null) {
+//      return ProtobufResponseUtilities.createErrorResponse("Region not found");
+//    }
 
     try {
       Set<Object> keys = new HashSet<>();
-      for (BasicTypes.EncodedValue key : getAllRequest.getKeyList()) {
+      for (BasicTypes.EncodedValue key : request.getKeyList()) {
         keys.add(ProtobufUtilities.decodeValue(serializationService, key));
       }
       Map<Object, Object> results = region.getAll(keys);
@@ -62,14 +56,16 @@ public class GetAllRequestOperationHandler
         entries.add(
             ProtobufUtilities.createEntry(serializationService, entry.getKey(), entry.getValue()));
       }
-      return ProtobufResponseUtilities.createGetAllResponse(entries);
+      return ProtobufResponseUtilities.createGetAllResponse(entries).getGetAllResponse();
     } catch (UnsupportedEncodingTypeException ex) {
       // can be thrown by encoding or decoding.
-      return ProtobufResponseUtilities.createAndLogErrorResponse("Encoding not supported.", logger,
-          ex);
+      return null;
+//      return ProtobufResponseUtilities.createAndLogErrorResponse("Encoding not supported.", logger,
+//          ex);
     } catch (CodecNotRegisteredForTypeException ex) {
-      return ProtobufResponseUtilities
-          .createAndLogErrorResponse("Codec error in protobuf deserialization.", logger, ex);
+      return null;
+//      return ProtobufResponseUtilities
+//          .createAndLogErrorResponse("Codec error in protobuf deserialization.", logger, ex);
     }
   }
 }
