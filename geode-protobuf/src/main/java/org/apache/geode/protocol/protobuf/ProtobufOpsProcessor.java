@@ -14,8 +14,10 @@
  */
 package org.apache.geode.protocol.protobuf;
 
+import com.sun.tools.javac.code.Attribute;
 import org.apache.geode.cache.Cache;
 import org.apache.geode.protocol.operations.OperationHandler;
+import org.apache.geode.protocol.operations.Result;
 import org.apache.geode.protocol.protobuf.operations.GetAllRequestOperationHandler;
 import org.apache.geode.protocol.protobuf.operations.GetRequestOperationHandler;
 import org.apache.geode.protocol.protobuf.operations.PutRequestOperationHandler;
@@ -42,14 +44,20 @@ public class ProtobufOpsProcessor {
     ClientProtocol.Request.RequestAPICase requestType = request.getRequestAPICase();
     Blah blah = operationHandlers.get(requestType);
 
-    Object opResponse =
-        blah.opH.process(serializationService, blah.fromRequest.apply(request), cache);
-    ClientProtocol.Response.Builder builder =
-        (ClientProtocol.Response.Builder) blah.toResponse.apply(opResponse);
+    ClientProtocol.Response.Builder builder;
+
+    Result result = blah.opH.process(serializationService, blah.fromRequest.apply(request), cache);
+
+    builder = (ClientProtocol.Response.Builder) result.map(blah.toResponse, blah.toErrorResponse);
+
     return builder.build();
   }
 
-  private void addOperationHandlers(){
+  private static ClientProtocol.Response.Builder makeErrorBuilder(ClientProtocol.ErrorResponse errorResponse) {
+    return ClientProtocol.Response.newBuilder().setErrorResponse(errorResponse);
+  }
+
+  private void addOperationHandlers() {
 //    registry.registerOperationHandlerForOperationId(
 //        ClientProtocol.Request.RequestAPICase.GETREQUEST,
 //        new GetRequestOperationHandler());
@@ -71,32 +79,35 @@ public class ProtobufOpsProcessor {
 
     operationHandlers.put(ClientProtocol.Request.RequestAPICase.GETALLREQUEST,
         new Blah<>(new GetAllRequestOperationHandler(),
-            request -> request.getGetAllRequest(),
+            ClientProtocol.Request::getGetAllRequest,
             opsResp -> ClientProtocol.Response.newBuilder().setGetAllResponse(opsResp)));
 
     operationHandlers.put(ClientProtocol.Request.RequestAPICase.PUTREQUEST,
         new Blah<>(new PutRequestOperationHandler(),
-            request -> request.getPutRequest(),
+            ClientProtocol.Request::getPutRequest,
             opsResp -> ClientProtocol.Response.newBuilder().setPutResponse(opsResp)));
 
     operationHandlers.put(ClientProtocol.Request.RequestAPICase.GETREQUEST,
-        new Blah<>(new GetRequestOperationHandler(),
-            request -> request.getGetRequest(),
+        new Blah<>(
+            new GetRequestOperationHandler(),
+            ClientProtocol.Request::getGetRequest,
             opsResp -> ClientProtocol.Response.newBuilder().setGetResponse(opsResp)));
   }
 
   //TODO This needs to get a nicer name.
-  private class Blah<OperationReq, OpResp> {
-    private OperationHandler<OperationReq, OpResp> opH;
+  private class Blah<OperationReq, OperationResponse> {
+    private OperationHandler<OperationReq, OperationResponse> opH;
     private Function<ClientProtocol.Request, OperationReq> fromRequest;
-    private Function<OpResp, ClientProtocol.Response.Builder> toResponse;
+    private Function<OperationResponse, ClientProtocol.Response.Builder> toResponse;
+    private Function<ClientProtocol.ErrorResponse, ClientProtocol.Response.Builder> toErrorResponse;
 
-    public Blah(OperationHandler<OperationReq, OpResp> opH,
-                Function<ClientProtocol.Request, OperationReq> fromRequest,
-                Function<OpResp, ClientProtocol.Response.Builder> toResponse) {
+    private Blah(OperationHandler<OperationReq, OperationResponse> opH,
+                 Function<ClientProtocol.Request, OperationReq> fromRequest,
+                 Function<OperationResponse, ClientProtocol.Response.Builder> toResponse) {
       this.opH = opH;
       this.fromRequest = fromRequest;
       this.toResponse = toResponse;
+      this.toErrorResponse = ProtobufOpsProcessor::makeErrorBuilder;
     }
   }
 }

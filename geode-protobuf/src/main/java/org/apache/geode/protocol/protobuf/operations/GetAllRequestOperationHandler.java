@@ -16,7 +16,10 @@ package org.apache.geode.protocol.protobuf.operations;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
+import org.apache.geode.protocol.operations.Failure;
 import org.apache.geode.protocol.operations.OperationHandler;
+import org.apache.geode.protocol.operations.Result;
+import org.apache.geode.protocol.operations.Success;
 import org.apache.geode.protocol.protobuf.BasicTypes;
 import org.apache.geode.protocol.protobuf.ClientProtocol;
 import org.apache.geode.protocol.protobuf.RegionAPI;
@@ -33,39 +36,40 @@ import java.util.Map;
 import java.util.Set;
 
 public class GetAllRequestOperationHandler
-    implements OperationHandler<RegionAPI.GetAllRequest, RegionAPI.GetAllResponse> {
+    implements
+    OperationHandler<RegionAPI.GetAllRequest, RegionAPI.GetAllResponse> {
   private static Logger logger = LogManager.getLogger();
 
   @Override
-  public RegionAPI.GetAllResponse process(SerializationService serializationService,
-                                         RegionAPI.GetAllRequest request, Cache cache) {
+  public Result<RegionAPI.GetAllResponse> process(SerializationService serializationService,
+                        RegionAPI.GetAllRequest request, Cache cache) {
     String regionName = request.getRegionName();
     Region region = cache.getRegion(regionName);
-//    if (region == null) {
-//      return ProtobufResponseUtilities.createErrorResponse("Region not found");
-//    }
+    if (region == null) {
+      return new Failure<>(
+          ProtobufResponseUtilities.createErrorResponse("Region not found").getErrorResponse());
+    }
 
     try {
       Set<Object> keys = new HashSet<>();
       for (BasicTypes.EncodedValue key : request.getKeyList()) {
         keys.add(ProtobufUtilities.decodeValue(serializationService, key));
       }
-      Map<Object, Object> results = region.getAll(keys);
+      Map<?, ?> results = region.getAll(keys);
       Set<BasicTypes.Entry> entries = new HashSet<>();
-      for (Map.Entry<Object, Object> entry : results.entrySet()) {
+      for (Map.Entry entry : results.entrySet()) {
         entries.add(
             ProtobufUtilities.createEntry(serializationService, entry.getKey(), entry.getValue()));
       }
-      return ProtobufResponseUtilities.createGetAllResponse(entries).getGetAllResponse();
+      return new Success<>(
+          ProtobufResponseUtilities.createGetAllResponse(entries).getGetAllResponse());
     } catch (UnsupportedEncodingTypeException ex) {
-      // can be thrown by encoding or decoding.
-      return null;
-//      return ProtobufResponseUtilities.createAndLogErrorResponse("Encoding not supported.", logger,
-//          ex);
+      return new Failure<>(ProtobufResponseUtilities.createErrorResponse("Encoding not supported.")
+          .getErrorResponse());
     } catch (CodecNotRegisteredForTypeException ex) {
-      return null;
-//      return ProtobufResponseUtilities
-//          .createAndLogErrorResponse("Codec error in protobuf deserialization.", logger, ex);
+      return new Failure<>(
+          ProtobufResponseUtilities.createErrorResponse("Codec error in protobuf deserialization.")
+              .getErrorResponse());
     }
   }
 }

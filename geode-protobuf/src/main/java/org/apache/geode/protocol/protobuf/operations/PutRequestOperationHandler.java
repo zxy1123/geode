@@ -16,9 +16,11 @@ package org.apache.geode.protocol.protobuf.operations;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
+import org.apache.geode.protocol.operations.Failure;
 import org.apache.geode.protocol.operations.OperationHandler;
+import org.apache.geode.protocol.operations.Result;
+import org.apache.geode.protocol.operations.Success;
 import org.apache.geode.protocol.protobuf.BasicTypes;
-import org.apache.geode.protocol.protobuf.ClientProtocol;
 import org.apache.geode.protocol.protobuf.RegionAPI;
 import org.apache.geode.protocol.protobuf.utilities.ProtobufResponseUtilities;
 import org.apache.geode.protocol.protobuf.utilities.ProtobufUtilities;
@@ -29,18 +31,19 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class PutRequestOperationHandler
-    implements OperationHandler<RegionAPI.PutRequest, RegionAPI.PutResponse> {
+    implements
+    OperationHandler<RegionAPI.PutRequest, RegionAPI.PutResponse> {
   private static Logger logger = LogManager.getLogger();
 
   @Override
-  public RegionAPI.PutResponse process(SerializationService serializationService,
-                                         RegionAPI.PutRequest request, Cache cache) {
+  public Result<RegionAPI.PutResponse> process(SerializationService serializationService,
+                                               RegionAPI.PutRequest request, Cache cache) {
     String regionName = request.getRegionName();
     Region region = cache.getRegion(regionName);
     if (region == null) {
-//      return ProtobufResponseUtilities.createAndLogErrorResponse(
-//          "Region passed by client did not exist: " + regionName, logger, null);
-      return null;
+      return new Failure<>(ProtobufResponseUtilities
+          .createErrorResponse("Region passed by client did not exist: " + regionName)
+          .getErrorResponse());
     }
 
     try {
@@ -50,22 +53,19 @@ public class PutRequestOperationHandler
       Object decodedKey = ProtobufUtilities.decodeValue(serializationService, entry.getKey());
       try {
         region.put(decodedKey, decodedValue);
-        return ProtobufResponseUtilities.createPutResponse().getPutResponse();
+        return new Success<>(ProtobufResponseUtilities.createPutResponse().getPutResponse());
       } catch (ClassCastException ex) {
-        return null;
-//        return ProtobufResponseUtilities
-//            .createAndLogErrorResponse("invalid key or value type for region " + regionName
-//                + ",passed key: " + entry.getKey().getEncodingType() + " value: "
-//                + entry.getValue().getEncodingType(), logger, ex);
+        return new Failure<>(ProtobufResponseUtilities
+            .createErrorResponse("invalid key or value type for region " + regionName
+                + ",passed key: " + entry.getKey().getEncodingType() + " value: "
+                + entry.getValue().getEncodingType()).getErrorResponse());
       }
     } catch (UnsupportedEncodingTypeException ex) {
-      return null;
-//      return ProtobufResponseUtilities.createAndLogErrorResponse("encoding not supported ", logger,
-//          ex);
+      return new Failure<>(
+          ProtobufResponseUtilities.createErrorResponse(ex.getMessage()).getErrorResponse());
     } catch (CodecNotRegisteredForTypeException ex) {
-      return null;
-//      return ProtobufResponseUtilities
-//          .createAndLogErrorResponse("codec error in protobuf deserialization ", logger, ex);
+      return new Failure<>(
+          ProtobufResponseUtilities.createErrorResponse(ex.getMessage()).getErrorResponse());
     }
   }
 }
