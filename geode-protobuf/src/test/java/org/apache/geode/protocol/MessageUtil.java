@@ -14,10 +14,27 @@
  */
 package org.apache.geode.protocol;
 
-import org.apache.geode.protocol.protobuf.ClientProtocol;
-import org.apache.geode.protocol.protobuf.RegionAPI;
+import org.apache.geode.protocol.protobuf.*;
+import org.apache.geode.protocol.protobuf.utilities.ProtobufRequestUtilities;
+import org.apache.geode.protocol.protobuf.utilities.ProtobufUtilities;
+import org.apache.geode.serialization.SerializationService;
+import org.apache.geode.serialization.exception.UnsupportedEncodingTypeException;
+import org.apache.geode.serialization.registry.exception.CodecAlreadyRegisteredForTypeException;
+import org.apache.geode.serialization.registry.exception.CodecNotRegisteredForTypeException;
 
 public class MessageUtil {
+
+  public static RegionAPI.GetRegionRequest makeGetRegionRequest(String requestRegion) {
+    return RegionAPI.GetRegionRequest.newBuilder().setRegionName(requestRegion).build();
+  }
+
+  public static ClientProtocol.Message makeGetRegionRequestMessage(String requestRegion,
+      ClientProtocol.MessageHeader header) {
+    ClientProtocol.Request request = ClientProtocol.Request.newBuilder()
+        .setGetRegionRequest(makeGetRegionRequest(requestRegion)).build();
+    return ClientProtocol.Message.newBuilder().setMessageHeader(header).setRequest(request).build();
+  }
+
   public static ClientProtocol.Message createGetRequestMessage() {
     ClientProtocol.Message.Builder messageBuilder = ClientProtocol.Message.newBuilder();
     messageBuilder.setMessageHeader(getMessageHeaderBuilder());
@@ -25,6 +42,29 @@ public class MessageUtil {
     requestBuilder.setGetRequest(getGetRequestBuilder());
     messageBuilder.setRequest(requestBuilder);
     return messageBuilder.build();
+  }
+
+  public static ClientProtocol.Message makePutRequestMessage(
+      SerializationService serializationService, String requestKey, String requestValue,
+      String requestRegion, ClientProtocol.MessageHeader header)
+      throws CodecNotRegisteredForTypeException, UnsupportedEncodingTypeException,
+      CodecAlreadyRegisteredForTypeException {
+    BasicTypes.Entry entry = ProtobufUtilities.createEntry(
+        ProtobufUtilities.createEncodedValue(serializationService, requestKey),
+        ProtobufUtilities.createEncodedValue(serializationService, requestValue));
+
+    ClientProtocol.Request request =
+        ProtobufRequestUtilities.createPutRequest(requestRegion, entry);
+    return ProtobufUtilities.createProtobufRequest(header, request);
+  }
+
+  public static ClientProtocol.Message makeGetRequestMessage(
+      SerializationService serializationService, Object requestKey, String requestRegion,
+      ClientProtocol.MessageHeader header) throws CodecAlreadyRegisteredForTypeException,
+      UnsupportedEncodingTypeException, CodecNotRegisteredForTypeException {
+    ClientProtocol.Request request = ProtobufRequestUtilities.createGetRequest(requestRegion,
+        ProtobufUtilities.createEncodedValue(serializationService, requestKey));
+    return ProtobufUtilities.createProtobufRequest(header, request);
   }
 
   private static ClientProtocol.Request.Builder getRequestBuilder() {

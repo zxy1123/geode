@@ -50,12 +50,13 @@ message Request {
 
         PingRequest pingRequest = 41;
         GetServersRequest getServersRequest = 42;
-        GetRegionsRequest getRegionsRequest = 43;
+        GetRegionNamesRequest getRegionNamesRequest = 43;
+        GetRegionRequest getRegionRequest = 44;
+
     }
 }
 
 message Response {
-    ResponseHeader responseHeader = 1;
     oneof responseAPI {
         PutResponse putResponse = 2;
         GetResponse getResponse = 3;
@@ -65,20 +66,21 @@ message Response {
         RemoveAllResponse removeAllResponse = 7;
         ListKeysResponse listKeysResponse = 8;
 
+        ErrorResponse errorResponse = 13;
+
         CreateRegionResponse createRegionResponse = 20;
         DestroyRegionResponse destroyRegionResponse = 21;
 
         PingResponse pingResponse = 41;
         GetServersResponse getServersResponse = 42;
-        GetRegionsResponse getRegionsResponse = 43;
+        GetRegionNamesResponse getRegionNamesResponse = 43;
+        GetRegionResponse getRegionResponse = 44;
     }
 }
 
-message ResponseHeader {
-    oneof reponseType {
-        int32 responseTypeID = 1;
-        int32 errorCode = 2;
-    }
+message ErrorResponse {
+    int32 errorCode = 1;
+    string message = 2;
 }
 
 message MetaData {
