@@ -1388,7 +1388,6 @@ public class DLockService extends DistributedLockService {
       throw new InterruptedException();
     }
 
-    boolean abnormalExit = true;
     boolean safeExit = true;
     try { // try-block for abnormalExit and safeExit
 
@@ -1438,23 +1437,7 @@ public class DLockService extends DistributedLockService {
         while (keepTrying) {
           if (DEBUG_LOCK_REQUEST_LOOP) {
             loopCount++;
-            if (loopCount > DEBUG_LOCK_REQUEST_LOOP_COUNT) {
-              Integer count = Integer.valueOf(DEBUG_LOCK_REQUEST_LOOP_COUNT);
-              String s =
-                  LocalizedStrings.DLockService_DEBUG_LOCKINTERRUPTIBLY_HAS_GONE_HOT_AND_LOOPED_0_TIMES
-                      .toLocalizedString(count);
-
-              InternalGemFireError e = new InternalGemFireError(s);
-              logger.error(LogMarker.DLS,
-                  LocalizedMessage.create(
-                      LocalizedStrings.DLockService_DEBUG_LOCKINTERRUPTIBLY_HAS_GONE_HOT_AND_LOOPED_0_TIMES,
-                      count),
-                  e);
-              throw e;
-            }
-            /*
-             * if (loopCount > 1) { Thread.sleep(1000); }
-             */
+            extracted1(loopCount);
           }
 
           checkDestroyed();
@@ -1552,6 +1535,7 @@ public class DLockService extends DistributedLockService {
           } // else: non-reentrant or reentrant w/ non-infinite lease
 
           if (gotLock) {
+            token.incUsage();
             // if (processor != null) (cannot be null)
             { // TODO: can be null after restoring above optimization
               // non-reentrant lock needs to getLeaseExpireTime
@@ -1716,7 +1700,6 @@ public class DLockService extends DistributedLockService {
         logger.trace(LogMarker.DLS, "{}, name: {} - exiting lock() returning {}", this, name,
             gotLock);
       }
-      abnormalExit = false;
       return gotLock;
     } // try-block for abnormalExit and safeExit
 
@@ -1733,6 +1716,26 @@ public class DLockService extends DistributedLockService {
         Assert.assertTrue(safeExit);
       }
     }
+  }
+
+  private void extracted1(int loopCount) {
+    if (loopCount > DEBUG_LOCK_REQUEST_LOOP_COUNT) {
+      Integer count = Integer.valueOf(DEBUG_LOCK_REQUEST_LOOP_COUNT);
+      String s =
+          LocalizedStrings.DLockService_DEBUG_LOCKINTERRUPTIBLY_HAS_GONE_HOT_AND_LOOPED_0_TIMES
+              .toLocalizedString(count);
+
+      InternalGemFireError e = new InternalGemFireError(s);
+      logger.error(LogMarker.DLS,
+          LocalizedMessage.create(
+              LocalizedStrings.DLockService_DEBUG_LOCKINTERRUPTIBLY_HAS_GONE_HOT_AND_LOOPED_0_TIMES,
+              count),
+          e);
+      throw e;
+    }
+            /*
+             * if (loopCount > 1) { Thread.sleep(1000); }
+             */
   }
 
   /**
@@ -2659,7 +2662,6 @@ public class DLockService extends DistributedLockService {
           }
           getStats().incTokens(1);
         }
-        token.incUsage();
       }
       return token;
     }
