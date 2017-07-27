@@ -86,7 +86,7 @@ public abstract class ServerConnection implements Runnable {
 
   private Map commands;
 
-  private final SecurityService securityService;
+  protected final SecurityService securityService;
 
   final protected CacheServerStats stats;
 

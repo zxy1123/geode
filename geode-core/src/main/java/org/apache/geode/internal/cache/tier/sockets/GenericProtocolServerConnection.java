@@ -61,7 +61,7 @@ public class GenericProtocolServerConnection extends ServerConnection {
 
   @Override
   protected boolean doHandShake(byte epType, int qSize) {
-    // no handshake for new client protocol.
+//    return (new SaslAuthenticator(theSocket, securityService)).authenticateClient();
     return true;
   }
 

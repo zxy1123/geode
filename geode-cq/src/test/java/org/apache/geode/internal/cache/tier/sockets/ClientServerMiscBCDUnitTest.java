@@ -301,6 +301,11 @@ public class ClientServerMiscBCDUnitTest extends ClientServerMiscDUnitTest {
   }
 
   @Test
+  public void testConcurrentOperationsWithDRandPR() throws Exception {
+    super.testConcurrentOperationsWithDRandPR();
+  }
+
+    @Test
   public void testDistributedMemberBytesWithCurrentServerAndOldClient() throws Exception {
     // Start current version server
     int serverPort = initServerCache(true);
