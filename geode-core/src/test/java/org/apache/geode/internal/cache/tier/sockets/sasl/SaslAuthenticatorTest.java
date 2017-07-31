@@ -21,6 +21,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.List;
 
 import javax.security.sasl.SaslException;
@@ -37,11 +39,10 @@ import org.apache.geode.test.junit.categories.UnitTest;
 public class SaslAuthenticatorTest {
   @Test
   public void authenticateClientPassesResponsesToSaslServerTillComplete() throws Exception {
-    SecurityService securityServiceStub = mock(SecurityService.class);
     SaslServer saslServerMock = mock(SaslServer.class);
     SaslMessenger saslMessengerStub = mock(SaslMessenger.class);
     SaslAuthenticator
-        saslServer = new SaslAuthenticator(securityServiceStub, saslServerMock, saslMessengerStub);
+        saslServer = new SaslAuthenticator(saslServerMock, saslMessengerStub);
     ArgumentCaptor<byte[]> saslServerArgumentCaptor = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<byte[]> messengerArgumentCaptor = ArgumentCaptor.forClass(byte[].class);
     byte[][] challengesFromServer = {
@@ -72,12 +73,11 @@ public class SaslAuthenticatorTest {
   }
 
   @Test
-  public void authenticateClientReturnsFalseIfCredentialsAreWrong() throws SaslException {
-    SecurityService securityServiceStub = mock(SecurityService.class);
+  public void authenticateClientReturnsFalseIfCredentialsAreWrong() throws IOException {
     SaslServer saslServerMock = mock(SaslServer.class);
     SaslMessenger saslMessengerStub = mock(SaslMessenger.class);
     SaslAuthenticator
-        saslServer = new SaslAuthenticator(securityServiceStub, saslServerMock, saslMessengerStub);
+        saslServer = new SaslAuthenticator(saslServerMock, saslMessengerStub);
     ArgumentCaptor<byte[]> saslServerArgumentCaptor = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<byte[]> messengerArgumentCaptor = ArgumentCaptor.forClass(byte[].class);
     byte[][] challengesFromServer = {
@@ -96,5 +96,23 @@ public class SaslAuthenticatorTest {
   }
 
   @Test
-  public void authenticateClientReturnsFalseIfClientStopsResponding(){}
+  public void authenticateClientReturnsFalseIfClientStopsResponding() throws IOException {
+    SaslServer saslServerMock = mock(SaslServer.class);
+    SaslMessenger saslMessengerStub = mock(SaslMessenger.class);
+    SaslAuthenticator
+            saslServer = new SaslAuthenticator(saslServerMock, saslMessengerStub);
+    ArgumentCaptor<byte[]> saslServerArgumentCaptor = ArgumentCaptor.forClass(byte[].class);
+    ArgumentCaptor<byte[]> messengerArgumentCaptor = ArgumentCaptor.forClass(byte[].class);
+    byte[][] challengesFromServer = {
+            new byte[] {0, 1, 2},
+            new byte[0],
+    };
+    when(saslServerMock.evaluateResponse(isA(byte[].class))).thenReturn(challengesFromServer[0]).thenReturn(new byte[0]);
+    when(saslServerMock.isComplete()).thenReturn(false);
+    when(saslMessengerStub.readMessage()).thenThrow(new SocketTimeoutException());
+
+    boolean authenticateClient = saslServer.authenticateClient();
+
+    assertFalse(authenticateClient);
+  }
 }

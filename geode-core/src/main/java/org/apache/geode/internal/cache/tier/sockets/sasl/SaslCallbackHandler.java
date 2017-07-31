@@ -19,7 +19,11 @@ import java.io.IOException;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.TextOutputCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
 
 /**
  * SASL invokes a callback handler during authentication
@@ -29,7 +33,42 @@ public class SaslCallbackHandler implements CallbackHandler {
   @Override
   public void handle(Callback[] callbacks)
       throws IOException, UnsupportedCallbackException {
+    for (Callback callback: callbacks) {
+      System.out.println("ClientCallbackHandler processing callback " + callback);
 
+      if (callback instanceof TextOutputCallback) {
+        // display the message according to the specified type
+        TextOutputCallback toc = (TextOutputCallback) callback;
+        switch (toc.getMessageType()) {
+          case TextOutputCallback.INFORMATION:
+            System.out.println(toc.getMessage());
+            break;
+          case TextOutputCallback.ERROR:
+            System.out.println("ERROR: " + toc.getMessage());
+            break;
+          case TextOutputCallback.WARNING:
+            System.out.println("WARNING: " + toc.getMessage());
+            break;
+          default:
+            throw new IOException("Unsupported message type: " +
+                toc.getMessageType());
+        }
+
+      } else if (callback instanceof NameCallback) {
+        NameCallback nc = (NameCallback) callback;
+        System.out.println("name from name callback: " +nc.getDefaultName());
+      } else if (callback instanceof PasswordCallback) {
+        PasswordCallback pc = (PasswordCallback) callback;
+        System.out.println("client is setting password");
+        pc.setPassword("secretsecret".toCharArray());
+      } else if (callback instanceof AuthorizeCallback) {
+
+        AuthorizeCallback ac = (AuthorizeCallback) callback;
+        ac.setAuthorized(true);
+      } else {
+        throw new UnsupportedCallbackException
+            (callback, "Unrecognized Callback");
+      }
+    }
   }
-
 }

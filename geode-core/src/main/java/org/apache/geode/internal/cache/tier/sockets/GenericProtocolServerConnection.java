@@ -18,12 +18,18 @@ package org.apache.geode.internal.cache.tier.sockets;
 import org.apache.geode.internal.cache.InternalCache;
 import org.apache.geode.internal.cache.tier.Acceptor;
 import org.apache.geode.internal.cache.tier.CachedRegionHelper;
+import org.apache.geode.internal.cache.tier.sockets.sasl.SaslAuthenticator;
+import org.apache.geode.internal.cache.tier.sockets.sasl.SaslCallbackHandler;
+import org.apache.geode.internal.cache.tier.sockets.sasl.SaslMessenger;
 import org.apache.geode.internal.security.SecurityService;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
+import java.io.*;
 import java.net.Socket;
+import java.nio.channels.AcceptPendingException;
+import java.util.Collections;
 
 /**
  * Holds the socket and protocol handler for the new client protocol.
@@ -31,6 +37,7 @@ import java.net.Socket;
 public class GenericProtocolServerConnection extends ServerConnection {
   // The new protocol lives in a separate module and gets loaded when this class is instantiated.
   private final ClientProtocolMessageHandler messageHandler;
+  private boolean isAutenticated = false;
 
   /**
    * Creates a new <code>GenericProtocolServerConnection</code> that processes messages received
@@ -51,12 +58,29 @@ public class GenericProtocolServerConnection extends ServerConnection {
       Socket socket = this.getSocket();
       InputStream inputStream = socket.getInputStream();
       OutputStream outputStream = socket.getOutputStream();
-
+      DataInputStream dataInputStream = new DataInputStream(inputStream);
+      DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
+      authenticateClient(dataInputStream, dataOutputStream);
       messageHandler.receiveMessage(inputStream, outputStream, this.getCache());
     } catch (IOException e) {
       logger.warn(e);
       this.setFlagProcessMessagesAsFalse(); // TODO: better shutdown.
     }
+  }
+
+  private void authenticateClient(DataInputStream inputStream, DataOutputStream outputStream)
+      throws IOException {
+      SaslServer saslServer = Sasl.createSaslServer("PLAIN", "geode", "localhost", Collections.emptyMap(), new SaslCallbackHandler());
+      SaslAuthenticator saslAuthenticator = new SaslAuthenticator(saslServer, new SaslMessenger(inputStream, outputStream));
+//      if(!isAutenticated) {
+      if (saslAuthenticator.authenticateClient()) {
+        outputStream.writeByte(Acceptor.SUCCESSFUL_SERVER_TO_CLIENT);
+      } else {
+        outputStream.writeByte(Acceptor.UNSUCCESSFUL_SERVER_TO_CLIENT);
+      }
+      isAutenticated = true;
+//      }
+    System.out.println("Done authenticating");
   }
 
   @Override

@@ -15,9 +15,6 @@
 
 package org.apache.geode.internal.cache.tier.sockets.sasl;
 
-import java.net.Socket;
-import java.security.Security;
-
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
@@ -26,18 +23,18 @@ import org.apache.logging.log4j.Logger;
 import org.apache.geode.internal.logging.LogService;
 import org.apache.geode.internal.security.SecurityService;
 
+import java.io.IOException;
+
 /**
  * SaslAuthenticator performs simple authentication using SASL
  */
 public class SaslAuthenticator {
   protected static final Logger logger = LogService.getLogger();
 
-  private final SecurityService securityService;
   private final SaslServer saslServer;
   private final SaslMessenger saslMessenger;
 
-  public SaslAuthenticator(SecurityService securityService, SaslServer saslServer, SaslMessenger saslMessenger) {
-    this.securityService = securityService;
+  public SaslAuthenticator(SaslServer saslServer, SaslMessenger saslMessenger) {
     this.saslServer = saslServer;
     this.saslMessenger = saslMessenger;
   }
@@ -51,10 +48,12 @@ public class SaslAuthenticator {
         byte[] response = saslMessenger.readMessage();
         challenge = saslServer.evaluateResponse(response);
       }
+      System.out.println(">>>>>>> Completed authentication");
 
       return true;
-    } catch (SaslException e) {
+    } catch (IOException e) {
       logger.warn("client authentication failed", e);
+
       return false;
     }
   }

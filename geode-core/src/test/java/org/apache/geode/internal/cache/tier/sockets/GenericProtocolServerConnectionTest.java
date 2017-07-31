@@ -47,6 +47,16 @@ public class GenericProtocolServerConnectionTest {
     }
   }
 
+  @Test
+  public void testAuthenticationSuccess() throws IOException {
+    ServerConnection serverConnection = IOExceptionThrowingServerConnection();
+    Assert.assertTrue(serverConnection.processMessages);
+    serverConnection.doOneMessage();
+  }
+
+  @Test
+  public void testAuthenticationFailure() {}
+
   private static ServerConnection IOExceptionThrowingServerConnection() throws IOException {
     Socket socketMock = mock(Socket.class);
     when(socketMock.getInetAddress()).thenReturn(InetAddress.getByName("localhost"));
