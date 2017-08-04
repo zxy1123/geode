@@ -212,8 +212,43 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
       client2.invoke(
           () -> createCacheClient(null, null, null, port1, port2, 0, multiUser, AUTHREQ_EXCEPTION));
     }
+  }
 
-    if (!gen.classCode().equals(CredentialGenerator.ClassCode.SSL)) {
+  protected void doTestNoCredentialsCantRegisterMetadata(final boolean multiUser) throws Exception {
+    CredentialGenerator gen = new DummyCredentialGenerator();
+    Properties extraProps = gen.getSystemProperties();
+    Properties javaProps = gen.getJavaProperties();
+    String authenticator = gen.getAuthenticator();
+    String authInit = gen.getAuthInit();
+
+    // Start the servers
+    int locPort1 = getLocatorPort();
+    int locPort2 = getLocatorPort();
+    String locString = getAndClearLocatorString();
+
+    int port1 = createServer1(extraProps, javaProps, authenticator, locPort1, locString);
+    int port2 = server2
+        .invoke(() -> createCacheServer(locPort2, locString, authenticator, extraProps, javaProps));
+
+    // Start first client with valid credentials
+    Properties credentials1 = gen.getValidCredentials(1);
+    Properties javaProps1 = gen.getJavaProperties();
+
+    createClient1NoException(multiUser, authInit, port1, port2, credentials1, javaProps1);
+
+    // Trying to create the region on client2
+    if (gen.classCode().equals(CredentialGenerator.ClassCode.SSL)) {
+      // For SSL the exception may not come since the server can close socket
+      // before handshake message is sent from client. However exception
+      // should come in any region operations.
+      client2.invoke(
+          () -> createCacheClient(null, null, null, port1, port2, 0, multiUser, NO_EXCEPTION));
+      client2.invoke(() -> doPuts(2, OTHER_EXCEPTION));
+
+    } else {
+      client2.invoke(
+          () -> createCacheClient(null, null, null, port1, port2, 0, multiUser, AUTHREQ_EXCEPTION));
+
       // Try to register a PDX type with the server
       client2.invoke("register a PDX type", () -> {
         HeapDataOutputStream outputStream = new HeapDataOutputStream(100, Version.CURRENT);

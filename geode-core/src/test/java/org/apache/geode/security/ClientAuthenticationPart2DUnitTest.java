@@ -34,6 +34,11 @@ public class ClientAuthenticationPart2DUnitTest extends ClientAuthenticationTest
   }
 
   @Test
+  public void testNoCredentialsForMultipleUsersCantRegisterMetadata() throws Exception {
+    doTestNoCredentialsCantRegisterMetadata(true);
+  }
+
+  @Test
   public void testInvalidCredentialsForMultipleUsers() throws Exception {
     doTestInvalidCredentials(true);
   }
