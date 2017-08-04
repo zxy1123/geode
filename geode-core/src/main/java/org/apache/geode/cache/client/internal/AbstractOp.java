@@ -140,6 +140,54 @@ public abstract class AbstractOp implements Op {
   }
 
   /**
+   * New implementations of AbstractOp should override this method to return false if the
+   * implementation should be excluded from client authentication. e.g. PingOp#needsUserId()
+   * <P/>
+   * Also, such an operation's <code>MessageType</code> must be added in the 'if' condition in
+   * {@link ServerConnection#updateAndGetSecurityPart()}
+   *
+   * @return boolean
+   * @see AbstractOp#sendMessage(Connection)
+   * @see AbstractOp#processSecureBytes(Connection, Message)
+   * @see ServerConnection#updateAndGetSecurityPart()
+   */
+  protected boolean needsUserId() {
+    return true;
+  }
+
+  /**
+   * New implementations of AbstractOp should override this method if the implementation should be
+   * excluded from client authentication. e.g. PingOp#processSecureBytes(Connection cnx, Message
+   * message)
+   *
+   * @see AbstractOp#sendMessage(Connection)
+   * @see AbstractOp#needsUserId()
+   * @see ServerConnection#updateAndGetSecurityPart()
+   */
+  protected void processSecureBytes(Connection cnx, Message message) throws Exception {
+    if (cnx.getServer().getRequiresCredentials()) {
+      if (!message.isSecureMode()) {
+        // This can be seen during shutdown
+        if (logger.isDebugEnabled()) {
+          logger.trace(LogMarker.BRIDGE_SERVER,
+              "Response message from {} for {} has no secure part.", cnx, this);
+        }
+        return;
+      }
+      byte[] partBytes = message.getSecureBytes();
+      if (partBytes == null) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Response message for {} has no bytes in secure part.", this);
+        }
+        return;
+      }
+      byte[] bytes = ((ConnectionImpl) cnx).getHandShake().decryptBytes(partBytes);
+      DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+      cnx.setConnectionID(dis.readLong());
+    }
+  }
+
+  /**
    * Attempts to read a response to this operation by reading it from the given connection, and
    * returning it.
    * 
@@ -170,38 +218,6 @@ public abstract class AbstractOp implements Op {
       }
     } else {
       return null;
-    }
-  }
-
-  /**
-   * New implementations of AbstractOp should override this method if the implementation should be
-   * excluded from client authentication. e.g. PingOp#processSecureBytes(Connection cnx, Message
-   * message)
-   * 
-   * @see AbstractOp#sendMessage(Connection)
-   * @see AbstractOp#needsUserId()
-   * @see ServerConnection#updateAndGetSecurityPart()
-   */
-  protected void processSecureBytes(Connection cnx, Message message) throws Exception {
-    if (cnx.getServer().getRequiresCredentials()) {
-      if (!message.isSecureMode()) {
-        // This can be seen during shutdown
-        if (logger.isDebugEnabled()) {
-          logger.trace(LogMarker.BRIDGE_SERVER,
-              "Response message from {} for {} has no secure part.", cnx, this);
-        }
-        return;
-      }
-      byte[] partBytes = message.getSecureBytes();
-      if (partBytes == null) {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Response message for {} has no bytes in secure part.", this);
-        }
-        return;
-      }
-      byte[] bytes = ((ConnectionImpl) cnx).getHandShake().decryptBytes(partBytes);
-      DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
-      cnx.setConnectionID(dis.readLong());
     }
   }
 
@@ -403,22 +419,6 @@ public abstract class AbstractOp implements Op {
   protected abstract void endSendAttempt(ConnectionStats stats, long start);
 
   protected abstract void endAttempt(ConnectionStats stats, long start);
-
-  /**
-   * New implementations of AbstractOp should override this method to return false if the
-   * implementation should be excluded from client authentication. e.g. PingOp#needsUserId()
-   * <P/>
-   * Also, such an operation's <code>MessageType</code> must be added in the 'if' condition in
-   * {@link ServerConnection#updateAndGetSecurityPart()}
-   * 
-   * @return boolean
-   * @see AbstractOp#sendMessage(Connection)
-   * @see AbstractOp#processSecureBytes(Connection, Message)
-   * @see ServerConnection#updateAndGetSecurityPart()
-   */
-  protected boolean needsUserId() {
-    return true;
-  }
 
   /**
    * Subclasses for AbstractOp should override this method to return false in this message should

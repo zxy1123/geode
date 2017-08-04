@@ -1082,33 +1082,39 @@ public abstract class ServerConnection implements Runnable {
   }
 
   private boolean isInternalMessage() {
-    return (this.requestMsg.messageType == MessageType.CLIENT_READY
-        || this.requestMsg.messageType == MessageType.CLOSE_CONNECTION
-        || this.requestMsg.messageType == MessageType.GETCQSTATS_MSG_TYPE
-        || this.requestMsg.messageType == MessageType.GET_CLIENT_PARTITION_ATTRIBUTES
-        || this.requestMsg.messageType == MessageType.GET_CLIENT_PR_METADATA
-        || this.requestMsg.messageType == MessageType.INVALID
-        || this.requestMsg.messageType == MessageType.MAKE_PRIMARY
-        || this.requestMsg.messageType == MessageType.MONITORCQ_MSG_TYPE
-        || this.requestMsg.messageType == MessageType.PERIODIC_ACK
-        || this.requestMsg.messageType == MessageType.PING
-        || this.requestMsg.messageType == MessageType.REGISTER_DATASERIALIZERS
-        || this.requestMsg.messageType == MessageType.REGISTER_INSTANTIATORS
+    return this.requestMsg.messageType == MessageType.PING
+        || this.requestMsg.messageType == MessageType.USER_CREDENTIAL_MESSAGE
         || this.requestMsg.messageType == MessageType.REQUEST_EVENT_VALUE
-        || this.requestMsg.messageType == MessageType.ADD_PDX_TYPE
-        || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_TYPE
-        || this.requestMsg.messageType == MessageType.GET_PDX_TYPE_BY_ID
+        || this.requestMsg.messageType == MessageType.MAKE_PRIMARY
+        || this.requestMsg.messageType == MessageType.REMOVE_USER_AUTH
+        || this.requestMsg.messageType == MessageType.CLIENT_READY
         || this.requestMsg.messageType == MessageType.SIZE
         || this.requestMsg.messageType == MessageType.TX_FAILOVER
         || this.requestMsg.messageType == MessageType.TX_SYNCHRONIZATION
-        || this.requestMsg.messageType == MessageType.GET_FUNCTION_ATTRIBUTES
-        || this.requestMsg.messageType == MessageType.ADD_PDX_ENUM
-        || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_ENUM
-        || this.requestMsg.messageType == MessageType.GET_PDX_ENUM_BY_ID
-        || this.requestMsg.messageType == MessageType.GET_PDX_TYPES
-        || this.requestMsg.messageType == MessageType.GET_PDX_ENUMS
         || this.requestMsg.messageType == MessageType.COMMIT
-        || this.requestMsg.messageType == MessageType.ROLLBACK);
+        || this.requestMsg.messageType == MessageType.ROLLBACK
+        || this.requestMsg.messageType == MessageType.CLOSE_CONNECTION
+        || this.requestMsg.messageType == MessageType.INVALID
+        || this.requestMsg.messageType == MessageType.PERIODIC_ACK
+        || this.requestMsg.messageType == MessageType.GET_CLIENT_PARTITION_ATTRIBUTES
+       ;
+
+//        || this.requestMsg.messageType == MessageType.GETCQSTATS_MSG_TYPE
+//        || this.requestMsg.messageType == MessageType.GET_CLIENT_PR_METADATA
+//        || this.requestMsg.messageType == MessageType.MAKE_PRIMARY
+//        || this.requestMsg.messageType == MessageType.MONITORCQ_MSG_TYPE
+//        || this.requestMsg.messageType == MessageType.REGISTER_DATASERIALIZERS
+//        || this.requestMsg.messageType == MessageType.REGISTER_INSTANTIATORS
+//        || this.requestMsg.messageType == MessageType.ADD_PDX_TYPE
+//        || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_TYPE
+//        || this.requestMsg.messageType == MessageType.GET_PDX_TYPE_BY_ID
+//        || this.requestMsg.messageType == MessageType.SIZE
+//        || this.requestMsg.messageType == MessageType.GET_FUNCTION_ATTRIBUTES
+//        || this.requestMsg.messageType == MessageType.ADD_PDX_ENUM
+//        || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_ENUM
+//        || this.requestMsg.messageType == MessageType.GET_PDX_ENUM_BY_ID
+//        || this.requestMsg.messageType == MessageType.GET_PDX_TYPES
+//        || this.requestMsg.messageType == MessageType.GET_PDX_ENUMS
   }
 
   public void run() {
