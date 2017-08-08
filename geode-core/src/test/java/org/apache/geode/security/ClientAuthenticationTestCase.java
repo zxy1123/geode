@@ -74,7 +74,7 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
 
     @Override
     public Class<?>[] getSupportedClasses() {
-      return new Class[]{Color.class};
+      return new Class[] {Color.class};
     }
 
     public int getId() {
@@ -256,7 +256,8 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
           DataSerializer.writeObject(new Employee(106l, "David", "Copperfield"), outputStream);
           throw new Error("operation should have been rejected");
         } catch (UnsupportedOperationException e) {
-          // "UnsupportedOperationException: Use Pool APIs for doing operations when multiuser-secure-mode-enabled is set to true."
+          // "UnsupportedOperationException: Use Pool APIs for doing operations when
+          // multiuser-secure-mode-enabled is set to true."
         }
       });
 
@@ -265,10 +266,12 @@ public abstract class ClientAuthenticationTestCase extends JUnit4DistributedTest
         EventID eventId = InternalDataSerializer.generateEventId();
         Pool pool = PoolManager.getAll().values().iterator().next();
         try {
-          RegisterDataSerializersOp.execute((ExecutablePool)pool, new DataSerializer[]{new MyDataSerializer()}, eventId);
+          RegisterDataSerializersOp.execute((ExecutablePool) pool,
+              new DataSerializer[] {new MyDataSerializer()}, eventId);
           throw new Error("operation should have been rejected");
         } catch (UnsupportedOperationException e) {
-          // "UnsupportedOperationException: Use Pool APIs for doing operations when multiuser-secure-mode-enabled is set to true."
+          // "UnsupportedOperationException: Use Pool APIs for doing operations when
+          // multiuser-secure-mode-enabled is set to true."
         }
       });
     }

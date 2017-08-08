@@ -1096,25 +1096,22 @@ public abstract class ServerConnection implements Runnable {
         || this.requestMsg.messageType == MessageType.CLOSE_CONNECTION
         || this.requestMsg.messageType == MessageType.INVALID
         || this.requestMsg.messageType == MessageType.PERIODIC_ACK
-        || this.requestMsg.messageType == MessageType.GET_CLIENT_PARTITION_ATTRIBUTES
-       ;
+        || this.requestMsg.messageType == MessageType.GET_CLIENT_PARTITION_ATTRIBUTES;
 
-//        || this.requestMsg.messageType == MessageType.GETCQSTATS_MSG_TYPE
-//        || this.requestMsg.messageType == MessageType.GET_CLIENT_PR_METADATA
-//        || this.requestMsg.messageType == MessageType.MAKE_PRIMARY
-//        || this.requestMsg.messageType == MessageType.MONITORCQ_MSG_TYPE
-//        || this.requestMsg.messageType == MessageType.REGISTER_DATASERIALIZERS
-//        || this.requestMsg.messageType == MessageType.REGISTER_INSTANTIATORS
-//        || this.requestMsg.messageType == MessageType.ADD_PDX_TYPE
-//        || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_TYPE
-//        || this.requestMsg.messageType == MessageType.GET_PDX_TYPE_BY_ID
-//        || this.requestMsg.messageType == MessageType.SIZE
-//        || this.requestMsg.messageType == MessageType.GET_FUNCTION_ATTRIBUTES
-//        || this.requestMsg.messageType == MessageType.ADD_PDX_ENUM
-//        || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_ENUM
-//        || this.requestMsg.messageType == MessageType.GET_PDX_ENUM_BY_ID
-//        || this.requestMsg.messageType == MessageType.GET_PDX_TYPES
-//        || this.requestMsg.messageType == MessageType.GET_PDX_ENUMS
+    // || this.requestMsg.messageType == MessageType.GETCQSTATS_MSG_TYPE
+    // || this.requestMsg.messageType == MessageType.GET_CLIENT_PR_METADATA
+    // || this.requestMsg.messageType == MessageType.MONITORCQ_MSG_TYPE
+    // || this.requestMsg.messageType == MessageType.REGISTER_DATASERIALIZERS
+    // || this.requestMsg.messageType == MessageType.REGISTER_INSTANTIATORS
+    // || this.requestMsg.messageType == MessageType.ADD_PDX_TYPE
+    // || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_TYPE
+    // || this.requestMsg.messageType == MessageType.GET_PDX_TYPE_BY_ID
+    // || this.requestMsg.messageType == MessageType.GET_FUNCTION_ATTRIBUTES
+    // || this.requestMsg.messageType == MessageType.ADD_PDX_ENUM
+    // || this.requestMsg.messageType == MessageType.GET_PDX_ID_FOR_ENUM
+    // || this.requestMsg.messageType == MessageType.GET_PDX_ENUM_BY_ID
+    // || this.requestMsg.messageType == MessageType.GET_PDX_TYPES
+    // || this.requestMsg.messageType == MessageType.GET_PDX_ENUMS
   }
 
   public void run() {
@@ -1722,7 +1719,8 @@ public abstract class ServerConnection implements Runnable {
           (HandShake) this.handshake, this.connectionId);
     } else {
       throw new AuthenticationRequiredException(
-          LocalizedStrings.HandShake_NO_SECURITY_CREDENTIALS_ARE_PROVIDED.toLocalizedString());
+          LocalizedStrings.HandShake_NO_SECURITY_CREDENTIALS_ARE_PROVIDED.toLocalizedString()
+              + "; for message " + this.requestMsg);
     }
     return uniqueId;
   }

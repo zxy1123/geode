@@ -67,20 +67,6 @@ public class GetClientPRMetaDataOp {
       getMessage().addStringPart(regionFullPath);
     }
 
-    @Override
-    protected void processSecureBytes(Connection cnx, Message message) throws Exception {}
-
-    @Override
-    protected boolean needsUserId() {
-      return false;
-    }
-
-    @Override
-    protected void sendMessage(Connection cnx) throws Exception {
-      getMessage().clearMessageHasSecurePartFlag();
-      getMessage().send(false);
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     protected Object processResponse(Message msg) throws Exception {
