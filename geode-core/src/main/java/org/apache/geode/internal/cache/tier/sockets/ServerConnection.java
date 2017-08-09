@@ -88,9 +88,9 @@ public abstract class ServerConnection implements Runnable {
       "geode.allow-internal-messages-without-credentials";
 
   /**
-   * This property allows folks to perform a rolling upgrade from pre-1.2.1 to
-   * a post-1.2.1 cluster.  Normally internal messages that can affect server state
-   * require credentials but pre-1.2.1 this wasn't the case.  See GEODE-3249
+   * This property allows folks to perform a rolling upgrade from pre-1.2.1 to a post-1.2.1 cluster.
+   * Normally internal messages that can affect server state require credentials but pre-1.2.1 this
+   * wasn't the case. See GEODE-3249
    */
   private static final boolean ALLOW_INTERNAL_MESSAGES_WITHOUT_CREDENTIALS =
       Boolean.getBoolean(ALLOW_INTERNAL_MESSAGES_WITHOUT_CREDENTIALS_NAME);
@@ -775,8 +775,8 @@ public abstract class ServerConnection implements Runnable {
 
         // if a subject exists for this uniqueId, binds the subject to this thread so that we can do
         // authorization later
-        if (AcceptorImpl.isIntegratedSecurity() && !isInternalMessage(
-            this.requestMsg, ALLOW_INTERNAL_MESSAGES_WITHOUT_CREDENTIALS)
+        if (AcceptorImpl.isIntegratedSecurity()
+            && !isInternalMessage(this.requestMsg, ALLOW_INTERNAL_MESSAGES_WITHOUT_CREDENTIALS)
             && this.communicationMode != Acceptor.GATEWAY_TO_GATEWAY) {
           long uniqueId = getUniqueId();
           Subject subject = this.clientUserAuths.getSubject(uniqueId);
@@ -1080,8 +1080,8 @@ public abstract class ServerConnection implements Runnable {
     if (AcceptorImpl.isAuthenticationRequired()
         && this.handshake.getVersion().compareTo(Version.GFE_65) >= 0
         && (this.communicationMode != Acceptor.GATEWAY_TO_GATEWAY)
-        && (!this.requestMsg.getAndResetIsMetaRegion()) && (!isInternalMessage(
-        this.requestMsg, ALLOW_INTERNAL_MESSAGES_WITHOUT_CREDENTIALS))) {
+        && (!this.requestMsg.getAndResetIsMetaRegion())
+        && (!isInternalMessage(this.requestMsg, ALLOW_INTERNAL_MESSAGES_WITHOUT_CREDENTIALS))) {
       setSecurityPart();
       return this.securePart;
     } else {
@@ -1101,22 +1101,16 @@ public abstract class ServerConnection implements Runnable {
     int messageType = message.getMessageType();
     boolean isInternalMessage = messageType == MessageType.PING
         || messageType == MessageType.USER_CREDENTIAL_MESSAGE
-        || messageType == MessageType.REQUEST_EVENT_VALUE
-        || messageType == MessageType.MAKE_PRIMARY
-        || messageType == MessageType.REMOVE_USER_AUTH
-        || messageType == MessageType.CLIENT_READY
-        || messageType == MessageType.SIZE
-        || messageType == MessageType.TX_FAILOVER
-        || messageType == MessageType.TX_SYNCHRONIZATION
-        || messageType == MessageType.COMMIT
-        || messageType == MessageType.ROLLBACK
-        || messageType == MessageType.CLOSE_CONNECTION
-        || messageType == MessageType.INVALID
-        || messageType == MessageType.PERIODIC_ACK
+        || messageType == MessageType.REQUEST_EVENT_VALUE || messageType == MessageType.MAKE_PRIMARY
+        || messageType == MessageType.REMOVE_USER_AUTH || messageType == MessageType.CLIENT_READY
+        || messageType == MessageType.SIZE || messageType == MessageType.TX_FAILOVER
+        || messageType == MessageType.TX_SYNCHRONIZATION || messageType == MessageType.COMMIT
+        || messageType == MessageType.ROLLBACK || messageType == MessageType.CLOSE_CONNECTION
+        || messageType == MessageType.INVALID || messageType == MessageType.PERIODIC_ACK
         || messageType == MessageType.GET_CLIENT_PARTITION_ATTRIBUTES;
 
     // we allow older clients to not send credentials for a handful of messages
-    // if and only if a system property is set.  This allows a rolling upgrade
+    // if and only if a system property is set. This allows a rolling upgrade
     // to be performed.
     if (!isInternalMessage && allowOldInternalMessages) {
       isInternalMessage = messageType == MessageType.GETCQSTATS_MSG_TYPE
@@ -1131,8 +1125,7 @@ public abstract class ServerConnection implements Runnable {
           || messageType == MessageType.ADD_PDX_ENUM
           || messageType == MessageType.GET_PDX_ID_FOR_ENUM
           || messageType == MessageType.GET_PDX_ENUM_BY_ID
-          || messageType == MessageType.GET_PDX_TYPES
-          || messageType == MessageType.GET_PDX_ENUMS;
+          || messageType == MessageType.GET_PDX_TYPES || messageType == MessageType.GET_PDX_ENUMS;
     }
     return isInternalMessage;
   }
