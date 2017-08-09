@@ -49,12 +49,13 @@ public class ClientAuthenticationPart2DUnitTest extends ClientAuthenticationTest
   public void testServerConnectionAcceptsOldInternalMessagesIfAllowed() throws Exception {
 
     ServerConnection serverConnection = mock(ServerConnection.class);
-    when(serverConnection.isInternalMessage(any(Message.class), any(Boolean.class))).thenCallRealMethod();
+    when(serverConnection.isInternalMessage(any(Message.class), any(Boolean.class)))
+        .thenCallRealMethod();
 
-    int[] oldInternalMessages = new int[]{MessageType.ADD_PDX_TYPE, MessageType.ADD_PDX_ENUM,
+    int[] oldInternalMessages = new int[] {MessageType.ADD_PDX_TYPE, MessageType.ADD_PDX_ENUM,
         MessageType.REGISTER_INSTANTIATORS, MessageType.REGISTER_DATASERIALIZERS};
 
-    for (int i=0; i<oldInternalMessages.length; i++) {
+    for (int i = 0; i < oldInternalMessages.length; i++) {
       Message message = mock(Message.class);
       when(message.getMessageType()).thenReturn(oldInternalMessages[i]);
 
