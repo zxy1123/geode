@@ -1056,6 +1056,7 @@ public abstract class ServerConnection implements Runnable {
   private void setSecurityPart() {
     try {
       this.connectionId = randomConnectionIdGen.nextLong();
+      logger.info("ServerConnection setting connectionId to {} for message {}", connectionId, requestMsg);
       this.securePart = new Part();
       byte[] id = encryptId(this.connectionId, this);
       this.securePart.setPartState(id, false);
@@ -1095,9 +1096,6 @@ public abstract class ServerConnection implements Runnable {
   }
 
   public boolean isInternalMessage(Message message, boolean allowOldInternalMessages) {
-    if (message.isSecureMode()) {
-      return false;
-    }
     int messageType = message.getMessageType();
     boolean isInternalMessage = messageType == MessageType.PING
         || messageType == MessageType.USER_CREDENTIAL_MESSAGE
@@ -1107,6 +1105,7 @@ public abstract class ServerConnection implements Runnable {
         || messageType == MessageType.TX_SYNCHRONIZATION || messageType == MessageType.COMMIT
         || messageType == MessageType.ROLLBACK || messageType == MessageType.CLOSE_CONNECTION
         || messageType == MessageType.INVALID || messageType == MessageType.PERIODIC_ACK
+        || messageType == MessageType.GET_CLIENT_PR_METADATA
         || messageType == MessageType.GET_CLIENT_PARTITION_ATTRIBUTES;
 
     // we allow older clients to not send credentials for a handful of messages
@@ -1114,7 +1113,6 @@ public abstract class ServerConnection implements Runnable {
     // to be performed.
     if (!isInternalMessage && allowOldInternalMessages) {
       isInternalMessage = messageType == MessageType.GETCQSTATS_MSG_TYPE
-          || messageType == MessageType.GET_CLIENT_PR_METADATA
           || messageType == MessageType.MONITORCQ_MSG_TYPE
           || messageType == MessageType.REGISTER_DATASERIALIZERS
           || messageType == MessageType.REGISTER_INSTANTIATORS
