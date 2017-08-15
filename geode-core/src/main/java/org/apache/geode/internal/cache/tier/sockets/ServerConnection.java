@@ -1056,7 +1056,8 @@ public abstract class ServerConnection implements Runnable {
   private void setSecurityPart() {
     try {
       this.connectionId = randomConnectionIdGen.nextLong();
-      logger.info("ServerConnection setting connectionId to {} for message {}", connectionId, requestMsg);
+      logger.info("ServerConnection setting connectionId to {} for message {}", connectionId,
+          requestMsg);
       this.securePart = new Part();
       byte[] id = encryptId(this.connectionId, this);
       this.securePart.setPartState(id, false);
