@@ -140,9 +140,8 @@ public abstract class AbstractOp implements Op {
   }
 
   /**
-   * Process the security information in a response from the server.  If the server
-   * sends a security "part" we must process it so all subclasses should allow this
-   * method to be invoked.
+   * Process the security information in a response from the server. If the server sends a security
+   * "part" we must process it so all subclasses should allow this method to be invoked.
    *
    * @see ServerConnection#updateAndGetSecurityPart()
    */
