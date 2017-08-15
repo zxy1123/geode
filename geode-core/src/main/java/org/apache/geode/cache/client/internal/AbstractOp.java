@@ -140,28 +140,10 @@ public abstract class AbstractOp implements Op {
   }
 
   /**
-   * New implementations of AbstractOp should override this method to return false if the
-   * implementation should be excluded from client authentication. e.g. PingOp#needsUserId()
-   * <P/>
-   * Also, such an operation's <code>MessageType</code> must be added in the 'if' condition in
-   * {@link ServerConnection#updateAndGetSecurityPart()}
+   * Process the security information in a response from the server.  If the server
+   * sends a security "part" we must process it so all subclasses should allow this
+   * method to be invoked.
    *
-   * @return boolean
-   * @see AbstractOp#sendMessage(Connection)
-   * @see AbstractOp#processSecureBytes(Connection, Message)
-   * @see ServerConnection#updateAndGetSecurityPart()
-   */
-  protected boolean needsUserId() {
-    return true;
-  }
-
-  /**
-   * New implementations of AbstractOp should override this method if the implementation should be
-   * excluded from client authentication. e.g. PingOp#processSecureBytes(Connection cnx, Message
-   * message)
-   *
-   * @see AbstractOp#sendMessage(Connection)
-   * @see AbstractOp#needsUserId()
    * @see ServerConnection#updateAndGetSecurityPart()
    */
   protected void processSecureBytes(Connection cnx, Message message) throws Exception {
@@ -185,6 +167,21 @@ public abstract class AbstractOp implements Op {
       DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
       cnx.setConnectionID(dis.readLong());
     }
+  }
+
+  /**
+   * New implementations of AbstractOp should override this method to return false if the
+   * implementation should be excluded from client authentication. e.g. PingOp#needsUserId()
+   * <P/>
+   * Also, such an operation's <code>MessageType</code> must be added in the 'if' condition in
+   * {@link ServerConnection#updateAndGetSecurityPart()}
+   *
+   * @return boolean
+   * @see AbstractOp#sendMessage(Connection)
+   * @see ServerConnection#updateAndGetSecurityPart()
+   */
+  protected boolean needsUserId() {
+    return true;
   }
 
   /**
