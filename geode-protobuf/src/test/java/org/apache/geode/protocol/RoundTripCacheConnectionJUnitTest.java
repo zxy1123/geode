@@ -24,6 +24,7 @@ import static org.apache.geode.distributed.ConfigurationProperties.SSL_TRUSTSTOR
 import static org.apache.geode.distributed.ConfigurationProperties.SSL_TRUSTSTORE_PASSWORD;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -57,6 +58,7 @@ import org.apache.geode.internal.AvailablePortHelper;
 import org.apache.geode.internal.admin.SSLConfig;
 import org.apache.geode.internal.cache.CacheServerImpl;
 import org.apache.geode.internal.cache.tier.sockets.AcceptorImpl;
+import org.apache.geode.internal.cache.tier.sockets.ClientHealthMonitor;
 import org.apache.geode.internal.cache.tier.sockets.GenericProtocolServerConnection;
 import org.apache.geode.internal.net.SocketCreator;
 import org.apache.geode.internal.net.SocketCreatorFactory;
@@ -117,6 +119,7 @@ public class RoundTripCacheConnectionJUnitTest {
     boolean useSSL = testName.getMethodName().startsWith("useSSL_");
 
     Properties properties = new Properties();
+    properties.put("log-level", "debug");
     if (useSSL) {
       updatePropertiesForSSLCache(properties);
     }
@@ -125,12 +128,16 @@ public class RoundTripCacheConnectionJUnitTest {
     cacheFactory.set(ConfigurationProperties.MCAST_PORT, "0");
     cacheFactory.set(ConfigurationProperties.ENABLE_CLUSTER_CONFIGURATION, "false");
     cacheFactory.set(ConfigurationProperties.USE_CLUSTER_CONFIGURATION, "false");
+
+
     cache = cacheFactory.create();
 
     CacheServer cacheServer = cache.addCacheServer();
     cacheServerPort = AvailablePortHelper.getRandomAvailableTCPPort();
     cacheServer.setPort(cacheServerPort);
+    cacheServer.setMaximumTimeBetweenPings(200);
     cacheServer.start();
+
 
     RegionFactory<Object, Object> regionFactory = cache.createRegionFactory();
     regionFactory.create(TEST_REGION);
@@ -151,9 +158,54 @@ public class RoundTripCacheConnectionJUnitTest {
 
   @After
   public void cleanup() throws IOException {
+    System.out.println("beginning of after");
     cache.close();
     socket.close();
     SocketCreatorFactory.close();
+    System.out.println("done with after");
+  }
+
+  @Test
+  public void testUnresponsiveClientsGetDisconnected() throws Exception {
+    ProtobufProtocolSerializer protobufProtocolSerializer = new ProtobufProtocolSerializer();
+    ClientProtocol.Message putMessage =
+        MessageUtil.makePutRequestMessage(serializationService, TEST_KEY, TEST_VALUE, TEST_REGION,
+            ProtobufUtilities.createMessageHeader(TEST_PUT_CORRELATION_ID));
+
+
+    Runnable runnable = new Runnable() {
+      @Override
+      public void run() {
+        try {
+          // send a PUT message
+          protobufProtocolSerializer.serialize(putMessage, outputStream);
+          assertEquals(-1, socket.getInputStream().read());
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    };
+
+    Awaitility.await().atMost(1500, TimeUnit.MILLISECONDS).pollInterval(100, TimeUnit.MILLISECONDS)
+        .pollDelay(ClientHealthMonitor.CLIENT_MONITOR_INTERVAL + 1, TimeUnit.MILLISECONDS)
+        .until(runnable);
+  }
+
+  @Test
+  public void testResponsiveClientsStaysConnected() throws Exception {
+    ProtobufProtocolSerializer protobufProtocolSerializer = new ProtobufProtocolSerializer();
+    ClientProtocol.Message putMessage =
+        MessageUtil.makePutRequestMessage(serializationService, TEST_KEY, TEST_VALUE, TEST_REGION,
+            ProtobufUtilities.createMessageHeader(TEST_PUT_CORRELATION_ID));
+
+    int timeout = 1500;
+    int interval = 100;
+    for (int i = 0; i < timeout; i += interval) {
+      // send a PUT message
+      protobufProtocolSerializer.serialize(putMessage, outputStream);
+      assertNotEquals(-1, socket.getInputStream().read());
+      Thread.sleep(interval);
+    }
   }
 
   @Test

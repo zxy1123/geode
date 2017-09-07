@@ -15,9 +15,13 @@
 
 package org.apache.geode.internal.cache.tier.sockets;
 
+import org.apache.geode.distributed.DistributedMember;
+import org.apache.geode.distributed.internal.ServerLocation;
+import org.apache.geode.distributed.internal.membership.InternalDistributedMember;
 import org.apache.geode.internal.cache.InternalCache;
 import org.apache.geode.internal.cache.tier.Acceptor;
 import org.apache.geode.internal.cache.tier.CachedRegionHelper;
+import org.apache.geode.internal.cache.tier.CommunicationMode;
 import org.apache.geode.internal.security.SecurityService;
 import org.apache.geode.security.SecurityManager;
 import org.apache.geode.security.server.Authenticator;
@@ -26,6 +30,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
@@ -36,6 +42,7 @@ public class GenericProtocolServerConnection extends ServerConnection {
   private final ClientProtocolMessageHandler messageHandler;
   private final SecurityManager securityManager;
   private final Authenticator authenticator;
+  private ClientProxyMembershipID clientProxyMembershipID;
 
   /**
    * Creates a new <code>GenericProtocolServerConnection</code> that processes messages received
@@ -50,6 +57,10 @@ public class GenericProtocolServerConnection extends ServerConnection {
     securityManager = securityService.getSecurityManager();
     this.messageHandler = newClientProtocol;
     this.authenticator = authenticator;
+
+    setClientProxyMembershipId();
+
+    doHandShake(CommunicationMode.ProtobufClientServerProtocol.getModeNumber(), 0);
   }
 
   @Override
@@ -72,13 +83,31 @@ public class GenericProtocolServerConnection extends ServerConnection {
       logger.warn(e);
       this.setFlagProcessMessagesAsFalse();
       setClientDisconnectedException(e);
+    } finally {
+      acceptor.getClientHealthMonitor().receivedPing(this.clientProxyMembershipID);
     }
+  }
+
+  private void setClientProxyMembershipId() {
+    ServerLocation serverLocation = new ServerLocation(
+        ((InetSocketAddress) this.getSocket().getRemoteSocketAddress()).getHostName(),
+        this.getSocketPort());
+    DistributedMember distributedMember = new InternalDistributedMember(serverLocation);
+    // no handshake for new client protocol.
+    clientProxyMembershipID = new ClientProxyMembershipID(distributedMember);
   }
 
   @Override
   protected boolean doHandShake(byte epType, int qSize) {
-    // no handshake for new client protocol.
+    getAcceptor().getClientHealthMonitor().registerClient(clientProxyMembershipID);
+    getAcceptor().getClientHealthMonitor().addConnection(clientProxyMembershipID, this);
+
     return true;
+  }
+
+  @Override
+  protected int getClientReadTimeout() {
+    return 10000;
   }
 
   @Override

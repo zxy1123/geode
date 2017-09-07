@@ -100,7 +100,7 @@ public class ClientHealthMonitor {
   /**
    * The interval between client monitor iterations
    */
-  final protected static long CLIENT_MONITOR_INTERVAL = 1000;
+  final public static long CLIENT_MONITOR_INTERVAL = 1000;
 
   final private CacheClientNotifierStats stats;
 
