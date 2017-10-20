@@ -37,6 +37,7 @@ dependencies {
     testCompile 'com.pholser:junit-quickcheck-generators:' + project.'junit-quickcheck.version'
     testCompile files(project(':geode-core').sourceSets.test.output)
     testCompile project(':geode-old-versions')
+    testRuntime 'org.apache.lucene:lucene-backward-codecs:' + project.'lucene.version'
 
 }
 

@@ -83,6 +83,9 @@ public class DistributedScoringJUnitTest {
     TopEntriesCollector collector = new TopEntriesCollector();
     singleIndexRepo.query(query, 100, collector);
     List<EntryScore<String>> singleResult = collector.getEntries().getHits();
+    System.out.println(Thread.currentThread().getName()
+        + ": DistributedScoringJUnitTest.uniformDistributionProducesComparableScores singleQueryResult="
+        + singleResult);
 
     IndexRepositoryImpl distIR1 = createIndexRepo();
     populateIndex(testStrings, distIR1, 0, testStrings.length / 3);
@@ -99,16 +102,28 @@ public class DistributedScoringJUnitTest {
     TopEntriesCollector collector1 = manager.newCollector("");
     distIR1.query(query, 100, collector1);
     collectors.add(collector1);
+    System.out.println(Thread.currentThread().getName()
+        + ": DistributedScoringJUnitTest.uniformDistributionProducesComparableScores collector1QueryResult="
+        + collector1.getEntries().getHits());
 
     TopEntriesCollector collector2 = manager.newCollector("");
     distIR2.query(query, 100, collector2);
     collectors.add(collector2);
+    System.out.println(Thread.currentThread().getName()
+        + ": DistributedScoringJUnitTest.uniformDistributionProducesComparableScores collector2QueryResult="
+        + collector2.getEntries().getHits());
 
     TopEntriesCollector collector3 = manager.newCollector("");
     distIR3.query(query, 100, collector3);
     collectors.add(collector3);
+    System.out.println(Thread.currentThread().getName()
+        + ": DistributedScoringJUnitTest.uniformDistributionProducesComparableScores collector3QueryResult="
+        + collector3.getEntries().getHits());
 
     List<EntryScore<String>> distResult = manager.reduce(collectors).getEntries().getHits();
+    System.out.println(Thread.currentThread().getName()
+        + ": DistributedScoringJUnitTest.uniformDistributionProducesComparableScores distResult="
+        + distResult);
 
     Assert.assertEquals(singleResult.size(), distResult.size());
     Assert.assertTrue(singleResult.size() > 0);
