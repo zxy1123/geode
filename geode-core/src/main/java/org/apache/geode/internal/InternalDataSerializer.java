@@ -19,16 +19,19 @@ import org.apache.geode.CancelException;
 import org.apache.geode.CanonicalInstantiator;
 import org.apache.geode.DataSerializable;
 import org.apache.geode.DataSerializer;
+import org.apache.geode.GemFireConfigException;
 import org.apache.geode.GemFireIOException;
 import org.apache.geode.GemFireRethrowable;
 import org.apache.geode.Instantiator;
 import org.apache.geode.InternalGemFireError;
+import org.apache.geode.InternalGemFireException;
 import org.apache.geode.SerializationException;
 import org.apache.geode.SystemFailure;
 import org.apache.geode.ToDataException;
 import org.apache.geode.cache.CacheClosedException;
 import org.apache.geode.cache.execute.Function;
 import org.apache.geode.distributed.internal.DMStats;
+import org.apache.geode.distributed.internal.DistributedSystemService;
 import org.apache.geode.distributed.internal.DistributionConfig;
 import org.apache.geode.distributed.internal.DistributionManager;
 import org.apache.geode.distributed.internal.InternalDistributedSystem;
@@ -47,6 +50,7 @@ import org.apache.geode.internal.cache.tier.sockets.ClientProxyMembershipID;
 import org.apache.geode.internal.cache.tier.sockets.OldClientSupportService;
 import org.apache.geode.internal.cache.tier.sockets.Part;
 import org.apache.geode.internal.i18n.LocalizedStrings;
+import org.apache.geode.internal.lang.ClassUtils;
 import org.apache.geode.internal.logging.LogService;
 import org.apache.geode.internal.logging.log4j.LocalizedMessage;
 import org.apache.geode.internal.logging.log4j.LogMarker;
@@ -67,11 +71,14 @@ import org.apache.geode.pdx.internal.PdxType;
 import org.apache.geode.pdx.internal.PdxWriterImpl;
 import org.apache.geode.pdx.internal.TypeRegistry;
 import org.apache.logging.log4j.Logger;
+import sun.misc.ObjectInputFilter;
 
+import java.io.BufferedReader;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.NotSerializableException;
@@ -132,6 +139,11 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   private static final Map<String, DataSerializer> classesToSerializers = new ConcurrentHashMap<>();
 
+  /**
+   * A deserialization filter for ObjectInputStreams
+   */
+  private static ObjectInputFilter serializationFilter = ObjectInputFilter.Config.createFilter("**");
+
   private static final String serializationVersionTxt =
       System.getProperty(DistributionConfig.GEMFIRE_PREFIX + "serializationVersion");
 
@@ -184,6 +196,89 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
     }
     return name;
   }
+
+  /**
+   * Initializes the optional serialization "white list" if the user has requested it in
+   * the DistributionConfig
+   *
+   * @param distributionConfig the DistributedSystem configuration
+   * @param services DistributedSystem services that might have classes to white-list
+   */
+  public static void initialize(DistributionConfig distributionConfig, Collection<DistributedSystemService> services) {
+    String serializationFilterSpec; // get from configuration
+    serializationFilterSpec = "!**";
+    if (serializationFilterSpec != null) {
+      if (!ClassUtils.isClassAvailable("sun.misc.ObjectInputFilter")) {
+        throw new GemFireConfigException(
+            "A serialization filter has been specified but this version of Java does not support serialization filters - sun.misc.ObjectInputFilter is not available");
+      }
+      createSerializationFilter(serializationFilterSpec, services);
+    }
+  }
+
+
+  private static void createSerializationFilter(String serializationFilterSpec, Collection<DistributedSystemService> services) {
+
+    Set<String> sanctionedClasses = new HashSet<>(500);
+    for (DistributedSystemService service: services) {
+      try {
+        sanctionedClasses.addAll(service.getSerializationWhitelist());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+    try {
+      File sanctionedSerializables = new File(InternalDataSerializer.class.getResource("sanctionedSerializables.txt").getFile());
+      Collection<String> coreClassNames = loadClassNames(sanctionedSerializables);
+      sanctionedClasses.addAll(coreClassNames);
+    } catch (IOException e) {
+      throw new InternalGemFireException("unable to read sanctionedSerializables.txt to form a serialization white-list", e);
+    }
+
+    logger.debug("setting a serialization filter containing {}", serializationFilterSpec);
+
+    final ObjectInputFilter userFilter = ObjectInputFilter.Config.createFilter(serializationFilterSpec);
+    serializationFilter = filterInfo -> {
+      if (filterInfo.serialClass() == null) {
+        return userFilter.checkInput(filterInfo);
+      }
+
+      String className = filterInfo.serialClass().getName();
+      logger.debug("checking whether {} can be deserialized", className);
+      if (sanctionedClasses.contains(className)) {
+        return ObjectInputFilter.Status.ALLOWED;
+      } else {
+        return userFilter.checkInput(filterInfo);
+      }
+    };
+
+    ObjectInputFilter.Config.setSerialFilter(serializationFilter);
+  }
+
+  /**
+   * Loads the class names from sanctionedSerializables.txt, a file that is also
+   * maintained for backward-compatibility testing with AnalyzeSerializablesJUnitTest
+   */
+  public static Collection<String> loadClassNames(File sanctionedSerializables) throws IOException {
+    Collection<String> result = new ArrayList(1000);
+    FileReader fr = null;
+    fr = new FileReader(sanctionedSerializables);
+    try (BufferedReader in = new BufferedReader(fr)) {
+      String line;
+      while ((line = in.readLine()) != null) {
+        line = line.trim();
+        if (line.startsWith("#") || line.startsWith("//")) {
+          // comment line
+        } else {
+          result.add(line.substring(0, line.indexOf(',')-1));
+        }
+      }
+    }
+    fr.close();
+    return result;
+
+  }
+
 
   /**
    * Any time new serialization format is added then a new enum needs to be added here.
@@ -2836,6 +2931,7 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
           }
 
           ObjectInput ois = new DSObjectInputStream(stream);
+          ObjectInputFilter.Config.setObjectInputFilter((ObjectInputStream)ois, serializationFilter);
           if (stream instanceof VersionedDataStream) {
             Version v = ((VersionedDataStream) stream).getVersion();
             if (v != null && v != Version.CURRENT) {
@@ -3408,6 +3504,7 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
         throws IOException, ClassNotFoundException {
 
       String className = desc.getName();
+
       OldClientSupportService svc = getOldClientSupportService();
       if (svc != null) {
         className = svc.processIncomingClassName(className);

@@ -31,6 +31,7 @@ import static org.junit.Assume.assumeThat;
 import org.apache.geode.codeAnalysis.decode.CompiledClass;
 import org.apache.geode.codeAnalysis.decode.CompiledField;
 import org.apache.geode.codeAnalysis.decode.CompiledMethod;
+import org.apache.geode.internal.InternalDataSerializer;
 import org.apache.geode.test.junit.categories.IntegrationTest;
 import org.junit.Before;
 import org.junit.Rule;
@@ -94,7 +95,7 @@ public class AnalyzeSerializablesJUnitTest {
 
     // setup expectedSerializables
 
-    this.expectedSerializablesFile = getResourceAsFile("sanctionedSerializables.txt");
+    this.expectedSerializablesFile = getResourceAsFile(InternalDataSerializer.class, "sanctionedSerializables.txt");
     assertThat(this.expectedSerializablesFile).exists().canRead();
 
     this.expectedSerializables = loadClassesAndVariables(this.expectedSerializablesFile);
@@ -149,14 +150,18 @@ public class AnalyzeSerializablesJUnitTest {
       System.out.println(diff);
       fail(diff + FAIL_MESSAGE, getSrcPathFor(getResourceAsFile("excludedClasses.txt")),
           this.actualSerializablesFile.getAbsolutePath(),
-          getSrcPathFor(this.expectedSerializablesFile));
+          getSrcPathFor(this.expectedSerializablesFile, "main"));
     }
   }
 
   private String getSrcPathFor(File file) {
+    return getSrcPathFor(file, "test");
+  }
+
+  private String getSrcPathFor(File file, String testOrMain) {
     return file.getAbsolutePath().replace(
         "build" + File.separator + "resources" + File.separator + "test",
-        "src" + File.separator + "test" + File.separator + "resources");
+        "src" + File.separator + testOrMain + File.separator + "resources");
   }
 
   private void loadClasses() throws IOException {
@@ -306,6 +311,10 @@ public class AnalyzeSerializablesJUnitTest {
   }
 
   private File getResourceAsFile(String resourceName) {
-    return new File(getClass().getResource(resourceName).getFile());
+    return getResourceAsFile(getClass(), resourceName);
+  }
+
+  private File getResourceAsFile(Class associatedClass, String resourceName) {
+    return new File(associatedClass.getResource(resourceName).getFile());
   }
 }
