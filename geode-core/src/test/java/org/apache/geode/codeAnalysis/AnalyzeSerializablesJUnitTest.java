@@ -26,12 +26,19 @@ import static org.apache.geode.internal.lang.SystemUtils.isJavaVersionAtLeast;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
 
+import org.apache.geode.DataSerializer;
 import org.apache.geode.codeAnalysis.decode.CompiledClass;
 import org.apache.geode.codeAnalysis.decode.CompiledField;
 import org.apache.geode.codeAnalysis.decode.CompiledMethod;
+import org.apache.geode.distributed.internal.DistributedSystemService;
+import org.apache.geode.distributed.internal.DistributionConfig;
+import org.apache.geode.distributed.internal.DistributionConfigImpl;
+import org.apache.geode.internal.HeapDataOutputStream;
 import org.apache.geode.internal.InternalDataSerializer;
+import org.apache.geode.internal.Version;
 import org.apache.geode.test.junit.categories.IntegrationTest;
 import org.junit.Before;
 import org.junit.Rule;
@@ -40,15 +47,20 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 @Category(IntegrationTest.class)
 public class AnalyzeSerializablesJUnitTest {
@@ -59,6 +71,9 @@ public class AnalyzeSerializablesJUnitTest {
       + "If the class is not persisted or sent over the wire add it to the file " + NEW_LINE + "%s"
       + NEW_LINE + "Otherwise if this doesn't break backward compatibility, copy the file "
       + NEW_LINE + "%s to " + NEW_LINE + "%s.";
+  public static final String EXCLUDED_CLASSES_TXT = "excludedClasses.txt";
+  public static final String ACTUAL_DATA_SERIALIZABLES_DAT = "actualDataSerializables.dat";
+  public static final String ACTUAL_SERIALIZABLES_DAT = "actualSerializables.dat";
 
   /** all loaded classes */
   private Map<String, CompiledClass> classes;
@@ -75,7 +90,6 @@ public class AnalyzeSerializablesJUnitTest {
   @Rule
   public TestName testName = new TestName();
 
-  @Before
   public void setUp() throws Exception {
     assumeThat(
         "AnalyzeSerializables requires Java 8 but tests are running with v" + getJavaVersion(),
@@ -112,8 +126,9 @@ public class AnalyzeSerializablesJUnitTest {
   @Test
   public void testDataSerializables() throws Exception {
     System.out.println(this.testName.getMethodName() + " starting");
+    setUp();
 
-    this.actualDataSerializablesFile = createEmptyFile("actualDataSerializables.dat");
+    this.actualDataSerializablesFile = createEmptyFile(ACTUAL_DATA_SERIALIZABLES_DAT);
     System.out.println(this.testName.getMethodName() + " actualDataSerializablesFile="
         + this.actualDataSerializablesFile.getAbsolutePath());
 
@@ -126,7 +141,7 @@ public class AnalyzeSerializablesJUnitTest {
       System.out.println(
           "++++++++++++++++++++++++++++++testDataSerializables found discrepancies++++++++++++++++++++++++++++++++++++");
       System.out.println(diff);
-      fail(diff + FAIL_MESSAGE, getSrcPathFor(getResourceAsFile("excludedClasses.txt")),
+      fail(diff + FAIL_MESSAGE, getSrcPathFor(getResourceAsFile(EXCLUDED_CLASSES_TXT)),
           this.actualDataSerializablesFile.getAbsolutePath(),
           getSrcPathFor(this.expectedDataSerializablesFile));
     }
@@ -135,8 +150,9 @@ public class AnalyzeSerializablesJUnitTest {
   @Test
   public void testSerializables() throws Exception {
     System.out.println(this.testName.getMethodName() + " starting");
+    setUp();
 
-    this.actualSerializablesFile = createEmptyFile("actualSerializables.dat");
+    this.actualSerializablesFile = createEmptyFile(ACTUAL_SERIALIZABLES_DAT);
     System.out.println(this.testName.getMethodName() + " actualSerializablesFile="
         + this.actualSerializablesFile.getAbsolutePath());
 
@@ -148,9 +164,64 @@ public class AnalyzeSerializablesJUnitTest {
       System.out.println(
           "++++++++++++++++++++++++++++++testSerializables found discrepancies++++++++++++++++++++++++++++++++++++");
       System.out.println(diff);
-      fail(diff + FAIL_MESSAGE, getSrcPathFor(getResourceAsFile("excludedClasses.txt")),
+      fail(diff + FAIL_MESSAGE, getSrcPathFor(getResourceAsFile(EXCLUDED_CLASSES_TXT)),
           this.actualSerializablesFile.getAbsolutePath(),
           getSrcPathFor(this.expectedSerializablesFile, "main"));
+    }
+  }
+
+  @Test
+  public void excludedClassesExistAndDoNotDeserialize() throws Exception {
+    List<String> excludedClasses = AnalyzeSerializablesJUnitTest.loadExcludedClasses();
+    DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
+    InternalDataSerializer.initialize(distributionConfig, new ArrayList<DistributedSystemService>());
+
+    for (String filePath: excludedClasses) {
+      String className = filePath.replaceAll("/", ".");
+      System.out.println("testing class " + className);
+
+      Class excludedClass = Class.forName(className);
+      assertTrue(excludedClass.getName() + " is not Serializable and should be removed from excludedClasses.txt",
+          Serializable.class.isAssignableFrom(excludedClass));
+
+      if (excludedClass.isEnum()) {
+        // geode enums are special cased by DataSerializer and are never java-serialized
+//        for (Object instance: excludedClass.getEnumConstants()) {
+//          serializeAndDeserializeObject(instance);
+//        }
+      } else {
+        final Object excludedInstance;
+        try {
+          excludedInstance = excludedClass.newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+          // okay - it's in the excludedClasses.txt file after all
+          // IllegalAccessException means that the constructor is private.
+          continue;
+        }
+        serializeAndDeserializeObject(excludedInstance);
+      }
+    }
+  }
+
+  private void serializeAndDeserializeObject(Object object) throws Exception {
+    HeapDataOutputStream outputStream = new HeapDataOutputStream(Version.CURRENT);
+    try {
+      DataSerializer.writeObject(object, outputStream);
+    } catch (IOException e) {
+      // some classes, such as BackupLock, are Serializable because the extend something
+      // like ReentrantLock but we never serialize them & it doesn't work to try to do so
+      System.out.println("Not Serializable: " + object.getClass().getName());
+      e.printStackTrace();
+      return;
+    }
+    try {
+      Object
+          instance =
+          DataSerializer.readObject(
+              new DataInputStream(new ByteArrayInputStream(outputStream.toByteArray())));
+      fail("I was able to deserialize " + object.getClass().getName());
+    } catch (InvalidClassException e) {
+      // expected
     }
   }
 
@@ -167,7 +238,7 @@ public class AnalyzeSerializablesJUnitTest {
   private void loadClasses() throws IOException {
     System.out.println("loadClasses starting");
 
-    List<String> excludedClasses = loadExcludedClasses(getResourceAsFile("excludedClasses.txt"));
+    List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
     List<String> openBugs = loadOpenBugs(getResourceAsFile("openBugs.txt"));
 
     excludedClasses.addAll(openBugs);
@@ -197,6 +268,12 @@ public class AnalyzeSerializablesJUnitTest {
     System.out.println("done loading " + this.classes.size() + " classes.  elapsed time = "
         + (finish - start) / 1000 + " seconds");
   }
+
+  public static List<String> loadExcludedClasses() throws IOException {
+    AnalyzeSerializablesJUnitTest instance = new AnalyzeSerializablesJUnitTest();
+    return instance.loadExcludedClasses(instance.getResourceAsFile(EXCLUDED_CLASSES_TXT));
+  }
+
 
   private List<String> loadExcludedClasses(File exclusionsFile) throws IOException {
     List<String> excludedClasses = new LinkedList<>();

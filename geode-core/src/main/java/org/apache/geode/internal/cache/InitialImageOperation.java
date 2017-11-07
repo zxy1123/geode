@@ -17,7 +17,6 @@ package org.apache.geode.internal.cache;
 
 import org.apache.geode.*;
 import org.apache.geode.cache.DiskAccessException;
-import org.apache.geode.cache.Operation;
 import org.apache.geode.cache.RegionDestroyedException;
 import org.apache.geode.cache.query.internal.CqStateImpl;
 import org.apache.geode.cache.query.internal.DefaultQueryService;
@@ -44,7 +43,6 @@ import org.apache.geode.internal.logging.LogService;
 import org.apache.geode.internal.logging.LoggingThreadGroup;
 import org.apache.geode.internal.logging.log4j.LocalizedMessage;
 import org.apache.geode.internal.logging.log4j.LogMarker;
-import org.apache.geode.internal.offheap.annotations.Released;
 import org.apache.geode.internal.sequencelog.EntryLogger;
 import org.apache.geode.internal.sequencelog.RegionLogger;
 import org.apache.geode.internal.util.ObjectIntProcedure;
@@ -3359,7 +3357,7 @@ public class InitialImageOperation {
       dop.writeBoolean(isHARegion);
       if (eventState != null) {
         dop.writeBoolean(true);
-        EventStateHelper.toData(dop, eventState, isHARegion);
+        EventStateHelper.dataSerialize(dop, eventState, isHARegion);
       } else {
         dop.writeBoolean(false);
       }
@@ -3392,7 +3390,7 @@ public class InitialImageOperation {
       isHARegion = dip.readBoolean();
       boolean has = dip.readBoolean();
       if (has) {
-        eventState = EventStateHelper.fromData(dip, isHARegion);
+        eventState = EventStateHelper.deDataSerialize(dip, isHARegion);
       }
       has = dip.readBoolean();
       if (has) {

@@ -206,7 +206,7 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   public static void initialize(DistributionConfig distributionConfig, Collection<DistributedSystemService> services) {
     String serializationFilterSpec; // get from configuration
-    serializationFilterSpec = "!**";
+    serializationFilterSpec = "!*";
     if (serializationFilterSpec != null) {
       if (!ClassUtils.isClassAvailable("sun.misc.ObjectInputFilter")) {
         throw new GemFireConfigException(
@@ -248,11 +248,13 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
       if (sanctionedClasses.contains(className)) {
         return ObjectInputFilter.Status.ALLOWED;
       } else {
-        return userFilter.checkInput(filterInfo);
+        ObjectInputFilter.Status status = userFilter.checkInput(filterInfo);
+        return status;
       }
     };
 
-    ObjectInputFilter.Config.setSerialFilter(serializationFilter);
+    // global filter - if we enable this it will affect all ObjectInputStreams
+//    ObjectInputFilter.Config.setSerialFilter(serializationFilter);
   }
 
   /**
