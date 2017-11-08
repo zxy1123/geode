@@ -54,6 +54,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InvalidClassException;
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -61,6 +62,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import java.lang.reflect.Modifier;
 
 @Category(IntegrationTest.class)
 public class AnalyzeSerializablesJUnitTest {
@@ -203,6 +206,45 @@ public class AnalyzeSerializablesJUnitTest {
     }
   }
 
+  @Test
+  public void sanctionedClassesExistAndDoDeserialize() throws Exception {
+    setUp();
+
+    DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
+    InternalDataSerializer.initialize(distributionConfig, new ArrayList<DistributedSystemService>());
+
+    for (ClassAndVariableDetails details : expectedSerializables) {
+      String className = details.className.replaceAll("/", ".");
+      System.out.println("testing class " + className);
+
+      Class sanctionedClass = Class.forName(className);
+      assertTrue(sanctionedClass.getName() + " is not Serializable and should be removed from sanctionedSerializables.txt",
+          Serializable.class.isAssignableFrom(sanctionedClass));
+
+      if (Modifier.isAbstract(sanctionedClass.getModifiers())) {
+        // we detect whether these are modified in another test, but cannot instantiate them.
+        continue;
+      }
+      if (sanctionedClass.isEnum()) {
+        // geode enums are special cased by DataSerializer and are never java-serialized
+        for (Object instance: sanctionedClass.getEnumConstants()) {
+          serializeAndDeserializeSanctionedObject(instance);
+        }
+      } else {
+        final Object sanctionedInstance;
+        try {
+          sanctionedInstance = sanctionedClass.newInstance();
+        } catch (InstantiationException e) {
+          throw new AssertionError("Unable to instantiate " + className + " - please move it from sanctionedSerializables.txt to excludedClasses.txt", e);
+        }
+        if (sanctionedInstance instanceof Throwable) {
+          ((Throwable)sanctionedInstance).initCause(null);
+        }
+        serializeAndDeserializeSanctionedObject(sanctionedInstance);
+      }
+    }
+  }
+
   private void serializeAndDeserializeObject(Object object) throws Exception {
     HeapDataOutputStream outputStream = new HeapDataOutputStream(Version.CURRENT);
     try {
@@ -222,6 +264,27 @@ public class AnalyzeSerializablesJUnitTest {
       fail("I was able to deserialize " + object.getClass().getName());
     } catch (InvalidClassException e) {
       // expected
+    }
+  }
+
+  private void serializeAndDeserializeSanctionedObject(Object object) throws Exception {
+    HeapDataOutputStream outputStream = new HeapDataOutputStream(Version.CURRENT);
+    try {
+      DataSerializer.writeObject(object, outputStream);
+    } catch (IOException e) {
+      // some classes, such as BackupLock, are Serializable because the extend something
+      // like ReentrantLock but we never serialize them & it doesn't work to try to do so
+      System.out.println("Not Serializable: " + object.getClass().getName());
+      e.printStackTrace();
+      return;
+    }
+    try {
+      Object
+          instance =
+          DataSerializer.readObject(
+              new DataInputStream(new ByteArrayInputStream(outputStream.toByteArray())));
+    } catch (InvalidClassException e) {
+      fail("I was unable to deserialize " + object.getClass().getName());
     }
   }
 

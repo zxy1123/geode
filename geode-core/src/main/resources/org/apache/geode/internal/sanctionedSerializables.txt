@@ -1,7 +1,6 @@
 org/apache/geode/CancelException,true,3215578659523282642
 org/apache/geode/CopyException,true,-1143711608610323585
 org/apache/geode/DeltaSerializationException,true,-2630435945840206466
-org/apache/geode/ForcedDisconnectException,true,4977003259880566257
 org/apache/geode/GemFireCacheException,true,-2844020916351682908
 org/apache/geode/GemFireCheckedException,true,-8659184576090173188
 org/apache/geode/GemFireConfigException,true,7791789785331120991

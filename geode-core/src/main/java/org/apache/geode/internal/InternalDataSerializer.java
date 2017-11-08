@@ -206,7 +206,7 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   public static void initialize(DistributionConfig distributionConfig, Collection<DistributedSystemService> services) {
     String serializationFilterSpec; // get from configuration
-    serializationFilterSpec = "!*";
+    serializationFilterSpec = "java.**;!*";
     if (serializationFilterSpec != null) {
       if (!ClassUtils.isClassAvailable("sun.misc.ObjectInputFilter")) {
         throw new GemFireConfigException(
@@ -246,7 +246,8 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
       String className = filterInfo.serialClass().getName();
       logger.debug("checking whether {} can be deserialized", className);
       if (sanctionedClasses.contains(className)) {
-        return ObjectInputFilter.Status.ALLOWED;
+//        return ObjectInputFilter.Status.ALLOWED;
+        return ObjectInputFilter.Status.UNDECIDED;
       } else {
         ObjectInputFilter.Status status = userFilter.checkInput(filterInfo);
         return status;
@@ -272,7 +273,8 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
         if (line.startsWith("#") || line.startsWith("//")) {
           // comment line
         } else {
-          result.add(line.substring(0, line.indexOf(',')-1));
+          line = line.replaceAll("/", ".");
+          result.add(line.substring(0, line.indexOf(',')));
         }
       }
     }
