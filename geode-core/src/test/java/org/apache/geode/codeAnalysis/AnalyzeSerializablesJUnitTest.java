@@ -26,10 +26,41 @@ import static org.apache.geode.internal.lang.SystemUtils.isJavaVersionAtLeast;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.Externalizable;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.Serializable;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import sun.reflect.ReflectionFactory;
+
+import org.apache.geode.CancelException;
 import org.apache.geode.DataSerializer;
+import org.apache.geode.ForcedDisconnectException;
 import org.apache.geode.codeAnalysis.decode.CompiledClass;
 import org.apache.geode.codeAnalysis.decode.CompiledField;
 import org.apache.geode.codeAnalysis.decode.CompiledMethod;
@@ -40,30 +71,6 @@ import org.apache.geode.internal.HeapDataOutputStream;
 import org.apache.geode.internal.InternalDataSerializer;
 import org.apache.geode.internal.Version;
 import org.apache.geode.test.junit.categories.IntegrationTest;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InvalidClassException;
-import java.io.Serializable;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import java.lang.reflect.Modifier;
 
 @Category(IntegrationTest.class)
 public class AnalyzeSerializablesJUnitTest {
@@ -77,6 +84,7 @@ public class AnalyzeSerializablesJUnitTest {
   public static final String EXCLUDED_CLASSES_TXT = "excludedClasses.txt";
   public static final String ACTUAL_DATA_SERIALIZABLES_DAT = "actualDataSerializables.dat";
   public static final String ACTUAL_SERIALIZABLES_DAT = "actualSerializables.dat";
+  public static final String OPEN_BUGS_TXT = "openBugs.txt";
 
   /** all loaded classes */
   private Map<String, CompiledClass> classes;
@@ -93,30 +101,34 @@ public class AnalyzeSerializablesJUnitTest {
   @Rule
   public TestName testName = new TestName();
 
-  public void setUp() throws Exception {
-    assumeThat(
-        "AnalyzeSerializables requires Java 8 but tests are running with v" + getJavaVersion(),
-        isJavaVersionAtLeast("1.8"), is(true));
-
-    this.classes = new HashMap<>();
-
-    loadClasses();
-
-    // setup expectedDataSerializables
-
+  public void loadExpectedDataSerializables() throws Exception {
     this.expectedDataSerializablesFile = getResourceAsFile("sanctionedDataSerializables.txt");
     assertThat(this.expectedDataSerializablesFile).exists().canRead();
 
     this.expectedDataSerializables = loadClassesAndMethods(this.expectedDataSerializablesFile);
     Collections.sort(this.expectedDataSerializables);
 
-    // setup expectedSerializables
+  }
 
+  public void loadExpectedSerializables() throws Exception {
     this.expectedSerializablesFile = getResourceAsFile(InternalDataSerializer.class, "sanctionedSerializables.txt");
     assertThat(this.expectedSerializablesFile).exists().canRead();
 
     this.expectedSerializables = loadClassesAndVariables(this.expectedSerializablesFile);
     Collections.sort(this.expectedSerializables);
+  }
+
+  public void findClasses() throws Exception {
+    this.classes = new HashMap<>();
+
+    loadClasses();
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    assumeThat(
+        "AnalyzeSerializables requires Java 8 but tests are running with v" + getJavaVersion(),
+        isJavaVersionAtLeast("1.8"), is(true));
   }
 
   /**
@@ -129,7 +141,8 @@ public class AnalyzeSerializablesJUnitTest {
   @Test
   public void testDataSerializables() throws Exception {
     System.out.println(this.testName.getMethodName() + " starting");
-    setUp();
+    findClasses();
+    loadExpectedDataSerializables();
 
     this.actualDataSerializablesFile = createEmptyFile(ACTUAL_DATA_SERIALIZABLES_DAT);
     System.out.println(this.testName.getMethodName() + " actualDataSerializablesFile="
@@ -153,7 +166,8 @@ public class AnalyzeSerializablesJUnitTest {
   @Test
   public void testSerializables() throws Exception {
     System.out.println(this.testName.getMethodName() + " starting");
-    setUp();
+    findClasses();
+    loadExpectedSerializables();
 
     this.actualSerializablesFile = createEmptyFile(ACTUAL_SERIALIZABLES_DAT);
     System.out.println(this.testName.getMethodName() + " actualSerializablesFile="
@@ -175,7 +189,7 @@ public class AnalyzeSerializablesJUnitTest {
 
   @Test
   public void excludedClassesExistAndDoNotDeserialize() throws Exception {
-    List<String> excludedClasses = AnalyzeSerializablesJUnitTest.loadExcludedClasses();
+    List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
     DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
     InternalDataSerializer.initialize(distributionConfig, new ArrayList<DistributedSystemService>());
 
@@ -206,44 +220,6 @@ public class AnalyzeSerializablesJUnitTest {
     }
   }
 
-  @Test
-  public void sanctionedClassesExistAndDoDeserialize() throws Exception {
-    setUp();
-
-    DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
-    InternalDataSerializer.initialize(distributionConfig, new ArrayList<DistributedSystemService>());
-
-    for (ClassAndVariableDetails details : expectedSerializables) {
-      String className = details.className.replaceAll("/", ".");
-      System.out.println("testing class " + className);
-
-      Class sanctionedClass = Class.forName(className);
-      assertTrue(sanctionedClass.getName() + " is not Serializable and should be removed from sanctionedSerializables.txt",
-          Serializable.class.isAssignableFrom(sanctionedClass));
-
-      if (Modifier.isAbstract(sanctionedClass.getModifiers())) {
-        // we detect whether these are modified in another test, but cannot instantiate them.
-        continue;
-      }
-      if (sanctionedClass.isEnum()) {
-        // geode enums are special cased by DataSerializer and are never java-serialized
-        for (Object instance: sanctionedClass.getEnumConstants()) {
-          serializeAndDeserializeSanctionedObject(instance);
-        }
-      } else {
-        final Object sanctionedInstance;
-        try {
-          sanctionedInstance = sanctionedClass.newInstance();
-        } catch (InstantiationException e) {
-          throw new AssertionError("Unable to instantiate " + className + " - please move it from sanctionedSerializables.txt to excludedClasses.txt", e);
-        }
-        if (sanctionedInstance instanceof Throwable) {
-          ((Throwable)sanctionedInstance).initCause(null);
-        }
-        serializeAndDeserializeSanctionedObject(sanctionedInstance);
-      }
-    }
-  }
 
   private void serializeAndDeserializeObject(Object object) throws Exception {
     HeapDataOutputStream outputStream = new HeapDataOutputStream(Version.CURRENT);
@@ -253,8 +229,6 @@ public class AnalyzeSerializablesJUnitTest {
       // some classes, such as BackupLock, are Serializable because the extend something
       // like ReentrantLock but we never serialize them & it doesn't work to try to do so
       System.out.println("Not Serializable: " + object.getClass().getName());
-      e.printStackTrace();
-      return;
     }
     try {
       Object
@@ -267,6 +241,129 @@ public class AnalyzeSerializablesJUnitTest {
     }
   }
 
+  @Test
+  public void sanctionedClassesExistAndDoDeserialize() throws Exception {
+    loadExpectedSerializables();
+    Set<String> openBugs = new HashSet<>(loadOpenBugs(getResourceAsFile(OPEN_BUGS_TXT)));
+
+
+    DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
+    InternalDataSerializer.initialize(distributionConfig, new ArrayList<DistributedSystemService>());
+
+    for (ClassAndVariableDetails details : expectedSerializables) {
+      if (openBugs.contains(details.className)) {
+        System.out.println("Skipping " + details.className + " because it is in openBugs.txt");
+        continue;
+      }
+      String className = details.className.replaceAll("/", ".");
+      System.out.println("testing class " + details.className);
+
+      Class sanctionedClass = Class.forName(className);
+      assertTrue(sanctionedClass.getName() + " is not Serializable and should be removed from sanctionedSerializables.txt",
+          Serializable.class.isAssignableFrom(sanctionedClass));
+
+      if (Modifier.isAbstract(sanctionedClass.getModifiers())) {
+        // we detect whether these are modified in another test, but cannot instantiate them.
+        continue;
+      }
+
+      if (sanctionedClass.getEnclosingClass() != null && sanctionedClass.getEnclosingClass().isEnum()) {
+        // inner enum class - enum constants are handled when we process their enclosing class
+        continue;
+      }
+
+      if (sanctionedClass.isEnum()) {
+        // geode enums are special cased by DataSerializer and are never java-serialized
+        for (Object instance : sanctionedClass.getEnumConstants()) {
+          serializeAndDeserializeSanctionedObject(instance);
+        }
+        continue;
+      }
+
+      Object sanctionedInstance = null;
+      if (!Serializable.class.isAssignableFrom(sanctionedClass)) {
+        throw new AssertionError(className + " is not serializable.  Remove it from sanctionedSerializables.txt");
+      }
+      try {
+        boolean isThrowable = Throwable.class.isAssignableFrom(sanctionedClass);
+
+        Constructor constructor = isThrowable ?
+            sanctionedClass.getDeclaredConstructor(String.class) :
+            sanctionedClass.getDeclaredConstructor(null);
+        constructor.setAccessible(true);
+        sanctionedInstance = isThrowable ?
+            constructor.newInstance("test throwable") :
+            constructor.newInstance();
+        serializeAndDeserializeSanctionedObject(sanctionedInstance);
+        continue;
+      } catch (NoSuchMethodException | InstantiationException | IllegalAccessException e) {
+        // fall through
+      }
+      try {
+        Class<?> superClass = sanctionedClass;
+        Constructor constructor = null;
+        if (Externalizable.class.isAssignableFrom(sanctionedClass)) {
+          Constructor<?> cons = sanctionedClass.getDeclaredConstructor(null);
+          cons.setAccessible(true);
+        } else {
+          while (Serializable.class.isAssignableFrom(superClass)) {
+            if ((superClass = superClass.getSuperclass()) == null) {
+              throw new AssertionError(className
+                  + " cannot be instantiated for serialization.  Remove it from sanctionedSerializables.txt");
+            }
+          }
+          constructor = superClass.getDeclaredConstructor((Class<?>[]) null);
+          constructor.setAccessible(true);
+          constructor =
+              ReflectionFactory.getReflectionFactory()
+                  .newConstructorForSerialization(sanctionedClass, constructor);
+        }
+        sanctionedInstance = constructor.newInstance();
+      } catch (Exception e2) {
+        throw new AssertionError("Unable to instantiate " + className
+            + " - please move it from sanctionedSerializables.txt to excludedClasses.txt", e2);
+      }
+      serializeAndDeserializeSanctionedObject(sanctionedInstance);
+    }
+  }
+
+  @Test
+  public void testOpenBugsAreInSanctionedSerializables() throws Exception {
+    loadExpectedSerializables();
+    List<String> openBugs = loadOpenBugs(getResourceAsFile(OPEN_BUGS_TXT));
+    Set<String> expectedSerializableClasses = new HashSet<>();
+
+    for (ClassAndVariableDetails details : expectedSerializables) {
+      expectedSerializableClasses.add(details.className);
+    }
+
+    for (String openBugClass : openBugs) {
+      assertTrue("open bug class: " + openBugClass + " is not present in sanctionedSerializables.txt", expectedSerializableClasses.contains(openBugClass));
+    }
+  }
+
+  @Test
+  public void testExcludedClassesAreNotInSanctionedSerializables() throws Exception {
+    loadExpectedSerializables();
+    Set<String> expectedSerializableClasses = new HashSet<>();
+
+    for (ClassAndVariableDetails details : expectedSerializables) {
+      expectedSerializableClasses.add(details.className);
+    }
+
+    List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
+
+    for (String excludedClass : excludedClasses) {
+      assertFalse("Excluded class: " + excludedClass + " was found in sanctionedSerializables.txt", expectedSerializableClasses.contains(excludedClass));
+    }
+  }
+
+  @Test
+  public void testSerializingForcedDisconnectException() throws Exception {
+    Throwable forcedDisconnectException = new ForcedDisconnectException("testing");
+    serializeAndDeserializeSanctionedObject(forcedDisconnectException);
+  }
+
   private void serializeAndDeserializeSanctionedObject(Object object) throws Exception {
     HeapDataOutputStream outputStream = new HeapDataOutputStream(Version.CURRENT);
     try {
@@ -274,17 +371,17 @@ public class AnalyzeSerializablesJUnitTest {
     } catch (IOException e) {
       // some classes, such as BackupLock, are Serializable because the extend something
       // like ReentrantLock but we never serialize them & it doesn't work to try to do so
-      System.out.println("Not Serializable: " + object.getClass().getName());
-      e.printStackTrace();
-      return;
+      throw new AssertionError("Not Serializable: " + object.getClass().getName(), e);
     }
     try {
       Object
           instance =
           DataSerializer.readObject(
               new DataInputStream(new ByteArrayInputStream(outputStream.toByteArray())));
+    } catch (CancelException e) {
+      // PDX classes fish for a PDXRegistry and find that there is no cache
     } catch (InvalidClassException e) {
-      fail("I was unable to deserialize " + object.getClass().getName());
+      fail("I was unable to deserialize " + object.getClass().getName(), e);
     }
   }
 
@@ -302,7 +399,7 @@ public class AnalyzeSerializablesJUnitTest {
     System.out.println("loadClasses starting");
 
     List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
-    List<String> openBugs = loadOpenBugs(getResourceAsFile("openBugs.txt"));
+    List<String> openBugs = loadOpenBugs(getResourceAsFile(OPEN_BUGS_TXT));
 
     excludedClasses.addAll(openBugs);
 
@@ -331,12 +428,6 @@ public class AnalyzeSerializablesJUnitTest {
     System.out.println("done loading " + this.classes.size() + " classes.  elapsed time = "
         + (finish - start) / 1000 + " seconds");
   }
-
-  public static List<String> loadExcludedClasses() throws IOException {
-    AnalyzeSerializablesJUnitTest instance = new AnalyzeSerializablesJUnitTest();
-    return instance.loadExcludedClasses(instance.getResourceAsFile(EXCLUDED_CLASSES_TXT));
-  }
-
 
   private List<String> loadExcludedClasses(File exclusionsFile) throws IOException {
     List<String> excludedClasses = new LinkedList<>();

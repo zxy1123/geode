@@ -167,7 +167,7 @@ public interface GemFireHealth {
     //////////////////// Instance Fields ////////////////////
 
     /** The string for this health */
-    private String healthString;
+    private String healthString = OKAY_STRING;
 
     ///////////////////// Constructors //////////////////////
 
