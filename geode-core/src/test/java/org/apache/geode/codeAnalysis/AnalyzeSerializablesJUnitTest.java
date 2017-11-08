@@ -358,12 +358,6 @@ public class AnalyzeSerializablesJUnitTest {
     }
   }
 
-  @Test
-  public void testSerializingForcedDisconnectException() throws Exception {
-    Throwable forcedDisconnectException = new ForcedDisconnectException("testing");
-    serializeAndDeserializeSanctionedObject(forcedDisconnectException);
-  }
-
   private void serializeAndDeserializeSanctionedObject(Object object) throws Exception {
     HeapDataOutputStream outputStream = new HeapDataOutputStream(Version.CURRENT);
     try {

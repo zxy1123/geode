@@ -267,9 +267,8 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   public static Collection<String> loadClassNames(File sanctionedSerializables) throws IOException {
     Collection<String> result = new ArrayList(1000);
-    FileReader fr = null;
-    fr = new FileReader(sanctionedSerializables);
-    try (BufferedReader in = new BufferedReader(fr)) {
+    try (FileReader fr = new FileReader(sanctionedSerializables);
+         BufferedReader in = new BufferedReader(fr)) {
       String line;
       while ((line = in.readLine()) != null) {
         line = line.trim();
@@ -281,7 +280,6 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
         }
       }
     }
-    fr.close();
     return result;
 
   }

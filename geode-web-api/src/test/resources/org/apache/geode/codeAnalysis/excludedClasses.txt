@@ -4,3 +4,5 @@ org/apache/geode/rest/internal/web/controllers/support/UpdateOp
 org/apache/geode/rest/internal/web/exception/MalformedJsonException
 org/apache/geode/rest/internal/web/exception/RegionNotFoundException
 org/apache/geode/rest/internal/web/exception/ResourceNotFoundException
+org/apache/geode/rest/internal/web/exception/DataTypeNotSupportedException
+org/apache/geode/rest/internal/web/exception/GemfireRestException
