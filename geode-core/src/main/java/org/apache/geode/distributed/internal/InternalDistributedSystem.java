@@ -610,7 +610,8 @@ public class InternalDistributedSystem extends DistributedSystem
    * mechanism.
    */
   private void initializeServices() {
-    ServiceLoader<DistributedSystemService> loader = ServiceLoader.load(DistributedSystemService.class);
+    ServiceLoader<DistributedSystemService> loader =
+        ServiceLoader.load(DistributedSystemService.class);
     for (DistributedSystemService service : loader) {
       service.init(this);
       services.put(service.getInterface(), service);

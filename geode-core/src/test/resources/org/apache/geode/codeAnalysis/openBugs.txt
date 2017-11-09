@@ -28,10 +28,6 @@
 ????,org/apache/geode/admin/jmx/internal/DynamicManagedBean
 ????,org/apache/geode/admin/jmx/internal/StatisticAttributeInfo
 
-# extends javax.print.attribute.EnumSyntax.  Can it be turned into a regular enum?
-????,org/apache/geode/cache/EvictionAction
-????,org/apache/geode/cache/EvictionAlgorithm
-
 # has an incestuous subclass that should be merged into the superclass.
 # see InterestResultPolicyImpl
 ????,org/apache/geode/cache/InterestResultPolicy
@@ -42,41 +38,6 @@
 
 # query class that does custom serialization and throws an NPE in the test
 ????,org/apache/geode/cache/query/internal/ObjectIntHashMap
-
-# query classes that extend an ANTLR class (ANTLR would have to be whitelisted)
-????,org/apache/geode/cache/query/internal/parse/ASTAggregateFunc
-????,org/apache/geode/cache/query/internal/parse/ASTAnd
-????,org/apache/geode/cache/query/internal/parse/ASTCombination
-????,org/apache/geode/cache/query/internal/parse/ASTCompareOp
-????,org/apache/geode/cache/query/internal/parse/ASTConstruction
-????,org/apache/geode/cache/query/internal/parse/ASTConversionExpr
-????,org/apache/geode/cache/query/internal/parse/ASTDummy
-????,org/apache/geode/cache/query/internal/parse/ASTGroupBy
-????,org/apache/geode/cache/query/internal/parse/ASTHint
-????,org/apache/geode/cache/query/internal/parse/ASTHintIdentifier
-????,org/apache/geode/cache/query/internal/parse/ASTIdentifier
-????,org/apache/geode/cache/query/internal/parse/ASTImport
-????,org/apache/geode/cache/query/internal/parse/ASTIn
-????,org/apache/geode/cache/query/internal/parse/ASTIteratorDef
-????,org/apache/geode/cache/query/internal/parse/ASTLike
-????,org/apache/geode/cache/query/internal/parse/ASTLimit
-????,org/apache/geode/cache/query/internal/parse/ASTLiteral
-????,org/apache/geode/cache/query/internal/parse/ASTMethodInvocation
-????,org/apache/geode/cache/query/internal/parse/ASTOr
-????,org/apache/geode/cache/query/internal/parse/ASTOrderBy
-????,org/apache/geode/cache/query/internal/parse/ASTParameter
-????,org/apache/geode/cache/query/internal/parse/ASTPostfix
-????,org/apache/geode/cache/query/internal/parse/ASTProjection
-????,org/apache/geode/cache/query/internal/parse/ASTRegionPath
-????,org/apache/geode/cache/query/internal/parse/ASTSelect
-????,org/apache/geode/cache/query/internal/parse/ASTSortCriterion
-????,org/apache/geode/cache/query/internal/parse/ASTTrace
-????,org/apache/geode/cache/query/internal/parse/ASTType
-????,org/apache/geode/cache/query/internal/parse/ASTTypeCast
-????,org/apache/geode/cache/query/internal/parse/ASTUnary
-????,org/apache/geode/cache/query/internal/parse/ASTUndefinedExpr
-????,org/apache/geode/cache/query/internal/parse/ASTUnsupported
-????,org/apache/geode/cache/query/internal/parse/GemFireAST
 
 # This needs a bug report.  This class serializes a DistributionConfigImpl but we
 # have that class in excludedClasses.txt and aren't monitoring it.

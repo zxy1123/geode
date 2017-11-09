@@ -659,7 +659,7 @@ public class BucketAdvisor extends CacheDistributionAdvisor {
     @SuppressWarnings("unchecked")
     private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
       stream.defaultReadObject();
-      backingSet = m==null? Collections.<E>emptySet() : m.keySet();
+      backingSet = m == null ? Collections.<E>emptySet() : m.keySet();
     }
   }
 

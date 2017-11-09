@@ -16,6 +16,7 @@ package org.apache.geode.internal;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Collection;
 
 import org.apache.geode.distributed.internal.DistributedSystemService;
@@ -34,7 +35,8 @@ public class CQDistributedSystemService implements DistributedSystemService {
 
   @Override
   public Collection<String> getSerializationWhitelist() throws IOException {
-    return InternalDataSerializer.loadClassNames(new File(getClass()
-        .getResource("sanctionedSerializables.txt").getFile()));
+    URL sanctionedSerializables =
+        ClassPathLoader.getLatest().getResource(getClass(), "sanctionedSerializables.txt");
+    return InternalDataSerializer.loadClassNames(sanctionedSerializables);
   }
 }

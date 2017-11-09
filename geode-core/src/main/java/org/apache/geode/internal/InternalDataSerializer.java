@@ -81,6 +81,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.NotSerializableException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
@@ -98,6 +99,7 @@ import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -142,7 +144,8 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
   /**
    * A deserialization filter for ObjectInputStreams
    */
-  private static ObjectInputFilter serializationFilter = ObjectInputFilter.Config.createFilter("**");
+  private static ObjectInputFilter serializationFilter =
+      ObjectInputFilter.Config.createFilter("**");
 
   private static final String serializationVersionTxt =
       System.getProperty(DistributionConfig.GEMFIRE_PREFIX + "serializationVersion");
@@ -198,15 +201,16 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
   }
 
   /**
-   * Initializes the optional serialization "white list" if the user has requested it in
-   * the DistributionConfig
+   * Initializes the optional serialization "white list" if the user has requested it in the
+   * DistributionConfig
    *
    * @param distributionConfig the DistributedSystem configuration
    * @param services DistributedSystem services that might have classes to white-list
    */
-  public static void initialize(DistributionConfig distributionConfig, Collection<DistributedSystemService> services) {
+  public static void initialize(DistributionConfig distributionConfig,
+      Collection<DistributedSystemService> services) {
     String serializationFilterSpec; // get from configuration
-    serializationFilterSpec = "java.**;!*";
+    serializationFilterSpec = "java.**;javax.management.**;javax.print.attribute.EnumSyntax;antlr.**;!*";
     if (serializationFilterSpec != null) {
       if (!ClassUtils.isClassAvailable("sun.misc.ObjectInputFilter")) {
         throw new GemFireConfigException(
@@ -217,10 +221,11 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
   }
 
 
-  private static void createSerializationFilter(String serializationFilterSpec, Collection<DistributedSystemService> services) {
+  private static void createSerializationFilter(String serializationFilterSpec,
+      Collection<DistributedSystemService> services) {
 
     Set<String> sanctionedClasses = new HashSet<>(500);
-    for (DistributedSystemService service: services) {
+    for (DistributedSystemService service : services) {
       try {
         sanctionedClasses.addAll(service.getSerializationWhitelist());
       } catch (IOException e) {
@@ -228,16 +233,19 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
       }
     }
     try {
-      File sanctionedSerializables = new File(InternalDataSerializer.class.getResource("sanctionedSerializables.txt").getFile());
+      URL sanctionedSerializables = ClassPathLoader.getLatest()
+          .getResource(InternalDataSerializer.class, "sanctionedSerializables.txt");
       Collection<String> coreClassNames = loadClassNames(sanctionedSerializables);
       sanctionedClasses.addAll(coreClassNames);
     } catch (IOException e) {
-      throw new InternalGemFireException("unable to read sanctionedSerializables.txt to form a serialization white-list", e);
+      throw new InternalGemFireException(
+          "unable to read sanctionedSerializables.txt to form a serialization white-list", e);
     }
 
     logger.debug("setting a serialization filter containing {}", serializationFilterSpec);
 
-    final ObjectInputFilter userFilter = ObjectInputFilter.Config.createFilter(serializationFilterSpec);
+    final ObjectInputFilter userFilter =
+        ObjectInputFilter.Config.createFilter(serializationFilterSpec);
     serializationFilter = filterInfo -> {
       if (filterInfo.serialClass() == null) {
         return userFilter.checkInput(filterInfo);
@@ -247,28 +255,32 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
       if (filterInfo.serialClass().isArray()) {
         className = filterInfo.serialClass().getComponentType().getName();
       }
-      logger.debug("checking whether {} can be deserialized", className);
       if (sanctionedClasses.contains(className)) {
         return ObjectInputFilter.Status.ALLOWED;
-//        return ObjectInputFilter.Status.UNDECIDED;
+        // return ObjectInputFilter.Status.UNDECIDED;
       } else {
         ObjectInputFilter.Status status = userFilter.checkInput(filterInfo);
+        if (status == ObjectInputFilter.Status.REJECTED) {
+          logger.warn("Serialization filter is rejecting class {}", className);
+        }
         return status;
       }
     };
 
     // global filter - if we enable this it will affect all ObjectInputStreams
-//    ObjectInputFilter.Config.setSerialFilter(serializationFilter);
+    // ObjectInputFilter.Config.setSerialFilter(serializationFilter);
   }
 
   /**
-   * Loads the class names from sanctionedSerializables.txt, a file that is also
-   * maintained for backward-compatibility testing with AnalyzeSerializablesJUnitTest
+   * Loads the class names from sanctionedSerializables.txt, a file that is also maintained for
+   * backward-compatibility testing with AnalyzeSerializablesJUnitTest
    */
-  public static Collection<String> loadClassNames(File sanctionedSerializables) throws IOException {
+  public static Collection<String> loadClassNames(URL sanctionedSerializables) throws IOException {
     Collection<String> result = new ArrayList(1000);
-    try (FileReader fr = new FileReader(sanctionedSerializables);
-         BufferedReader in = new BufferedReader(fr)) {
+    InputStream inputStream = sanctionedSerializables.openStream();
+    InputStreamReader reader = new InputStreamReader(inputStream);
+    BufferedReader in = new BufferedReader(reader);
+    try {
       String line;
       while ((line = in.readLine()) != null) {
         line = line.trim();
@@ -279,6 +291,8 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
           result.add(line.substring(0, line.indexOf(',')));
         }
       }
+    } finally {
+      inputStream.close();
     }
     return result;
 
@@ -2936,7 +2950,8 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
           }
 
           ObjectInput ois = new DSObjectInputStream(stream);
-          ObjectInputFilter.Config.setObjectInputFilter((ObjectInputStream)ois, serializationFilter);
+          ObjectInputFilter.Config.setObjectInputFilter((ObjectInputStream) ois,
+              serializationFilter);
           if (stream instanceof VersionedDataStream) {
             Version v = ((VersionedDataStream) stream).getVersion();
             if (v != null && v != Version.CURRENT) {

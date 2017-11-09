@@ -111,7 +111,8 @@ public class AnalyzeSerializablesJUnitTest {
   }
 
   public void loadExpectedSerializables() throws Exception {
-    this.expectedSerializablesFile = getResourceAsFile(InternalDataSerializer.class, "sanctionedSerializables.txt");
+    this.expectedSerializablesFile =
+        getResourceAsFile(InternalDataSerializer.class, "sanctionedSerializables.txt");
     assertThat(this.expectedSerializablesFile).exists().canRead();
 
     this.expectedSerializables = loadClassesAndVariables(this.expectedSerializablesFile);
@@ -191,21 +192,24 @@ public class AnalyzeSerializablesJUnitTest {
   public void excludedClassesExistAndDoNotDeserialize() throws Exception {
     List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
     DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
-    InternalDataSerializer.initialize(distributionConfig, new ArrayList<DistributedSystemService>());
+    InternalDataSerializer.initialize(distributionConfig,
+        new ArrayList<DistributedSystemService>());
 
-    for (String filePath: excludedClasses) {
+    for (String filePath : excludedClasses) {
       String className = filePath.replaceAll("/", ".");
       System.out.println("testing class " + className);
 
       Class excludedClass = Class.forName(className);
-      assertTrue(excludedClass.getName() + " is not Serializable and should be removed from excludedClasses.txt",
+      assertTrue(
+          excludedClass.getName()
+              + " is not Serializable and should be removed from excludedClasses.txt",
           Serializable.class.isAssignableFrom(excludedClass));
 
       if (excludedClass.isEnum()) {
         // geode enums are special cased by DataSerializer and are never java-serialized
-//        for (Object instance: excludedClass.getEnumConstants()) {
-//          serializeAndDeserializeObject(instance);
-//        }
+        // for (Object instance: excludedClass.getEnumConstants()) {
+        // serializeAndDeserializeObject(instance);
+        // }
       } else {
         final Object excludedInstance;
         try {
@@ -231,10 +235,8 @@ public class AnalyzeSerializablesJUnitTest {
       System.out.println("Not Serializable: " + object.getClass().getName());
     }
     try {
-      Object
-          instance =
-          DataSerializer.readObject(
-              new DataInputStream(new ByteArrayInputStream(outputStream.toByteArray())));
+      Object instance = DataSerializer
+          .readObject(new DataInputStream(new ByteArrayInputStream(outputStream.toByteArray())));
       fail("I was able to deserialize " + object.getClass().getName());
     } catch (InvalidClassException e) {
       // expected
@@ -248,7 +250,8 @@ public class AnalyzeSerializablesJUnitTest {
 
 
     DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
-    InternalDataSerializer.initialize(distributionConfig, new ArrayList<DistributedSystemService>());
+    InternalDataSerializer.initialize(distributionConfig,
+        new ArrayList<DistributedSystemService>());
 
     for (ClassAndVariableDetails details : expectedSerializables) {
       if (openBugs.contains(details.className)) {
@@ -259,7 +262,9 @@ public class AnalyzeSerializablesJUnitTest {
       System.out.println("testing class " + details.className);
 
       Class sanctionedClass = Class.forName(className);
-      assertTrue(sanctionedClass.getName() + " is not Serializable and should be removed from sanctionedSerializables.txt",
+      assertTrue(
+          sanctionedClass.getName()
+              + " is not Serializable and should be removed from sanctionedSerializables.txt",
           Serializable.class.isAssignableFrom(sanctionedClass));
 
       if (Modifier.isAbstract(sanctionedClass.getModifiers())) {
@@ -267,7 +272,8 @@ public class AnalyzeSerializablesJUnitTest {
         continue;
       }
 
-      if (sanctionedClass.getEnclosingClass() != null && sanctionedClass.getEnclosingClass().isEnum()) {
+      if (sanctionedClass.getEnclosingClass() != null
+          && sanctionedClass.getEnclosingClass().isEnum()) {
         // inner enum class - enum constants are handled when we process their enclosing class
         continue;
       }
@@ -282,18 +288,17 @@ public class AnalyzeSerializablesJUnitTest {
 
       Object sanctionedInstance = null;
       if (!Serializable.class.isAssignableFrom(sanctionedClass)) {
-        throw new AssertionError(className + " is not serializable.  Remove it from sanctionedSerializables.txt");
+        throw new AssertionError(
+            className + " is not serializable.  Remove it from sanctionedSerializables.txt");
       }
       try {
         boolean isThrowable = Throwable.class.isAssignableFrom(sanctionedClass);
 
-        Constructor constructor = isThrowable ?
-            sanctionedClass.getDeclaredConstructor(String.class) :
-            sanctionedClass.getDeclaredConstructor(null);
+        Constructor constructor = isThrowable ? sanctionedClass.getDeclaredConstructor(String.class)
+            : sanctionedClass.getDeclaredConstructor(null);
         constructor.setAccessible(true);
-        sanctionedInstance = isThrowable ?
-            constructor.newInstance("test throwable") :
-            constructor.newInstance();
+        sanctionedInstance =
+            isThrowable ? constructor.newInstance("test throwable") : constructor.newInstance();
         serializeAndDeserializeSanctionedObject(sanctionedInstance);
         continue;
       } catch (NoSuchMethodException | InstantiationException | IllegalAccessException e) {
@@ -314,9 +319,8 @@ public class AnalyzeSerializablesJUnitTest {
           }
           constructor = superClass.getDeclaredConstructor((Class<?>[]) null);
           constructor.setAccessible(true);
-          constructor =
-              ReflectionFactory.getReflectionFactory()
-                  .newConstructorForSerialization(sanctionedClass, constructor);
+          constructor = ReflectionFactory.getReflectionFactory()
+              .newConstructorForSerialization(sanctionedClass, constructor);
         }
         sanctionedInstance = constructor.newInstance();
       } catch (Exception e2) {
@@ -338,7 +342,9 @@ public class AnalyzeSerializablesJUnitTest {
     }
 
     for (String openBugClass : openBugs) {
-      assertTrue("open bug class: " + openBugClass + " is not present in sanctionedSerializables.txt", expectedSerializableClasses.contains(openBugClass));
+      assertTrue(
+          "open bug class: " + openBugClass + " is not present in sanctionedSerializables.txt",
+          expectedSerializableClasses.contains(openBugClass));
     }
   }
 
@@ -354,7 +360,8 @@ public class AnalyzeSerializablesJUnitTest {
     List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
 
     for (String excludedClass : excludedClasses) {
-      assertFalse("Excluded class: " + excludedClass + " was found in sanctionedSerializables.txt", expectedSerializableClasses.contains(excludedClass));
+      assertFalse("Excluded class: " + excludedClass + " was found in sanctionedSerializables.txt",
+          expectedSerializableClasses.contains(excludedClass));
     }
   }
 
@@ -368,10 +375,8 @@ public class AnalyzeSerializablesJUnitTest {
       throw new AssertionError("Not Serializable: " + object.getClass().getName(), e);
     }
     try {
-      Object
-          instance =
-          DataSerializer.readObject(
-              new DataInputStream(new ByteArrayInputStream(outputStream.toByteArray())));
+      Object instance = DataSerializer
+          .readObject(new DataInputStream(new ByteArrayInputStream(outputStream.toByteArray())));
     } catch (CancelException e) {
       // PDX classes fish for a PDXRegistry and find that there is no cache
     } catch (InvalidClassException e) {

@@ -50,7 +50,8 @@ public class EventStateHelper {
    * {@link RegionStateMessage#toData(DataOutput)} <br>
    */
   @SuppressWarnings("synthetic-access")
-  public static void dataSerialize(DataOutput dop, Map eventState, boolean isHARegion) throws IOException {
+  public static void dataSerialize(DataOutput dop, Map eventState, boolean isHARegion)
+      throws IOException {
     // For HARegionQueues, the event state map is uses different values
     // than a regular region :(
     InternalDistributedMember myId =
