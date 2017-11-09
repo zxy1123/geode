@@ -14,6 +14,7 @@
  */
 package org.apache.geode.modules.util;
 
+import org.apache.geode.DataSerializable;
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.CacheFactory;
 import org.apache.geode.cache.Declarable;
@@ -21,6 +22,9 @@ import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.Function;
 import org.apache.geode.cache.execute.FunctionContext;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
 
@@ -29,7 +33,8 @@ import java.util.Set;
  * is a non-data-aware function invoked using onMembers or onServers.
  *
  */
-public class TouchReplicatedRegionEntriesFunction implements Function, Declarable {
+public class TouchReplicatedRegionEntriesFunction
+    implements Function, Declarable, DataSerializable {
 
   private static final long serialVersionUID = -7424895036162243564L;
 
@@ -85,5 +90,15 @@ public class TouchReplicatedRegionEntriesFunction implements Function, Declarabl
   }
 
   public void init(Properties properties) {}
+
+  @Override
+  public void toData(DataOutput out) throws IOException {
+
+  }
+
+  @Override
+  public void fromData(DataInput in) throws IOException, ClassNotFoundException {
+
+  }
 }
 

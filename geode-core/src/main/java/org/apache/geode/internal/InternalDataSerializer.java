@@ -209,8 +209,20 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   public static void initialize(DistributionConfig distributionConfig,
       Collection<DistributedSystemService> services) {
-    String serializationFilterSpec; // get from configuration
-    serializationFilterSpec = "java.**;javax.management.**;javax.print.attribute.EnumSyntax;antlr.**;!*";
+
+    String configSerializationSpec = ""; // distributionConfig.getSerializationSpecification()
+    // if (configSerializationSpec == null || configSerializationSpec.trim().length() == 0) {
+    // return;
+    // }
+
+    String serializationFilterSpec =
+        "java.**;javax.management.**;javax.print.attribute.EnumSyntax" + ";antlr.**" // query AST
+                                                                                     // objects
+            + ";org.apache.commons.modeler.AttributeInfo" // old Admin API
+            + ";org.apache.commons.modeler.FeatureInfo" // old Admin API
+            + ";org.apache.commons.modeler.ManagedBean" // old Admin API
+            + ";" + configSerializationSpec + ";!*"; // everything else is black-listed
+
     if (serializationFilterSpec != null) {
       if (!ClassUtils.isClassAvailable("sun.misc.ObjectInputFilter")) {
         throw new GemFireConfigException(

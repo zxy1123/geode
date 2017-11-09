@@ -18,52 +18,5 @@
 
 
 # ~~~~~~~~~~~~~~~~~~~ Whitelist Testing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# these are failures from
 
-# has assertions that throw an InternalGemFireError when deserializing
-????,org/apache/geode/admin/jmx/internal/ConfigurationParameterJmxImpl
 
-# deprecated classes that extend an apache commons class (commons class would have to be whitelisted)
-????,org/apache/geode/admin/jmx/internal/ConfigAttributeInfo
-????,org/apache/geode/admin/jmx/internal/DynamicManagedBean
-????,org/apache/geode/admin/jmx/internal/StatisticAttributeInfo
-
-# has an incestuous subclass that should be merged into the superclass.
-# see InterestResultPolicyImpl
-????,org/apache/geode/cache/InterestResultPolicy
-
-# deprecated class that does custom serialization
-????,org/apache/geode/cache/RegionAccessException
-????,org/apache/geode/cache/RegionDistributionException
-
-# query class that does custom serialization and throws an NPE in the test
-????,org/apache/geode/cache/query/internal/ObjectIntHashMap
-
-# This needs a bug report.  This class serializes a DistributionConfigImpl but we
-# have that class in excludedClasses.txt and aren't monitoring it.
-????,org/apache/geode/distributed/internal/DistributionConfigSnapshot
-????,org/apache/geode/distributed/internal/RuntimeDistributionConfigImpl
-
-# class is serializable and causes DataSerializable contents to be java-serialized
-????,org/apache/geode/cache/AttributesFactory$RegionAttributesImpl
-
-# NPE in readResolve()
-????,org/apache/geode/admin/GemFireHealth$Health
-
-# NPE in InternalDataSerializer.processIncomingClassName
-????,org/apache/geode/pdx/internal/PdxInstanceEnum
-
-# NPE in PdxInstanceImpl.sendTo
-????,org/apache/geode/pdx/internal/PdxInstanceImpl
-
-# NPE when serializing
-????,org/apache/geode/pdx/internal/WritablePdxInstanceImpl
-
-# class is an anonymous inner class.  If a new inner class is added to the enclosing
-# class the name of this class may be changed (e.g., $8) and break backward compatibility.
-# The class also has no constructor that the whitelist test can use.
-????,org/apache/geode/internal/cache/PartitionedRegion$7
-????,org/apache/geode/internal/cache/TXFarSideCMTracker$2
-????,org/apache/geode/internal/cache/TXManagerImpl$1
-????,org/apache/geode/internal/cache/partitioned/FetchEntriesMessage$FetchEntriesResponse$1
-????,org/apache/geode/pdx/internal/AutoSerializableManager$1

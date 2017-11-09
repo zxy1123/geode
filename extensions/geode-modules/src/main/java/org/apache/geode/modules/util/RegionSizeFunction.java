@@ -14,14 +14,18 @@
  */
 package org.apache.geode.modules.util;
 
+import org.apache.geode.DataSerializable;
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.cache.execute.Function;
 import org.apache.geode.cache.execute.FunctionContext;
 import org.apache.geode.cache.execute.RegionFunctionContext;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Properties;
 
-public class RegionSizeFunction implements Function, Declarable {
+public class RegionSizeFunction implements Function, Declarable, DataSerializable {
 
   private static final long serialVersionUID = -2791590491585777990L;
 
@@ -50,4 +54,14 @@ public class RegionSizeFunction implements Function, Declarable {
 
   @Override
   public void init(Properties arg0) {}
+
+  @Override
+  public void toData(DataOutput out) throws IOException {
+
+  }
+
+  @Override
+  public void fromData(DataInput in) throws IOException, ClassNotFoundException {
+
+  }
 }

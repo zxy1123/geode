@@ -47,7 +47,6 @@ org/apache/geode/admin/jmx/internal/GemFireHealthConfigJmxImpl,true,148271964716
 org/apache/geode/admin/jmx/internal/ManagedResourceType,true,3752874768667480449,ordinal:int
 org/apache/geode/admin/jmx/internal/RefreshNotificationType,true,4376763592395613794,ordinal:int
 org/apache/geode/admin/jmx/internal/StatisticAttributeInfo,true,28022387514935560,stat:org/apache/geode/admin/Statistic
-org/apache/geode/cache/AttributesFactory$RegionAttributesImpl,true,-3663000883567530374,asyncEventQueueIds:java/util/Set,cacheListeners:java/util/ArrayList,cacheLoader:org/apache/geode/cache/CacheLoader,cacheWriter:org/apache/geode/cache/CacheWriter,compressor:org/apache/geode/compression/Compressor,concurrencyChecksEnabled:boolean,concurrencyLevel:int,customEntryIdleTimeout:org/apache/geode/cache/CustomExpiry,customEntryTimeToLive:org/apache/geode/cache/CustomExpiry,dataPolicy:org/apache/geode/cache/DataPolicy,diskDirs:java/io/File[],diskSizes:int[],diskStoreName:java/lang/String,diskSynchronous:boolean,diskWriteAttributes:org/apache/geode/cache/DiskWriteAttributes,earlyAck:boolean,enableAsyncConflation:boolean,enableSubscriptionConflation:boolean,entryIdleTimeout:int,entryIdleTimeoutExpirationAction:org/apache/geode/cache/ExpirationAction,entryTimeToLive:int,entryTimeToLiveExpirationAction:org/apache/geode/cache/ExpirationAction,evictionAttributes:org/apache/geode/internal/cache/EvictionAttributesImpl,gatewaySenderIds:java/util/Set,ignoreJTA:boolean,indexMaintenanceSynchronous:boolean,initialCapacity:int,isBucketRegion:boolean,isCloningEnabled:boolean,isLockGrantor:boolean,keyConstraint:java/lang/Class,loadFactor:float,membershipAttributes:org/apache/geode/cache/MembershipAttributes,multicastEnabled:boolean,offHeap:boolean,partitionAttributes:org/apache/geode/cache/PartitionAttributes,poolName:java/lang/String,publisher:boolean,regionIdleTimeout:int,regionIdleTimeoutExpirationAction:org/apache/geode/cache/ExpirationAction,regionTimeToLive:int,regionTimeToLiveExpirationAction:org/apache/geode/cache/ExpirationAction,scope:org/apache/geode/cache/Scope,statisticsEnabled:boolean,subscriptionAttributes:org/apache/geode/cache/SubscriptionAttributes,valueConstraint:java/lang/Class
 org/apache/geode/cache/CacheClosedException,true,-6479561694497811262
 org/apache/geode/cache/CacheException,true,7699432887938858940
 org/apache/geode/cache/CacheExistsException,true,4090002289325418100
@@ -73,7 +72,6 @@ org/apache/geode/cache/GatewayConfigurationException,true,3112317608711263007
 org/apache/geode/cache/GatewayException,true,8090143153569084886
 org/apache/geode/cache/IncompatibleVersionException,true,668812986092856749
 org/apache/geode/cache/InterestPolicy,true,1567179436331385968,ordinal:byte
-org/apache/geode/cache/InterestResultPolicy,true,-4993765891973030160,ordinal:byte
 org/apache/geode/cache/LossAction,true,-832035480397447797,ordinal:byte
 org/apache/geode/cache/LowMemoryException,true,6585765466722883168,critMems:java/util/Set
 org/apache/geode/cache/MirrorType,true,-6632651349646672540,ordinal:int
@@ -211,14 +209,12 @@ org/apache/geode/distributed/OplogCancelledException,true,106566926222526806
 org/apache/geode/distributed/PoolCancelledException,true,-4562742255812266767
 org/apache/geode/distributed/TXManagerCancelledException,true,3902857360354568446
 org/apache/geode/distributed/internal/AtomicLongWithTerminalState,true,-6130409343386576390
-org/apache/geode/distributed/internal/DistributionConfigSnapshot,true,7445728132965092798,modifiable:java/util/HashSet
 org/apache/geode/distributed/internal/DistributionException,true,9039055444056269504
 org/apache/geode/distributed/internal/FlowControlParams,true,7322447678546893647,byteAllowance:int,rechargeBlockMs:int,rechargeThreshold:float
 org/apache/geode/distributed/internal/HighPriorityAckedMessage$operationType,false
 org/apache/geode/distributed/internal/ReliableReplyException,true,472566058783450438
 org/apache/geode/distributed/internal/ReplyException,true,-4410839793809166071
 org/apache/geode/distributed/internal/ResourceEvent,false
-org/apache/geode/distributed/internal/RuntimeDistributionConfigImpl,true,-805637520096606113
 org/apache/geode/distributed/internal/deadlock/DLockDependencyMonitor$LockId,false,serviceName:java/lang/String,tokenName:java/io/Serializable
 org/apache/geode/distributed/internal/deadlock/Dependency,true,1,depender:java/lang/Object,dependsOn:java/lang/Object
 org/apache/geode/distributed/internal/deadlock/DependencyGraph,true,-6794339771271587648,edges:java/util/Set,vertices:java/util/Map
@@ -272,7 +268,6 @@ org/apache/geode/internal/cache/Oplog$OkToSkipResult,false
 org/apache/geode/internal/cache/Oplog$OplogFileType,false
 org/apache/geode/internal/cache/PRContainsValueFunction,false
 org/apache/geode/internal/cache/PRHARedundancyProvider$ArrayListWithClearState,true,1,wasCleared:boolean
-org/apache/geode/internal/cache/PartitionedRegion$7,true,0,this$0:org/apache/geode/internal/cache/PartitionedRegion,val$bucketId:int
 org/apache/geode/internal/cache/PartitionedRegion$PRIdMap,true,3667357372967498179,cleared:boolean
 org/apache/geode/internal/cache/PartitionedRegion$SizeEntry,false,isPrimary:boolean,size:int
 org/apache/geode/internal/cache/PartitionedRegionDataStore$CreateBucketResult,false,nowExists:boolean
@@ -290,8 +285,6 @@ org/apache/geode/internal/cache/RemoteRegionOperation$Operation,false
 org/apache/geode/internal/cache/SearchLoadAndWriteProcessor$TryAgainException,false
 org/apache/geode/internal/cache/TXCommitMessage$CommitExceptionCollectingException,true,589384721273797822,cacheExceptions:java/util/Set,fatalExceptions:java/util/Map,id:org/apache/geode/internal/cache/TXId,regionExceptions:java/util/Map
 org/apache/geode/internal/cache/TXCommitMessage$RegionCommitList,true,-8910813949027683641
-org/apache/geode/internal/cache/TXFarSideCMTracker$2,false,this$0:org/apache/geode/internal/cache/TXFarSideCMTracker
-org/apache/geode/internal/cache/TXManagerImpl$1,true,-4156018226167594134,this$0:org/apache/geode/internal/cache/TXManagerImpl
 org/apache/geode/internal/cache/control/InternalResourceManager$ResourceType,false,id:int
 org/apache/geode/internal/cache/control/MemoryThresholds$MemoryState,false
 org/apache/geode/internal/cache/control/PartitionRebalanceDetailsImpl,true,5880667005758250156,bucketCreateBytes:long,bucketCreateTime:long,bucketCreatesCompleted:int,bucketRemoveBytes:long,bucketRemoveTime:long,bucketRemovesCompleted:int,bucketTransferBytes:long,bucketTransferTime:long,bucketTransfersCompleted:int,partitionMemberDetailsAfter:java/util/Set,partitionMemberDetailsBefore:java/util/Set,primaryTransferTime:long,primaryTransfersCompleted:int,time:long
@@ -309,7 +302,6 @@ org/apache/geode/internal/cache/lru/LRUAlgorithm,false,bucketRegion:org/apache/g
 org/apache/geode/internal/cache/lru/LRUCapacityController,true,-4383074909189355938,maximumEntries:int
 org/apache/geode/internal/cache/lru/MemLRUCapacityController,true,6364183985590572514,isOffHeap:boolean,limit:long,perEntryOverHead:int,sizer:org/apache/geode/cache/util/ObjectSizer
 org/apache/geode/internal/cache/partitioned/DumpB2NRegion$PrimaryInfo,true,6334695270795306178,hostToken:java/lang/String,isHosting:boolean,isPrimary:boolean
-org/apache/geode/internal/cache/partitioned/FetchEntriesMessage$FetchEntriesResponse$1,true,0,this$0:org/apache/geode/internal/cache/partitioned/FetchEntriesMessage$FetchEntriesResponse,val$bucketId:int,val$recipient:org/apache/geode/distributed/internal/membership/InternalDistributedMember
 org/apache/geode/internal/cache/partitioned/PRLocallyDestroyedException,true,-1291911181409686840
 org/apache/geode/internal/cache/partitioned/PartitionMemberInfoImpl,true,8245020687604034289,bucketCount:int,configuredMaxMemory:long,distributedMember:org/apache/geode/distributed/DistributedMember,primaryCount:int,size:long
 org/apache/geode/internal/cache/partitioned/PartitionRegionInfoImpl,true,6462414089469761476,actualRedundantCopies:int,colocatedWith:java/lang/String,configuredBucketCount:int,configuredRedundantCopies:int,createdBucketCount:int,lowRedundancyBucketCount:int,memberDetails:java/util/Set,offlineMembers:org/apache/geode/internal/cache/partitioned/OfflineMemberDetails,regionPath:java/lang/String
@@ -606,14 +598,10 @@ org/apache/geode/pdx/PdxFieldTypeMismatchException,true,-829617162170742740
 org/apache/geode/pdx/PdxInitializationException,true,5098737377658808834
 org/apache/geode/pdx/PdxRegistryMismatchException,true,-2329989020829052537
 org/apache/geode/pdx/PdxSerializationException,true,-3843814927034345635
-org/apache/geode/pdx/internal/AutoSerializableManager$1,false,this$0:org/apache/geode/pdx/internal/AutoSerializableManager
 org/apache/geode/pdx/internal/EnumInfo$PdxInstanceEnumInfo,true,7907582104525106416,ei:org/apache/geode/pdx/internal/EnumInfo,enumId:int
 org/apache/geode/pdx/internal/FieldNotFoundInPdxVersion,true,1292033563588485577
 org/apache/geode/pdx/internal/PdxInputStream,false
-org/apache/geode/pdx/internal/PdxInstanceEnum,true,-7417287878052772302,className:java/lang/String,enumName:java/lang/String,enumOrdinal:int
-org/apache/geode/pdx/internal/PdxInstanceImpl,true,-1669268527103938431
 org/apache/geode/pdx/internal/PdxReaderImpl,true,-6094553093860427759,blobType:org/apache/geode/pdx/internal/PdxType,dis:org/apache/geode/pdx/internal/PdxInputStream
-org/apache/geode/pdx/internal/WritablePdxInstanceImpl,true,7398999150097596214,dirtyFields:java/lang/Object[]
 org/apache/geode/redis/internal/RedisCommandParserException,true,4707944288714910949
 org/apache/geode/redis/internal/RedisCommandType$1,false,dataType:org/apache/geode/redis/internal/RedisDataType,executor:org/apache/geode/redis/internal/Executor
 org/apache/geode/redis/internal/RedisCommandType$10,false,dataType:org/apache/geode/redis/internal/RedisDataType,executor:org/apache/geode/redis/internal/Executor

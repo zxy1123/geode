@@ -1,4 +1,3 @@
-
 org.apache.geode.internal.security.SecurableCommunicationChannel
 org/apache/geode/GemFireCacheException
 org/apache/geode/admin/AlertLevel
@@ -67,3 +66,14 @@ org/apache/geode/security/ResourcePermission
 org/apache/geode/security/ResourcePermission$Operation
 org/apache/geode/security/ResourcePermission$Resource
 org/apache/geode/security/ResourcePermission$Target
+org/apache/geode/internal/cache/PartitionedRegion$7
+org/apache/geode/internal/cache/TXFarSideCMTracker$2
+org/apache/geode/internal/cache/TXManagerImpl$1
+org/apache/geode/internal/cache/partitioned/FetchEntriesMessage$FetchEntriesResponse$1
+org/apache/geode/pdx/internal/AutoSerializableManager$1
+org/apache/geode/cache/InterestResultPolicy
+org/apache/geode/distributed/internal/DistributionConfigSnapshot
+org/apache/geode/distributed/internal/RuntimeDistributionConfigImpl
+org/apache/geode/pdx/internal/PdxInstanceEnum
+org/apache/geode/pdx/internal/PdxInstanceImpl
+org/apache/geode/pdx/internal/WritablePdxInstanceImpl
