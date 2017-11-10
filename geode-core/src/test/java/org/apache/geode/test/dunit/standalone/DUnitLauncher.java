@@ -21,6 +21,7 @@ import static org.apache.geode.distributed.ConfigurationProperties.LOCATORS;
 import static org.apache.geode.distributed.ConfigurationProperties.LOG_LEVEL;
 import static org.apache.geode.distributed.ConfigurationProperties.MCAST_PORT;
 import static org.apache.geode.distributed.ConfigurationProperties.USE_CLUSTER_CONFIGURATION;
+import static org.apache.geode.distributed.ConfigurationProperties.VALIDATE_SERIALIZABLE_OBJECTS;
 import static org.apache.geode.distributed.internal.DistributionConfig.GEMFIRE_PREFIX;
 
 import java.io.BufferedReader;
@@ -253,6 +254,7 @@ public class DUnitLauncher {
     p.setProperty(MCAST_PORT, "0");
     p.setProperty(ENABLE_CLUSTER_CONFIGURATION, "false");
     p.setProperty(USE_CLUSTER_CONFIGURATION, "false");
+    p.setProperty(VALIDATE_SERIALIZABLE_OBJECTS, "true");
     p.setProperty(LOG_LEVEL, logLevel);
     return p;
   }

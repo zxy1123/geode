@@ -296,7 +296,7 @@ public class AnalyzeSerializablesJUnitTest {
         boolean isThrowable = Throwable.class.isAssignableFrom(sanctionedClass);
 
         Constructor constructor = isThrowable ? sanctionedClass.getDeclaredConstructor(String.class)
-            : sanctionedClass.getDeclaredConstructor(null);
+            : sanctionedClass.getDeclaredConstructor((Class<?>[]) null);
         constructor.setAccessible(true);
         sanctionedInstance =
             isThrowable ? constructor.newInstance("test throwable") : constructor.newInstance();
@@ -309,7 +309,7 @@ public class AnalyzeSerializablesJUnitTest {
         Class<?> superClass = sanctionedClass;
         Constructor constructor = null;
         if (Externalizable.class.isAssignableFrom(sanctionedClass)) {
-          Constructor<?> cons = sanctionedClass.getDeclaredConstructor(null);
+          Constructor<?> cons = sanctionedClass.getDeclaredConstructor((Class<?>[]) null);
           cons.setAccessible(true);
         } else {
           while (Serializable.class.isAssignableFrom(superClass)) {

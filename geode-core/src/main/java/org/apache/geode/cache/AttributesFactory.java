@@ -1530,7 +1530,7 @@ public class AttributesFactory<K, V> {
 
 
   private static class RegionAttributesImpl<K, V> extends UserSpecifiedRegionAttributes<K, V>
-      implements Cloneable {
+      implements Cloneable, Serializable {
     public Set<String> gatewaySenderIds;
     public Set<String> asyncEventQueueIds;
     private static final long serialVersionUID = -3663000883567530374L;

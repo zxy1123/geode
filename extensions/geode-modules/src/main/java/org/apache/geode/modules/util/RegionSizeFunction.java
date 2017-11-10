@@ -31,6 +31,8 @@ public class RegionSizeFunction implements Function, Declarable, DataSerializabl
 
   public static final String ID = "region-size-function";
 
+  public RegionSizeFunction() {}
+
   public void execute(FunctionContext context) {
     RegionFunctionContext rfc = (RegionFunctionContext) context;
     context.getResultSender().lastResult(rfc.getDataSet().size());

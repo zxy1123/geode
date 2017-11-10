@@ -42,6 +42,8 @@ public class BootstrappingFunction implements Function, MembershipListener, Data
   private static final int TIME_TO_WAIT_FOR_CACHE =
       Integer.getInteger("gemfiremodules.timeToWaitForCache", 30000);
 
+  public BootstrappingFunction() {}
+
   @Override
   public void execute(FunctionContext context) {
     // Verify that the cache exists before continuing.

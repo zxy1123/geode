@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import javax.naming.Context;
@@ -87,6 +88,7 @@ import org.apache.geode.cache.query.CqListener;
 import org.apache.geode.cache.server.CacheServer;
 import org.apache.geode.cache.util.CacheListenerAdapter;
 import org.apache.geode.cache.util.CacheWriterAdapter;
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.distributed.DistributedMember;
 import org.apache.geode.distributed.internal.membership.InternalDistributedMember;
 import org.apache.geode.internal.AvailablePort;
@@ -143,6 +145,17 @@ public class RemoteTransactionDUnitTest extends JUnit4CacheTestCase {
 
   protected enum OP {
     PUT, GET, DESTROY, INVALIDATE, KEYS, VALUES, ENTRIES, PUTALL, GETALL, REMOVEALL
+  }
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties result = super.getDistributedSystemProperties();
+    result.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.internal.cache.RemoteTransactionDUnitTest*"
+            + ";org.apache.geode.test.dunit.**" + ";org.apache.geode.test.junit.**"
+            + ";org.apache.geode.internal.cache.execute.data.CustId"
+            + ";org.apache.geode.internal.cache.execute.data.Customer");
+    return result;
   }
 
   @Override

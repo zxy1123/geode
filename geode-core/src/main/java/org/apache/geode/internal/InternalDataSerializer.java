@@ -140,12 +140,14 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   private static final Map<String, DataSerializer> classesToSerializers = new ConcurrentHashMap<>();
   private static final String SANCTIONED_SERIALIZABLES_DEPENDENCIES_PATTERN =
-      "java.**;javax.management.**" + ";javax.print.attribute.EnumSyntax" // used for some *old*
-                                                                          // enums
+      "java.**;javax.management.**" + ";javax.print.attribute.EnumSyntax" // used for some old enums
           + ";antlr.**" // query AST objects
           + ";org.apache.commons.modeler.AttributeInfo" // old Admin API
           + ";org.apache.commons.modeler.FeatureInfo" // old Admin API
           + ";org.apache.commons.modeler.ManagedBean" // old Admin API
+          + ";org.apache.geode.distributed.internal.DistributionConfigSnapshot" // old Admin API
+          + ";org.apache.geode.distributed.internal.RuntimeDistributionConfigImpl" // old Admin API
+          + ";org.apache.geode.distributed.internal.DistributionConfigImpl" // old Admin API
           + ";";
 
 
@@ -2964,8 +2966,10 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
           }
 
           ObjectInput ois = new DSObjectInputStream(stream);
-          ObjectInputFilter.Config.setObjectInputFilter((ObjectInputStream) ois,
-              serializationFilter);
+          if (serializationFilter != null) {
+            ObjectInputFilter.Config.setObjectInputFilter((ObjectInputStream) ois,
+                serializationFilter);
+          }
           if (stream instanceof VersionedDataStream) {
             Version v = ((VersionedDataStream) stream).getVersion();
             if (v != null && v != Version.CURRENT) {

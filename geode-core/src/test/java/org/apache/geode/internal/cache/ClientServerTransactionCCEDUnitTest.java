@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.cache.internal.JUnit4CacheTestCase;
 import org.apache.geode.test.dunit.internal.JUnit4DistributedTestCase;
 import org.apache.geode.test.junit.categories.DistributedTest;
@@ -26,6 +27,7 @@ import org.apache.geode.test.junit.categories.DistributedTest;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.partition.PartitionRegionHelper;
@@ -41,6 +43,18 @@ import org.apache.geode.test.dunit.VM;
  */
 @Category(DistributedTest.class)
 public class ClientServerTransactionCCEDUnitTest extends ClientServerTransactionDUnitTest {
+
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties result = super.getDistributedSystemProperties();
+    result.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.internal.cache.**" + ";org.apache.geode.test.dunit.**"
+            + ";org.apache.geode.test.junit.**"
+            + ";org.apache.geode.internal.cache.execute.data.CustId"
+            + ";org.apache.geode.internal.cache.execute.data.Customer");
+    return result;
+  }
 
 
   protected final void postSetUpClientServerTransactionDUnitTest() throws Exception {

@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.junit.categories.DistributedTest;
 import org.apache.geode.test.junit.categories.FlakyTest;
 
@@ -98,6 +99,16 @@ public class ClientServerTransactionDUnitTest extends RemoteTransactionDUnitTest
   }
 
   protected void postSetUpClientServerTransactionDUnitTest() throws Exception {}
+
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties result = super.getDistributedSystemProperties();
+    result.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.internal.cache.ClientServerTransactionDUnitTest*"
+            + ";org.apache.geode.test.dunit.**" + ";org.apache.geode.test.junit.**");
+    return result;
+  }
 
 
   private Integer createRegionsAndStartServerWithTimeout(VM vm, boolean accessor,
@@ -244,7 +255,7 @@ public class ClientServerTransactionDUnitTest extends RemoteTransactionDUnitTest
   }
 
   private void configureOffheapSystemProperty() {
-    Properties p = new Properties();
+    Properties p = getDistributedSystemProperties();
     // p.setProperty(LOG_LEVEL, "finer");
     p.setProperty(OFF_HEAP_MEMORY_SIZE, "1m");
     this.getSystem(p);
@@ -3067,7 +3078,7 @@ public class ClientServerTransactionDUnitTest extends RemoteTransactionDUnitTest
         public Object call() throws Exception {
           System.setProperty(
               DistributionConfig.GEMFIRE_PREFIX + "bridge.disableShufflingOfEndpoints", "true");
-          ClientCacheFactory ccf = new ClientCacheFactory();
+          ClientCacheFactory ccf = new ClientCacheFactory(getDistributedSystemProperties());
           ccf.addPoolServer("localhost"/* getServerHostName(Host.getHost(0)) */, port);
           setCCF(port2, ccf);
           // these settings were used to manually check that tx operation stats were being updated
