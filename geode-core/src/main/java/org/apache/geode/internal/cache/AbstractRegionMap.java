@@ -1188,6 +1188,7 @@ public abstract class AbstractRegionMap implements RegionMap {
                               true/* conflict with clear */, duringRI, true);
                           doPart3 = true;
                         } catch (ConcurrentCacheModificationException ccme) {
+                          event.isConcurrencyConflict(true);
                           VersionTag tag = event.getVersionTag();
                           if (tag != null && tag.isTimeStampUpdated()) {
                             // Notify gateways of new time-stamp.
@@ -2097,6 +2098,7 @@ public abstract class AbstractRegionMap implements RegionMap {
                   }
                 } // !opCompleted
               } catch (ConcurrentCacheModificationException ccme) {
+                event.isConcurrencyConflict(true);
                 VersionTag tag = event.getVersionTag();
                 if (tag != null && tag.isTimeStampUpdated()) {
                   // Notify gateways of new time-stamp.
@@ -2854,6 +2856,7 @@ public abstract class AbstractRegionMap implements RegionMap {
                     clearOccured = true;
                     owner.recordEvent(event);
                   } catch (ConcurrentCacheModificationException ccme) {
+                    event.isConcurrencyConflict(true);
                     VersionTag tag = event.getVersionTag();
                     if (tag != null && tag.isTimeStampUpdated()) {
                       // Notify gateways of new time-stamp.
