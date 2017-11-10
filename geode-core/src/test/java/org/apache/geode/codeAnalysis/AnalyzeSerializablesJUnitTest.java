@@ -60,10 +60,10 @@ import sun.reflect.ReflectionFactory;
 
 import org.apache.geode.CancelException;
 import org.apache.geode.DataSerializer;
-import org.apache.geode.ForcedDisconnectException;
 import org.apache.geode.codeAnalysis.decode.CompiledClass;
 import org.apache.geode.codeAnalysis.decode.CompiledField;
 import org.apache.geode.codeAnalysis.decode.CompiledMethod;
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.distributed.internal.DistributedSystemService;
 import org.apache.geode.distributed.internal.DistributionConfig;
 import org.apache.geode.distributed.internal.DistributionConfigImpl;
@@ -191,9 +191,10 @@ public class AnalyzeSerializablesJUnitTest {
   @Test
   public void excludedClassesExistAndDoNotDeserialize() throws Exception {
     List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
-    DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
-    InternalDataSerializer.initialize(distributionConfig,
-        new ArrayList<DistributedSystemService>());
+    Properties properties = new Properties();
+    properties.setProperty(ConfigurationProperties.VALIDATE_SERIALIZABLE_OBJECTS, "true");
+    DistributionConfig distributionConfig = new DistributionConfigImpl(properties);
+    InternalDataSerializer.initialize(distributionConfig, new ArrayList<>());
 
     for (String filePath : excludedClasses) {
       String className = filePath.replaceAll("/", ".");

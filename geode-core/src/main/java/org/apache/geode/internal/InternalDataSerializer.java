@@ -78,7 +78,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -140,12 +139,23 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    * serialization.
    */
   private static final Map<String, DataSerializer> classesToSerializers = new ConcurrentHashMap<>();
+  private static final String SANCTIONED_SERIALIZABLES_DEPENDENCIES_PATTERN =
+      "java.**;javax.management.**" + ";javax.print.attribute.EnumSyntax" // used for some *old*
+                                                                          // enums
+          + ";antlr.**" // query AST objects
+          + ";org.apache.commons.modeler.AttributeInfo" // old Admin API
+          + ";org.apache.commons.modeler.FeatureInfo" // old Admin API
+          + ";org.apache.commons.modeler.ManagedBean" // old Admin API
+          + ";";
+
+
+  private static ObjectInputFilter defaultSerializationFilter =
+      ObjectInputFilter.Config.createFilter("**");
 
   /**
    * A deserialization filter for ObjectInputStreams
    */
-  private static ObjectInputFilter serializationFilter =
-      ObjectInputFilter.Config.createFilter("**");
+  private static ObjectInputFilter serializationFilter = defaultSerializationFilter;
 
   private static final String serializationVersionTxt =
       System.getProperty(DistributionConfig.GEMFIRE_PREFIX + "serializationVersion");
@@ -209,29 +219,21 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   public static void initialize(DistributionConfig distributionConfig,
       Collection<DistributedSystemService> services) {
-
-    String configSerializationSpec = ""; // distributionConfig.getSerializationSpecification()
-    // if (configSerializationSpec == null || configSerializationSpec.trim().length() == 0) {
-    // return;
-    // }
-
-    String serializationFilterSpec =
-        "java.**;javax.management.**;javax.print.attribute.EnumSyntax" + ";antlr.**" // query AST
-                                                                                     // objects
-            + ";org.apache.commons.modeler.AttributeInfo" // old Admin API
-            + ";org.apache.commons.modeler.FeatureInfo" // old Admin API
-            + ";org.apache.commons.modeler.ManagedBean" // old Admin API
-            + ";" + configSerializationSpec + ";!*"; // everything else is black-listed
-
-    if (serializationFilterSpec != null) {
+    if (distributionConfig.getValidateSerializableObjects()) {
       if (!ClassUtils.isClassAvailable("sun.misc.ObjectInputFilter")) {
         throw new GemFireConfigException(
             "A serialization filter has been specified but this version of Java does not support serialization filters - sun.misc.ObjectInputFilter is not available");
       }
-      createSerializationFilter(serializationFilterSpec, services);
+      createSerializationFilter(SANCTIONED_SERIALIZABLES_DEPENDENCIES_PATTERN
+          + distributionConfig.getSerializableObjectFilter() + ";!*", services);
+    } else {
+      clearSerializationFilter();
     }
   }
 
+  private static void clearSerializationFilter() {
+    serializationFilter = defaultSerializationFilter;
+  }
 
   private static void createSerializationFilter(String serializationFilterSpec,
       Collection<DistributedSystemService> services) {
