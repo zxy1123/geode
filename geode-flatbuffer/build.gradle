@@ -1,22 +1,38 @@
+
+import com.github.gregwhitaker.flatbuffers.plugin.tasks.FlatBuffers
+
 buildscript {
     ext.kotlin_version = '1.1.51'
+    ext.gradle_flatbuffer_version = '1.0.2'
 
     repositories {
         mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "gradle.plugin.com.github.gregwhitaker:gradle-flatbuffers-plugin:$gradle_flatbuffer_version"
     }
+}
+
+plugins {
+    id "com.github.gregwhitaker.flatbuffers" version "1.0.2"
 }
 
 group 'org.apache.geode'
 version '1.4.0-SNAPSHOT'
+
+
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 
 sourceCompatibility = 1.8
+
+
 
 repositories {
     mavenCentral()
@@ -35,7 +51,26 @@ dependencies {
 
     // https://mvnrepository.com/artifact/com.github.davidmoten/flatbuffers-java
     compile group: 'com.github.davidmoten', name: 'flatbuffers-java', version: '1.7.0.1'
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
 
+}
+
+flatbuffers {
+    flatcPath = '/home/pivotal/tools/flatbuffers/flatc'
+    language = 'java'
+}
+
+task createFlatBuffers(type: FlatBuffers) {
+    inputDir = file("src/main/schema")
+    outputDir = file("$buildDir/generated-src/flatbuffer/main/java")
+    language = 'java'
+}
+
+// let IntelliJ know where the generated sources are.
+idea {
+    module {
+        sourceDirs += file("$buildDir/generated-src/flatbuffer/main/java")
+    }
 }
 
 compileKotlin {
@@ -49,6 +84,7 @@ sourceSets {
     main {
         java {
             srcDir "$projectDir/src/main/kotlin"
+            srcDir "$buildDir/generated-src/flatbuffer/main/java"
         }
     }
 }
