@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -43,9 +44,20 @@ public class InternalDataSerializerSerializationWhitelistTest {
 
   @Before
   public void setUp() {
+    Assume.assumeTrue("ObjectInputFilter is present in this JVM (post- 8.111)",
+        hasObjectInputFilter());
     outputStream = new HeapDataOutputStream(Version.CURRENT);
     testSerializable = new TestSerializable();
     properties = new Properties();
+  }
+
+  private boolean hasObjectInputFilter() {
+    try {
+      Class.forName("sun.misc.ObjectInputFilter");
+      return true;
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
   }
 
   @AfterClass

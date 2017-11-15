@@ -14,65 +14,6 @@
  */
 package org.apache.geode.internal;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.geode.CancelException;
-import org.apache.geode.CanonicalInstantiator;
-import org.apache.geode.DataSerializable;
-import org.apache.geode.DataSerializer;
-import org.apache.geode.GemFireConfigException;
-import org.apache.geode.GemFireIOException;
-import org.apache.geode.GemFireRethrowable;
-import org.apache.geode.Instantiator;
-import org.apache.geode.InternalGemFireError;
-import org.apache.geode.InternalGemFireException;
-import org.apache.geode.SerializationException;
-import org.apache.geode.SystemFailure;
-import org.apache.geode.ToDataException;
-import org.apache.geode.cache.CacheClosedException;
-import org.apache.geode.cache.execute.Function;
-import org.apache.geode.distributed.internal.DMStats;
-import org.apache.geode.distributed.internal.DistributedSystemService;
-import org.apache.geode.distributed.internal.DistributionConfig;
-import org.apache.geode.distributed.internal.DistributionManager;
-import org.apache.geode.distributed.internal.InternalDistributedSystem;
-import org.apache.geode.distributed.internal.LonerDistributionManager;
-import org.apache.geode.distributed.internal.SerialDistributionMessage;
-import org.apache.geode.i18n.StringId;
-import org.apache.geode.internal.cache.EnumListenerEvent;
-import org.apache.geode.internal.cache.EventID;
-import org.apache.geode.internal.cache.GemFireCacheImpl;
-import org.apache.geode.internal.cache.InternalCache;
-import org.apache.geode.internal.cache.PoolManagerImpl;
-import org.apache.geode.internal.cache.tier.sockets.CacheClientNotifier;
-import org.apache.geode.internal.cache.tier.sockets.CacheServerHelper;
-import org.apache.geode.internal.cache.tier.sockets.ClientDataSerializerMessage;
-import org.apache.geode.internal.cache.tier.sockets.ClientProxyMembershipID;
-import org.apache.geode.internal.cache.tier.sockets.OldClientSupportService;
-import org.apache.geode.internal.cache.tier.sockets.Part;
-import org.apache.geode.internal.i18n.LocalizedStrings;
-import org.apache.geode.internal.lang.ClassUtils;
-import org.apache.geode.internal.logging.LogService;
-import org.apache.geode.internal.logging.log4j.LocalizedMessage;
-import org.apache.geode.internal.logging.log4j.LogMarker;
-import org.apache.geode.internal.util.concurrent.CopyOnWriteHashMap;
-import org.apache.geode.pdx.NonPortableClassException;
-import org.apache.geode.pdx.PdxInstance;
-import org.apache.geode.pdx.PdxSerializable;
-import org.apache.geode.pdx.PdxSerializer;
-import org.apache.geode.pdx.internal.AutoSerializableManager;
-import org.apache.geode.pdx.internal.AutoSerializableManager.AutoClassInfo;
-import org.apache.geode.pdx.internal.EnumInfo;
-import org.apache.geode.pdx.internal.PdxInputStream;
-import org.apache.geode.pdx.internal.PdxInstanceEnum;
-import org.apache.geode.pdx.internal.PdxInstanceImpl;
-import org.apache.geode.pdx.internal.PdxOutputStream;
-import org.apache.geode.pdx.internal.PdxReaderImpl;
-import org.apache.geode.pdx.internal.PdxType;
-import org.apache.geode.pdx.internal.PdxWriterImpl;
-import org.apache.geode.pdx.internal.TypeRegistry;
-import org.apache.logging.log4j.Logger;
-import sun.misc.ObjectInputFilter;
-
 import java.io.BufferedReader;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -124,6 +65,64 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Logger;
+
+import org.apache.geode.CancelException;
+import org.apache.geode.CanonicalInstantiator;
+import org.apache.geode.DataSerializable;
+import org.apache.geode.DataSerializer;
+import org.apache.geode.GemFireConfigException;
+import org.apache.geode.GemFireIOException;
+import org.apache.geode.GemFireRethrowable;
+import org.apache.geode.Instantiator;
+import org.apache.geode.InternalGemFireError;
+import org.apache.geode.SerializationException;
+import org.apache.geode.SystemFailure;
+import org.apache.geode.ToDataException;
+import org.apache.geode.cache.CacheClosedException;
+import org.apache.geode.cache.execute.Function;
+import org.apache.geode.distributed.internal.DMStats;
+import org.apache.geode.distributed.internal.DistributedSystemService;
+import org.apache.geode.distributed.internal.DistributionConfig;
+import org.apache.geode.distributed.internal.DistributionManager;
+import org.apache.geode.distributed.internal.InternalDistributedSystem;
+import org.apache.geode.distributed.internal.LonerDistributionManager;
+import org.apache.geode.distributed.internal.SerialDistributionMessage;
+import org.apache.geode.i18n.StringId;
+import org.apache.geode.internal.cache.EnumListenerEvent;
+import org.apache.geode.internal.cache.EventID;
+import org.apache.geode.internal.cache.GemFireCacheImpl;
+import org.apache.geode.internal.cache.InternalCache;
+import org.apache.geode.internal.cache.PoolManagerImpl;
+import org.apache.geode.internal.cache.tier.sockets.CacheClientNotifier;
+import org.apache.geode.internal.cache.tier.sockets.CacheServerHelper;
+import org.apache.geode.internal.cache.tier.sockets.ClientDataSerializerMessage;
+import org.apache.geode.internal.cache.tier.sockets.ClientProxyMembershipID;
+import org.apache.geode.internal.cache.tier.sockets.OldClientSupportService;
+import org.apache.geode.internal.cache.tier.sockets.Part;
+import org.apache.geode.internal.i18n.LocalizedStrings;
+import org.apache.geode.internal.lang.ClassUtils;
+import org.apache.geode.internal.logging.LogService;
+import org.apache.geode.internal.logging.log4j.LocalizedMessage;
+import org.apache.geode.internal.logging.log4j.LogMarker;
+import org.apache.geode.internal.util.concurrent.CopyOnWriteHashMap;
+import org.apache.geode.pdx.NonPortableClassException;
+import org.apache.geode.pdx.PdxInstance;
+import org.apache.geode.pdx.PdxSerializable;
+import org.apache.geode.pdx.PdxSerializer;
+import org.apache.geode.pdx.internal.AutoSerializableManager;
+import org.apache.geode.pdx.internal.AutoSerializableManager.AutoClassInfo;
+import org.apache.geode.pdx.internal.EnumInfo;
+import org.apache.geode.pdx.internal.PdxInputStream;
+import org.apache.geode.pdx.internal.PdxInstanceEnum;
+import org.apache.geode.pdx.internal.PdxInstanceImpl;
+import org.apache.geode.pdx.internal.PdxOutputStream;
+import org.apache.geode.pdx.internal.PdxReaderImpl;
+import org.apache.geode.pdx.internal.PdxType;
+import org.apache.geode.pdx.internal.PdxWriterImpl;
+import org.apache.geode.pdx.internal.TypeRegistry;
+
 /**
  * Contains static methods for data serializing instances of internal GemFire classes. It also
  * contains the implementation of the distribution messaging (and shared memory management) needed
@@ -151,13 +150,12 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
           + ";";
 
 
-  private static ObjectInputFilter defaultSerializationFilter =
-      ObjectInputFilter.Config.createFilter("**");
+  private static InputStreamFilter defaultSerializationFilter = new EmptyInputStreamFilter();
 
   /**
    * A deserialization filter for ObjectInputStreams
    */
-  private static ObjectInputFilter serializationFilter = defaultSerializationFilter;
+  private static InputStreamFilter serializationFilter = defaultSerializationFilter;
 
   private static final String serializationVersionTxt =
       System.getProperty(DistributionConfig.GEMFIRE_PREFIX + "serializationVersion");
@@ -226,8 +224,9 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
         throw new GemFireConfigException(
             "A serialization filter has been specified but this version of Java does not support serialization filters - sun.misc.ObjectInputFilter is not available");
       }
-      createSerializationFilter(SANCTIONED_SERIALIZABLES_DEPENDENCIES_PATTERN
-          + distributionConfig.getSerializableObjectFilter() + ";!*", services);
+      serializationFilter =
+          new ObjectInputStreamFilterWrapper(SANCTIONED_SERIALIZABLES_DEPENDENCIES_PATTERN
+              + distributionConfig.getSerializableObjectFilter() + ";!*", services);
     } else {
       clearSerializationFilter();
     }
@@ -237,59 +236,11 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
     serializationFilter = defaultSerializationFilter;
   }
 
-  private static void createSerializationFilter(String serializationFilterSpec,
-      Collection<DistributedSystemService> services) {
-
-    Set<String> sanctionedClasses = new HashSet<>(500);
-    for (DistributedSystemService service : services) {
-      try {
-        sanctionedClasses.addAll(service.getSerializationWhitelist());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-    try {
-      URL sanctionedSerializables = ClassPathLoader.getLatest()
-          .getResource(InternalDataSerializer.class, "sanctionedSerializables.txt");
-      Collection<String> coreClassNames = loadClassNames(sanctionedSerializables);
-      sanctionedClasses.addAll(coreClassNames);
-    } catch (IOException e) {
-      throw new InternalGemFireException(
-          "unable to read sanctionedSerializables.txt to form a serialization white-list", e);
-    }
-
-    logger.debug("setting a serialization filter containing {}", serializationFilterSpec);
-
-    final ObjectInputFilter userFilter =
-        ObjectInputFilter.Config.createFilter(serializationFilterSpec);
-    serializationFilter = filterInfo -> {
-      if (filterInfo.serialClass() == null) {
-        return userFilter.checkInput(filterInfo);
-      }
-
-      String className = filterInfo.serialClass().getName();
-      if (filterInfo.serialClass().isArray()) {
-        className = filterInfo.serialClass().getComponentType().getName();
-      }
-      if (sanctionedClasses.contains(className)) {
-        return ObjectInputFilter.Status.ALLOWED;
-        // return ObjectInputFilter.Status.UNDECIDED;
-      } else {
-        ObjectInputFilter.Status status = userFilter.checkInput(filterInfo);
-        if (status == ObjectInputFilter.Status.REJECTED) {
-          logger.warn("Serialization filter is rejecting class {}", className);
-        }
-        return status;
-      }
-    };
-
-    // global filter - if we enable this it will affect all ObjectInputStreams
-    // ObjectInputFilter.Config.setSerialFilter(serializationFilter);
-  }
 
   /**
-   * Loads the class names from sanctionedSerializables.txt, a file that is also maintained for
-   * backward-compatibility testing with AnalyzeSerializablesJUnitTest
+   * {@link DistributedSystemService}s that need to whitelist Serializable objects can use this to
+   * read them from a file and then return them via
+   * {@link DistributedSystemService#getSerializationWhitelist}
    */
   public static Collection<String> loadClassNames(URL sanctionedSerializables) throws IOException {
     Collection<String> result = new ArrayList(1000);
@@ -2966,10 +2917,7 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
           }
 
           ObjectInput ois = new DSObjectInputStream(stream);
-          if (serializationFilter != null) {
-            ObjectInputFilter.Config.setObjectInputFilter((ObjectInputStream) ois,
-                serializationFilter);
-          }
+          serializationFilter.setFilterOn((ObjectInputStream) ois);
           if (stream instanceof VersionedDataStream) {
             Version v = ((VersionedDataStream) stream).getVersion();
             if (v != null && v != Version.CURRENT) {
