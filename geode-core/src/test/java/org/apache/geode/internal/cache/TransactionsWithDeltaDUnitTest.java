@@ -234,6 +234,7 @@ public class TransactionsWithDeltaDUnitTest extends JUnit4CacheTestCase {
     public void fromData(DataInput in) throws IOException, ClassNotFoundException {
       id = in.readInt();
       name = in.readUTF();
+      idChanged = in.readBoolean();
       nameChanged = in.readBoolean();
       fromDeltaCalled = in.readBoolean();
       toDeltaCalled = in.readBoolean();

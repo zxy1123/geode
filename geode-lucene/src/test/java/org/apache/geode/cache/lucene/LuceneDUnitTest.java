@@ -24,6 +24,7 @@ import org.apache.geode.cache.PartitionAttributesFactory;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.RegionShortcut;
 import org.apache.geode.cache.lucene.test.LuceneTestUtilities;
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.Host;
 import org.apache.geode.test.dunit.SerializableRunnableIF;
 import org.apache.geode.test.dunit.VM;
@@ -31,6 +32,8 @@ import org.apache.geode.test.dunit.VM;
 import org.apache.geode.test.dunit.cache.internal.JUnit4CacheTestCase;
 
 import static org.apache.geode.cache.lucene.test.LuceneTestUtilities.*;
+
+import java.util.Properties;
 
 
 public abstract class LuceneDUnitTest extends JUnit4CacheTestCase {
@@ -74,6 +77,17 @@ public abstract class LuceneDUnitTest extends JUnit4CacheTestCase {
       }
     }
     return parameters;
+  }
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties result = super.getDistributedSystemProperties();
+    result.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.cache.lucene.test.TestObject;org.apache.geode.cache.lucene.LuceneQueriesAccessorBase$TestObject"
+            + ";org.apache.geode.cache.lucene.LuceneDUnitTest"
+            + ";org.apache.geode.cache.lucene.LuceneQueriesAccessorBase"
+            + ";org.apache.geode.test.dunit.**");
+    return result;
   }
 
   public enum RegionTestableType {

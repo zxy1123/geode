@@ -147,6 +147,13 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
           + ";org.apache.geode.distributed.internal.DistributionConfigSnapshot" // old Admin API
           + ";org.apache.geode.distributed.internal.RuntimeDistributionConfigImpl" // old Admin API
           + ";org.apache.geode.distributed.internal.DistributionConfigImpl" // old Admin API
+          + ";org.apache.geode.distributed.internal.membership.InternalDistributedMember" // RegionSnapshotService
+                                                                                          // function
+                                                                                          // WindowedExportFunction
+          + ";org.apache.geode.internal.cache.persistence.PersistentMemberID" // putAll
+          + ";org.apache.geode.internal.cache.persistence.DiskStoreID" // putAll
+          + ";org.apache.geode.internal.cache.tier.sockets.VersionedObjectList" // putAll
+          + ";org.apache.shiro.*;org.apache.shiro.authz.*" // security services
           + ";";
 
 
@@ -219,6 +226,7 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
    */
   public static void initialize(DistributionConfig distributionConfig,
       Collection<DistributedSystemService> services) {
+    logger.info("initializing InternalDataSerializer with {} services", services.size());
     if (distributionConfig.getValidateSerializableObjects()) {
       if (!ClassUtils.isClassAvailable("sun.misc.ObjectInputFilter")) {
         throw new GemFireConfigException(
@@ -261,6 +269,7 @@ public abstract class InternalDataSerializer extends DataSerializer implements D
     } finally {
       inputStream.close();
     }
+    // logger.info("loaded {} class names from {}", result.size(), sanctionedSerializables);
     return result;
 
   }

@@ -73,9 +73,11 @@ import org.apache.geode.cache.query.Query;
 import org.apache.geode.cache.query.QueryInvocationTargetException;
 import org.apache.geode.cache.query.SelectResults;
 import org.apache.geode.cache.server.CacheServer;
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.distributed.DistributedSystem;
 import org.apache.geode.distributed.Locator;
 import org.apache.geode.distributed.internal.DistributionConfig;
+import org.apache.geode.internal.Version;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
 import org.apache.geode.pdx.PdxWriter;
@@ -488,6 +490,11 @@ public class SecurityTestUtils {
       props.setProperty(DURABLE_CLIENT_ID, durableClientId);
       props.setProperty(DURABLE_CLIENT_TIMEOUT,
           String.valueOf(DistributionConfig.DEFAULT_DURABLE_CLIENT_TIMEOUT));
+    }
+
+    if (Version.CURRENT.ordinal() >= 75) {
+      props.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+          "org.apache.geode.security.templates.UsernamePrincipal");
     }
 
     SecurityTestUtils tmpInstance = new SecurityTestUtils("temp");

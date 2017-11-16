@@ -703,6 +703,7 @@ public class InternalDistributedSystem extends DistributedSystem
         this.locatorDMTypeForced = true;
       }
 
+      initializeServices();
       InternalDataSerializer.initialize(config, services.values());
 
       // Initialize the Diffie-Hellman and public/private keys

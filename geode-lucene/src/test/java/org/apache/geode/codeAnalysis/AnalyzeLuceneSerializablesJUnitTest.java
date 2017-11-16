@@ -12,31 +12,17 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.geode.internal;
+package org.apache.geode.codeAnalysis;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Collection;
+import org.junit.experimental.categories.Category;
 
-import org.apache.geode.distributed.internal.DistributedSystemService;
-import org.apache.geode.distributed.internal.InternalDistributedSystem;
+import org.apache.geode.test.junit.categories.IntegrationTest;
 
-public class CQDistributedSystemService implements DistributedSystemService {
-  @Override
-  public void init(InternalDistributedSystem internalDistributedSystem) {
-
-  }
+@Category(IntegrationTest.class)
+public class AnalyzeLuceneSerializablesJUnitTest extends AnalyzeSerializablesJUnitTest {
 
   @Override
-  public Class getInterface() {
-    return getClass();
-  }
-
-  @Override
-  public Collection<String> getSerializationWhitelist() throws IOException {
-    URL sanctionedSerializables = ClassPathLoader.getLatest().getResource(getClass(),
-        "sanctioned-geode-cq-serializables.txt");
-    return InternalDataSerializer.loadClassNames(sanctionedSerializables);
+  protected String getModuleName() {
+    return "geode-lucene";
   }
 }

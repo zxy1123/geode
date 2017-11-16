@@ -40,14 +40,19 @@ public class ObjectInputStreamFilterWrapper implements InputStreamFilter {
     Set<String> sanctionedClasses = new HashSet<>(500);
     for (DistributedSystemService service : services) {
       try {
-        sanctionedClasses.addAll(service.getSerializationWhitelist());
+        Collection<String> classNames = service.getSerializationWhitelist();
+        logger.info("loaded {} sanctioned serializables from {}", classNames.size(),
+            service.getClass().getSimpleName());
+        sanctionedClasses.addAll(classNames);
       } catch (IOException e) {
-        e.printStackTrace();
+        throw new InternalGemFireException("error initializing serialization filter for " + service,
+            e);
       }
     }
+
     try {
       URL sanctionedSerializables = ClassPathLoader.getLatest()
-          .getResource(InternalDataSerializer.class, "sanctionedSerializables.txt");
+          .getResource(InternalDataSerializer.class, "sanctioned-geode-core-serializables.txt");
       Collection<String> coreClassNames =
           InternalDataSerializer.loadClassNames(sanctionedSerializables);
       sanctionedClasses.addAll(coreClassNames);
@@ -56,7 +61,11 @@ public class ObjectInputStreamFilterWrapper implements InputStreamFilter {
           "unable to read sanctionedSerializables.txt to form a serialization white-list", e);
     }
 
-    logger.debug("setting a serialization filter containing {}", serializationFilterSpec);
+    logger.info("setting a serialization filter containing {}", serializationFilterSpec);
+    // logger.info("sanctioned serializables are");
+    // for (String cls: sanctionedClasses) {
+    // logger.info(" " + cls);
+    // }
 
     final ObjectInputFilter userFilter =
         ObjectInputFilter.Config.createFilter(serializationFilterSpec);
@@ -75,7 +84,7 @@ public class ObjectInputStreamFilterWrapper implements InputStreamFilter {
       } else {
         ObjectInputFilter.Status status = userFilter.checkInput(filterInfo);
         if (status == ObjectInputFilter.Status.REJECTED) {
-          logger.warn("Serialization filter is rejecting class {}", className);
+          logger.fatal("Serialization filter is rejecting class {}", className, new Exception(""));
         }
         return status;
       }

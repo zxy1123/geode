@@ -49,6 +49,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.junit.Before;
@@ -90,6 +91,8 @@ public class AnalyzeSerializablesJUnitTest {
   private Map<String, CompiledClass> classes;
 
   private File expectedDataSerializablesFile;
+  private String expectedSerializablesFileName =
+      "sanctioned-" + getModuleName() + "-serializables.txt";
   private File expectedSerializablesFile;
 
   private List<ClassAndMethodDetails> expectedDataSerializables;
@@ -112,7 +115,7 @@ public class AnalyzeSerializablesJUnitTest {
 
   public void loadExpectedSerializables() throws Exception {
     this.expectedSerializablesFile =
-        getResourceAsFile(InternalDataSerializer.class, "sanctionedSerializables.txt");
+        getResourceAsFile(InternalDataSerializer.class, expectedSerializablesFileName);
     assertThat(this.expectedSerializablesFile).exists().canRead();
 
     this.expectedSerializables = loadClassesAndVariables(this.expectedSerializablesFile);
@@ -131,6 +134,17 @@ public class AnalyzeSerializablesJUnitTest {
         "AnalyzeSerializables requires Java 8 but tests are running with v" + getJavaVersion(),
         isJavaVersionAtLeast("1.8"), is(true));
   }
+
+  private List<DistributedSystemService> initializeServices() {
+    ServiceLoader<DistributedSystemService> loader =
+        ServiceLoader.load(DistributedSystemService.class);
+    List<DistributedSystemService> services = new ArrayList<>();
+    for (DistributedSystemService service : loader) {
+      services.add(service);
+    }
+    return services;
+  }
+
 
   /**
    * Override only this one method in sub-classes
@@ -189,12 +203,13 @@ public class AnalyzeSerializablesJUnitTest {
   }
 
   @Test
-  public void excludedClassesExistAndDoNotDeserialize() throws Exception {
+  public void testExcludedClassesExistAndDoNotDeserialize() throws Exception {
     List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
     Properties properties = new Properties();
-    properties.setProperty(ConfigurationProperties.VALIDATE_SERIALIZABLE_OBJECTS, "true");
+    properties.put(ConfigurationProperties.VALIDATE_SERIALIZABLE_OBJECTS, "true");
+    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER, "!*");
     DistributionConfig distributionConfig = new DistributionConfigImpl(properties);
-    InternalDataSerializer.initialize(distributionConfig, new ArrayList<>());
+    InternalDataSerializer.initialize(distributionConfig, initializeServices());
 
     for (String filePath : excludedClasses) {
       String className = filePath.replaceAll("/", ".");
@@ -245,14 +260,15 @@ public class AnalyzeSerializablesJUnitTest {
   }
 
   @Test
-  public void sanctionedClassesExistAndDoDeserialize() throws Exception {
+  public void testSanctionedClassesExistAndDoDeserialize() throws Exception {
     loadExpectedSerializables();
     Set<String> openBugs = new HashSet<>(loadOpenBugs(getResourceAsFile(OPEN_BUGS_TXT)));
 
 
     DistributionConfig distributionConfig = new DistributionConfigImpl(new Properties());
-    InternalDataSerializer.initialize(distributionConfig,
-        new ArrayList<DistributedSystemService>());
+    distributionConfig.setValidateSerializableObjects(true);
+    distributionConfig.setSerializableObjectFilter("!*");
+    InternalDataSerializer.initialize(distributionConfig, initializeServices());
 
     for (ClassAndVariableDetails details : expectedSerializables) {
       if (openBugs.contains(details.className)) {
@@ -264,8 +280,8 @@ public class AnalyzeSerializablesJUnitTest {
 
       Class sanctionedClass = Class.forName(className);
       assertTrue(
-          sanctionedClass.getName()
-              + " is not Serializable and should be removed from sanctionedSerializables.txt",
+          sanctionedClass.getName() + " is not Serializable and should be removed from "
+              + expectedSerializablesFileName,
           Serializable.class.isAssignableFrom(sanctionedClass));
 
       if (Modifier.isAbstract(sanctionedClass.getModifiers())) {
@@ -290,7 +306,7 @@ public class AnalyzeSerializablesJUnitTest {
       Object sanctionedInstance = null;
       if (!Serializable.class.isAssignableFrom(sanctionedClass)) {
         throw new AssertionError(
-            className + " is not serializable.  Remove it from sanctionedSerializables.txt");
+            className + " is not serializable.  Remove it from " + expectedSerializablesFileName);
       }
       try {
         boolean isThrowable = Throwable.class.isAssignableFrom(sanctionedClass);
@@ -314,8 +330,9 @@ public class AnalyzeSerializablesJUnitTest {
         } else {
           while (Serializable.class.isAssignableFrom(superClass)) {
             if ((superClass = superClass.getSuperclass()) == null) {
-              throw new AssertionError(className
-                  + " cannot be instantiated for serialization.  Remove it from sanctionedSerializables.txt");
+              throw new AssertionError(
+                  className + " cannot be instantiated for serialization.  Remove it from "
+                      + expectedSerializablesFileName);
             }
           }
           constructor = superClass.getDeclaredConstructor((Class<?>[]) null);
@@ -325,8 +342,8 @@ public class AnalyzeSerializablesJUnitTest {
         }
         sanctionedInstance = constructor.newInstance();
       } catch (Exception e2) {
-        throw new AssertionError("Unable to instantiate " + className
-            + " - please move it from sanctionedSerializables.txt to excludedClasses.txt", e2);
+        throw new AssertionError("Unable to instantiate " + className + " - please move it from "
+            + expectedSerializablesFileName + " to excludedClasses.txt", e2);
       }
       serializeAndDeserializeSanctionedObject(sanctionedInstance);
     }
@@ -344,7 +361,7 @@ public class AnalyzeSerializablesJUnitTest {
 
     for (String openBugClass : openBugs) {
       assertTrue(
-          "open bug class: " + openBugClass + " is not present in sanctionedSerializables.txt",
+          "open bug class: " + openBugClass + " is not present in " + expectedSerializablesFileName,
           expectedSerializableClasses.contains(openBugClass));
     }
   }
@@ -361,7 +378,8 @@ public class AnalyzeSerializablesJUnitTest {
     List<String> excludedClasses = loadExcludedClasses(getResourceAsFile(EXCLUDED_CLASSES_TXT));
 
     for (String excludedClass : excludedClasses) {
-      assertFalse("Excluded class: " + excludedClass + " was found in sanctionedSerializables.txt",
+      assertFalse(
+          "Excluded class: " + excludedClass + " was found in " + expectedSerializablesFileName,
           expectedSerializableClasses.contains(excludedClass));
     }
   }
