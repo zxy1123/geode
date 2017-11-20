@@ -49,6 +49,6 @@ public class TestConfigService {
   }
 
   private static ConnectionConfiguration createConnectionConfig() {
-    return new ConnectionConfiguration(CONNECTION_CONFIG_NAME, CONNECTION_URL, null, null);
+    return new ConnectionConfiguration(CONNECTION_CONFIG_NAME, CONNECTION_URL, null, null, null);
   }
 }
