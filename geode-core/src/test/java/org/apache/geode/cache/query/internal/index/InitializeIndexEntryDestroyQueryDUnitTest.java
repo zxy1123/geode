@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.cache.internal.JUnit4CacheTestCase;
 import org.apache.geode.test.dunit.internal.JUnit4DistributedTestCase;
 import org.apache.geode.test.junit.categories.DistributedTest;
@@ -26,6 +27,7 @@ import org.apache.geode.test.junit.categories.DistributedTest;
 import static org.apache.geode.cache.query.Utils.createPortfolioData;
 
 import java.util.Arrays;
+import java.util.Properties;
 
 import org.junit.experimental.categories.Category;
 
@@ -88,6 +90,16 @@ public class InitializeIndexEntryDestroyQueryDUnitTest extends JUnit4CacheTestCa
       vm.invoke(() -> PRQueryDUnitHelper.setCache(getCache()));
     }
   }
+
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties properties = super.getDistributedSystemProperties();
+    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.cache.query.data.**");
+    return properties;
+  }
+
 
   @Test
   public void testAsyncIndexInitDuringEntryDestroyAndQuery() {

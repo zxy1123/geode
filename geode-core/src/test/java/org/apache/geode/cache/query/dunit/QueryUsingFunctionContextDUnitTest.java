@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.cache.internal.JUnit4CacheTestCase;
 import org.apache.geode.test.dunit.internal.JUnit4DistributedTestCase;
 import org.apache.geode.test.junit.categories.DistributedTest;
@@ -141,11 +142,17 @@ public class QueryUsingFunctionContextDUnitTest extends JUnit4CacheTestCase {
   public static String[] queriesForRR =
       new String[] {"<trace> select * from /" + repRegionName + " where ID>=0"};
 
-  /**
-   * @param name
-   */
   public QueryUsingFunctionContextDUnitTest() {
     super();
+  }
+
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties properties = super.getDistributedSystemProperties();
+    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.cache.query.dunit.**");
+    return properties;
   }
 
   @Override
@@ -609,7 +616,7 @@ public class QueryUsingFunctionContextDUnitTest extends JUnit4CacheTestCase {
 
 
   // Helper classes and function
-  public class TestQueryFunction extends FunctionAdapter {
+  public static class TestQueryFunction extends FunctionAdapter {
 
     @Override
     public boolean hasResult() {
@@ -650,7 +657,7 @@ public class QueryUsingFunctionContextDUnitTest extends JUnit4CacheTestCase {
     }
   }
 
-  public class TestServerQueryFunction extends FunctionAdapter {
+  public static class TestServerQueryFunction extends FunctionAdapter {
 
     @Override
     public boolean hasResult() {
@@ -740,7 +747,7 @@ public class QueryUsingFunctionContextDUnitTest extends JUnit4CacheTestCase {
 
   private void createServersWithRegions() {
     // Create caches
-    Properties props = new Properties();
+    Properties props = getDistributedSystemProperties();
     server1.invoke(() -> PRClientServerTestBase.createCacheInVm(props));
     server2.invoke(() -> PRClientServerTestBase.createCacheInVm(props));
     server3.invoke(() -> PRClientServerTestBase.createCacheInVm(props));
@@ -854,7 +861,7 @@ public class QueryUsingFunctionContextDUnitTest extends JUnit4CacheTestCase {
   private void createCacheClientWithoutReg(String host, Integer port1, Integer port2,
       Integer port3) {
     this.disconnectFromDS();
-    ClientCache cache = new ClientCacheFactory().addPoolServer(host, port1)
+    ClientCache cache = new ClientCacheFactory(getDistributedSystemProperties()).addPoolServer(host, port1)
         .addPoolServer(host, port2).addPoolServer(host, port3).create();
   }
 

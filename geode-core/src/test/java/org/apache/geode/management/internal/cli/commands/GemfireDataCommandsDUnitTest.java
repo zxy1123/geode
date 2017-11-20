@@ -59,6 +59,7 @@ import org.apache.geode.cache.query.data.Portfolio;
 import org.apache.geode.cache.query.internal.CompiledValue;
 import org.apache.geode.cache.query.internal.QCompiler;
 import org.apache.geode.cache.util.CacheListenerAdapter;
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.distributed.DistributedMember;
 import org.apache.geode.internal.cache.GemFireCacheImpl;
 import org.apache.geode.internal.cache.InternalCache;
@@ -141,6 +142,14 @@ public class GemfireDataCommandsDUnitTest extends CliCommandTestBase {
   public String getMemberId() {
     InternalCache cache = getCache();
     return cache.getDistributedSystem().getDistributedMember().getId();
+  }
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties properties = super.getDistributedSystemProperties();
+    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.management.internal.cli.dto.**");
+    return properties;
   }
 
   void setupForGetPutRemoveLocateEntry(String testName) {

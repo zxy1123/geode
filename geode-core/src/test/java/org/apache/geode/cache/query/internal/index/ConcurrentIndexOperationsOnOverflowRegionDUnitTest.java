@@ -22,12 +22,14 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.cache.internal.JUnit4CacheTestCase;
 import org.apache.geode.test.dunit.internal.JUnit4DistributedTestCase;
 import org.apache.geode.test.junit.categories.DistributedTest;
 import org.apache.geode.test.junit.categories.FlakyTest;
 
 import java.util.Collection;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.geode.cache.AttributesFactory;
@@ -70,6 +72,15 @@ public class ConcurrentIndexOperationsOnOverflowRegionDUnitTest extends JUnit4Ca
   String name;
 
   public static volatile boolean hooked = false;
+
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties properties = super.getDistributedSystemProperties();
+    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.cache.query.data.**");
+    return properties;
+  }
 
   @Category(FlakyTest.class) // GEODE-1828
   @Test

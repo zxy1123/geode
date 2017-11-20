@@ -19,6 +19,7 @@ import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER;
 import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER_PORT;
 import static org.apache.geode.distributed.ConfigurationProperties.JMX_MANAGER_START;
 import static org.apache.geode.distributed.ConfigurationProperties.NAME;
+import static org.apache.geode.distributed.ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -189,6 +190,14 @@ public class CliUtilDUnitTest extends JUnit4CacheTestCase {
     LogWriterUtils.getLogWriter().info("Manager federation is complete");
   }
 
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties properties = super.getDistributedSystemProperties();
+    properties.put(SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.management.internal.cli.CliUtilDUnitTest$DunitFunction");
+    return properties;
+  }
+
   @SuppressWarnings("rawtypes")
   private Region createRegion(String regionName) {
     RegionFactory regionFactory = getCache().createRegionFactory(RegionShortcut.REPLICATE);
@@ -209,6 +218,8 @@ public class CliUtilDUnitTest extends JUnit4CacheTestCase {
     localProps.setProperty(JMX_MANAGER_START, "false");
     int jmxPort = AvailablePortHelper.getRandomAvailableTCPPort();
     localProps.setProperty(JMX_MANAGER_PORT, "" + jmxPort);
+    localProps.put(SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.management.internal.cli.CliUtilDUnitTest$DunitFunction");
     LogWriterUtils.getLogWriter().info("Set jmx-port=" + jmxPort);
     getSystem(localProps);
     getCache();

@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.cache.internal.JUnit4CacheTestCase;
 import org.apache.geode.test.dunit.internal.JUnit4DistributedTestCase;
 import org.apache.geode.test.junit.categories.DistributedTest;
@@ -53,12 +54,6 @@ import org.apache.geode.internal.cache.ForceReattemptException;
 @Category(DistributedTest.class)
 public class PRQueryRegionCloseDUnitTest extends PartitionedRegionDUnitTestCase {
 
-  /**
-   * constructor *
-   * 
-   * @param name
-   */
-
   public PRQueryRegionCloseDUnitTest() {
     super();
   }
@@ -83,6 +78,15 @@ public class PRQueryRegionCloseDUnitTest extends PartitionedRegionDUnitTestCase 
   final int cnt = 0, cntDest = 50;
 
   final int redundancy = 1;
+
+  @Override
+  public Properties getDistributedSystemProperties() {
+    Properties properties = super.getDistributedSystemProperties();
+    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
+        "org.apache.geode.cache.query.data.**");
+    return properties;
+  }
+
 
   /**
    * This test <br>

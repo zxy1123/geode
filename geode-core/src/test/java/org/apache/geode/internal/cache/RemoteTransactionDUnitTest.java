@@ -3595,6 +3595,8 @@ public class RemoteTransactionDUnitTest extends JUnit4CacheTestCase {
         ccf.addPoolServer("localhost"/* getServerHostName(Host.getHost(0)) */, port);
         ccf.setPoolSubscriptionEnabled(true);
         ccf.set(LOG_LEVEL, LogWriterUtils.getDUnitLogLevel());
+        ccf.set(SERIALIZABLE_OBJECT_FILTER,
+            getDistributedSystemProperties().getProperty(SERIALIZABLE_OBJECT_FILTER));
         ClientCache cCache = getClientCache(ccf);
         ClientRegionFactory<Integer, String> crf = cCache.createClientRegionFactory(
             isEmpty ? ClientRegionShortcut.PROXY : ClientRegionShortcut.CACHING_PROXY);
