@@ -5855,6 +5855,9 @@ public class LocalRegion extends AbstractRegion implements InternalRegion, Loade
     updateTimeStampEvent.setGenerateCallbacks(false);
     updateTimeStampEvent.distributedMember = event.getDistributedMember();
     updateTimeStampEvent.setNewEventId(getSystem());
+    if (event.isConcurrencyConflict()) {
+      updateTimeStampEvent.isConcurrencyConflict(true);
+    }
 
     if (event.getRegion() instanceof BucketRegion) {
       BucketRegion bucketRegion = (BucketRegion) event.getRegion();
