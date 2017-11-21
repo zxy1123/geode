@@ -113,8 +113,7 @@ public class PRColocatedEquiJoinDUnitTest extends PartitionedRegionDUnitTestCase
   @Override
   public Properties getDistributedSystemProperties() {
     Properties properties = super.getDistributedSystemProperties();
-    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER,
-        "parReg.query.unittest.**");
+    properties.put(ConfigurationProperties.SERIALIZABLE_OBJECT_FILTER, "parReg.query.unittest.**");
     return properties;
   }
 
@@ -1554,6 +1553,7 @@ public class PRColocatedEquiJoinDUnitTest extends PartitionedRegionDUnitTestCase
     LogWriterUtils.getLogWriter()
         .info("PRQBasicQueryDUnitTest#testPRBasicQuerying: Querying PR's Test ENDED");
   }
+
   // Helper classes and function
   static public class TestQueryFunction extends FunctionAdapter implements DataSerializable {
 
@@ -1585,8 +1585,7 @@ public class PRColocatedEquiJoinDUnitTest extends PartitionedRegionDUnitTestCase
       try {
         Query query = queryService.newQuery(qstr);
         context.getResultSender().sendResult(
-            (ArrayList) ((SelectResults) query.execute((RegionFunctionContext) context))
-                .asList());
+            (ArrayList) ((SelectResults) query.execute((RegionFunctionContext) context)).asList());
         context.getResultSender().lastResult(null);
       } catch (Exception e) {
         e.printStackTrace();

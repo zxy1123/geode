@@ -861,8 +861,8 @@ public class QueryUsingFunctionContextDUnitTest extends JUnit4CacheTestCase {
   private void createCacheClientWithoutReg(String host, Integer port1, Integer port2,
       Integer port3) {
     this.disconnectFromDS();
-    ClientCache cache = new ClientCacheFactory(getDistributedSystemProperties()).addPoolServer(host, port1)
-        .addPoolServer(host, port2).addPoolServer(host, port3).create();
+    ClientCache cache = new ClientCacheFactory(getDistributedSystemProperties())
+        .addPoolServer(host, port1).addPoolServer(host, port2).addPoolServer(host, port3).create();
   }
 
   /**
