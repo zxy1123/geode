@@ -716,9 +716,10 @@ public class SerialGatewaySenderEventProcessor extends AbstractGatewaySenderEven
         logger.info("GGG:secondary after removed:" + v + ":" + gatewayEvent);
       }
 
-      if (v == null && !gatewayEvent.isConcurrencyConflict) {
-        // only when isConcurrencyConflict is false, add the event into unprocessedEvents
-        logger.info("GGG:secondary before add to:" + gatewayEvent, new Exception());
+      if (v == null) {
+        if (gatewayEvent.isConcurrencyConflict) {
+          logger.info("GGG:secondary before add to:" + gatewayEvent, new Exception());
+        }
         // first time for the event
         if (logger.isTraceEnabled()) {
           logger.trace("{}: fromSecondary event {}:{}->{} added from unprocessed events map",
